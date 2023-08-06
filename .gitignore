@@ -1,0 +1,6 @@
+*/dataset/test_data/*
+*.csv
+*.txt
+*.pkl
+*.gif
+*/__pycache__/*
