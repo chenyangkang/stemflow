@@ -308,7 +308,6 @@ def get_ensemble_quadtree(data,size=1,
     4. latitude
     '''
     ensemble_all_df_list = []
-    sub_data_all = data
 
     gridding_plot_list = []
         
@@ -333,7 +332,7 @@ def get_ensemble_quadtree(data,size=1,
 
             time_start = bin_[0]
             time_end = bin_[1]
-            sub_data=sub_data_all[(sub_data_all['DOY']>=time_start) & (sub_data_all['DOY']<time_end)]
+            sub_data=data[(data['DOY']>=time_start) & (data['DOY']<time_end)]
 
 
             QT_obj = QTree(grid_len_long_upper_threshold=grid_len_long_upper_threshold, \
