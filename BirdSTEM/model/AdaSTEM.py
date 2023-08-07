@@ -215,10 +215,10 @@ class AdaSTEM:
                 del self.x_names[self.x_names.index(i)]
 
         import copy
-        X_train_copy = X_train.copy().reset_index(drop=True)
+        X_train_copy = X_train.copy().reset_index(drop=True) ### I reset index here!! caution!
         X_train_copy['true_y'] = np.array(y_train)
         
-        grid_dict = self.split(X_train)
+        grid_dict = self.split(X_train_copy)
 
         ##### define model dict
         self.model_dict = {}
@@ -237,17 +237,19 @@ class AdaSTEM:
             if (not self.task == 'regression') and (len(unique_sub_y_train_binary)==1):
                 self.model_dict[f'{name}_model'] = dummy_model1(float(unique_sub_y_train_binary[0]))
                 continue
-            
-            elif (not self.task == 'regression') and self.sample_weights_for_classifier:
-                sample_weights = \
-                    class_weight.compute_sample_weight(class_weight='balanced',y=np.where(sub_y_train>0,1,0))
-                
-                self.base_model.fit(np.array(sub_X_train), np.array(sub_y_train), sample_weight=sample_weights)
             else:
-                self.base_model.fit(np.array(sub_X_train), np.array(sub_y_train))
+                self.model_dict[f'{name}_model'] = copy.deepcopy(self.base_model)
+                
+                if (not self.task == 'regression') and self.sample_weights_for_classifier:
+                    sample_weights = \
+                        class_weight.compute_sample_weight(class_weight='balanced',y=np.where(sub_y_train>0,1,0))
+                    
+                    self.model_dict[f'{name}_model'].fit(np.array(sub_X_train), np.array(sub_y_train), sample_weight=sample_weights)
+                else:
+                    self.model_dict[f'{name}_model'].fit(np.array(sub_X_train), np.array(sub_y_train))
 
-            ###### store
-            self.model_dict[f'{name}_model'] = copy.deepcopy(self.base_model)
+            # ###### store
+            # self.model_dict[f'{name}_model'] = copy.deepcopy(self.base_model)
             
 
 
