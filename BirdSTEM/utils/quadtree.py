@@ -272,8 +272,6 @@ class QTree():
 def generate_temporal_bins(start, end, step, bin_interval):
     '''
     start, end, step, bin_interval
-    bin_interval should be larger than step!
-    constrain: bin_interval - step > step
     '''
     bin_interval = bin_interval #50
     step = step #20
@@ -282,12 +280,16 @@ def generate_temporal_bins(start, end, step, bin_interval):
     
     start = start - np.random.uniform(low=0, high=bin_interval) ### ensure 20 DOY
     bin_list = []
-    for i in range(1000):
+    
+    i=0
+    while True:
         s = start + i * step
         e = s+bin_interval
-        if s>=366: ### ensure 20 DOY
+        if s>=end:
             break
         bin_list.append((s,e))
+        i+=1
+        
     return bin_list
 
 
@@ -331,7 +333,7 @@ def get_ensemble_quadtree(data,size=1,
 
             time_start = bin_[0]
             time_end = bin_[1]
-            sub_data=sub_data_all[(sub_data_all['DOY']>=time_start) & (sub_data_all['DOY']<time_end)]#.reset_index(drop=True)
+            sub_data=sub_data_all[(sub_data_all['DOY']>=time_start) & (sub_data_all['DOY']<time_end)]
 
 
             QT_obj = QTree(grid_len_long_upper_threshold=grid_len_long_upper_threshold, \
@@ -366,20 +368,12 @@ def get_ensemble_quadtree(data,size=1,
             this_slice['ensemble_index'] = ensemble_count
             this_slice['DOY_start'] = time_start
             this_slice['DOY_end'] = time_end
-            this_slice['checklist_name'] = [sub_data.loc[i,:]['sampling_event_identifier'].values.tolist() for i in this_slice['checklist_indexes']]
-            ensemble_all_df = this_slice
-#             ensemble_all_df = ensemble_all_df[ensemble_all_df['stixel_checklist_count']>=10]
-#             ensemble_all_df['DOY_start'][ensemble_all_df['DOY_start']<1]=1
-            ensemble_all_df['DOY_start']=round(ensemble_all_df['DOY_start'],1)
-#             ensemble_all_df['DOY_end'][ensemble_all_df['DOY_end']>366]=366
-            ensemble_all_df['DOY_end']=round(ensemble_all_df['DOY_end'],1)
-            ensemble_all_df['unique_stixel_id'] = [str(time_block_index)+"_"+str(i)+"_"+str(k) for i,k in zip (ensemble_all_df['ensemble_index'].values, ensemble_all_df['stixel_indexes'].values)]
-    #            if (ensemble_count == 0) and (time_block_index == 0):
-    #                ensemble_all_df.to_csv(f'./ensemble_metadata_all/ensembles_metadata_year{year}_ensemble{ensemble_count}_timeblock{time_block_index}.txt',sep='\t',index=False)
-    #            else:
-
-            # ensemble_all_df.to_csv(f'./ensemble_metadata_all/ensembles_metadata_year{year}_ensemble{ensemble_count}_timeblock{time_block_index}.txt',sep='\t',index=False,header=True)
-            ensemble_all_df_list.append(ensemble_all_df)
+            # this_slice['checklist_name'] = [sub_data.loc[i,:]['sampling_event_identifier'].values.tolist() for i in this_slice['checklist_indexes']]
+            this_slice['DOY_start']=round(this_slice['DOY_start'],1)
+            this_slice['DOY_end']=round(this_slice['DOY_end'],1)
+            this_slice['unique_stixel_id'] = [str(time_block_index)+"_"+str(i)+"_"+str(k) for i,k in zip (this_slice['ensemble_index'].values, 
+                                                                                                          this_slice['stixel_indexes'].values)]
+            ensemble_all_df_list.append(this_slice)
             
     ensemble_df = pd.concat(ensemble_all_df_list).reset_index(drop=True)
     if not save_path=='':

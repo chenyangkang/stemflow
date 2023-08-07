@@ -70,7 +70,7 @@ from .dummy_model import dummy_model1
 
 
     
-class AdaSTEM():
+class AdaSTEM:
     '''
         attributes:
         
@@ -127,7 +127,9 @@ class AdaSTEM():
         self.task = task
         if not self.task in ['regression','classification','hurdle']:
             raise AttributeError(f'task type must be one of \'regression\', \'classification\', or \'hurdle\'! Now it is {self.task}')
-        
+        if self.task=='hurdle':
+            warnings.warn('You have chosen HURDLE task. The goal is to first conduct classification, and then apply regression on points with *positive values*')
+                    
         self.ensemble_fold = ensemble_fold
         self.min_ensemble_require = min_ensemble_require
         self.grid_len_long_upper_threshold=grid_len_long_upper_threshold
@@ -192,7 +194,7 @@ class AdaSTEM():
         if 'predict_proba' in dir(model):
             return model
         else:
-            print(f'predict_proba function not in base_model. Monkey patching one.')
+            warnings.warn(f'predict_proba function not in base_model. Monkey patching one.')
             def predict_proba(X_test):
                 pred = model.predict(X_test)
                 pred = np.array(pred).reshape(-1,1)
@@ -203,6 +205,9 @@ class AdaSTEM():
         
         
     def fit(self, X_train, y_train):
+        type_X_train = type(X_train)
+        if not type_X_train == pd.core.frame.DataFrame:
+            raise TypeError(f'Input X_train should be type \'pd.core.frame.DataFrame\'. Got {type_X_train}')
         
         self.x_names = list(X_train.columns)
         for i in ['longitude','latitude','sampling_event_identifier','y_true','y','y_pred','abundance']:
@@ -210,8 +215,8 @@ class AdaSTEM():
                 del self.x_names[self.x_names.index(i)]
 
         import copy
-        X_train_copy = X_train.copy()
-        X_train_copy['true_y'] = y_train
+        X_train_copy = X_train.copy().reset_index(drop=True)
+        X_train_copy['true_y'] = np.array(y_train)
         
         grid_dict = self.split(X_train)
 
@@ -219,9 +224,11 @@ class AdaSTEM():
         self.model_dict = {}
         for index,line in tqdm(self.ensemble_df.iterrows(),total=len(self.ensemble_df),desc='training: '):
             name = f'{line.ensemble_index}_{line.unique_stixel_id}'
-            sub_X_train = X_train_copy[X_train_copy.sampling_event_identifier.isin(line.checklist_name)]
+            sub_X_train = X_train_copy[X_train_copy.index.isin(line.checklist_indexes)]
+            
             if len(sub_X_train)<self.stixel_training_size_threshold: ####### threshold
                 continue
+            
             sub_y_train = sub_X_train.iloc[:,-1]
             sub_X_train = sub_X_train[self.x_names]
             unique_sub_y_train_binary = np.unique(np.where(sub_y_train>0, 1, 0))
@@ -245,13 +252,17 @@ class AdaSTEM():
 
 
             
-    def predict_proba(self,X_test):
+    def predict_proba(self,X_test,verbosity=0):
+        type_X_test = type(X_test)
+        if not type_X_test == pd.core.frame.DataFrame:
+            raise TypeError(f'Input X_test should be type \'pd.core.frame.DataFrame\'. Got {type_X_test}')
+        
         ##### predict
         X_test_copy = X_test.copy()
         
         round_res_list = []
         ensemble_df = self.ensemble_df
-        for ensemble in list(ensemble_df.ensemble_index.unique()):
+        for ensemble in tqdm(list(ensemble_df.ensemble_index.unique())):
             this_ensemble = ensemble_df[ensemble_df.ensemble_index==ensemble]
             this_ensemble['stixel_calibration_point_transformed_left_bound'] = \
                         [i[0] for i in this_ensemble['stixel_calibration_point(transformed)']]
@@ -269,7 +280,11 @@ class AdaSTEM():
             
             ##### pred each stixel
             res_list = []
-            for index,line in tqdm(this_ensemble.iterrows(),total=len(this_ensemble), desc=f'predicting ensemble {ensemble} '):
+                
+            iter_func = this_ensemble.iterrows() if verbosity==0 else tqdm(this_ensemble.iterrows(), 
+                                                                     total=len(this_ensemble), 
+                                                                     desc=f'predicting ensemble {ensemble} ')
+            for index,line in iter_func:
                 grid_index = line['unique_stixel_id']
                 sub_X_test = X_test_copy[
                     (X_test_copy.DOY>=line['DOY_start']) & (X_test_copy.DOY<=line['DOY_end']) & \
@@ -304,7 +319,6 @@ class AdaSTEM():
                                         'pred':[np.nan]*len(list(sub_X_test.index))
                                         }).set_index('index')
                     
-
                 res_list.append(res)
                 
             res_list = pd.concat(res_list, axis=0)
@@ -339,11 +353,17 @@ class AdaSTEM():
         }).set_index('index')
 
         new_res = new_res.merge(res, left_on='index', right_on='index', how='left')
+        
+        nan_count = np.sum(np.isnan(new_res['pred_mean'].values))
+        nan_frac = nan_count / len(new_res['pred_mean'].values)
+        # warnings.warn(f'There are {nan_frac}% points ({nan_count} points) fell out of predictable range.')
+        print(f'There are {nan_frac*100:0.5f}% points ({nan_count} points) fell out of predictable range.')
+        
         return new_res['pred_mean'].values, new_res['pred_std'].values
         
         
-    def predict(self,X_test):
-        return self.predict_proba(X_test)
+    def predict(self,X_test, verbosity=0):
+        return self.predict_proba(X_test, verbosity=verbosity)
     
             
     def transform_pred_set_to_STEM_quad(self,X_train,ensemble_info):
@@ -372,6 +392,79 @@ class AdaSTEM():
         X_train['lat_new'] = lat_new
 
         return X_train
+    
+    
+    def eval_STEM_res(task, y_test, y_pred):
+        '''
+        task: one of 'regression', 'classification' or 'hurdle'
+        
+        Classification metrics used: 
+        1. AUC
+        2. Cohen's Kappa
+        3. F1
+        4. precision
+        5. recall
+        6. average precision 
+        
+        Regression metrics used: 
+        1. spearman's r
+        2. peason's r
+        3. R2
+        4. mean absolute error (MAE)
+        5. mean squared error (MSE)
+        6. poisson deviance explained (PDE)
+        '''
+        if not task in ['regression','classification','hurdle']:
+            raise AttributeError(f'task type must be one of \'regression\', \'classification\', or \'hurdle\'! Now it is {task}')
+    
+        
+        from sklearn.metrics import roc_auc_score, cohen_kappa_score, r2_score, d2_tweedie_score, \
+            f1_score, precision_score, recall_score, average_precision_score, mean_absolute_error, mean_squared_error
+        from scipy.stats import pearsonr, spearmanr
+
+        if not task=='regression':
+            auc = roc_auc_score(np.where(y_test>0, 1, 0), np.where(y_pred>0, 1, 0))
+            kappa = cohen_kappa_score(np.where(y_test>0, 1, 0), np.where(y_pred>0, 1, 0))
+            f1 = f1_score(np.where(y_test>0, 1, 0), np.where(y_pred>0, 1, 0))
+            precision = precision_score(np.where(y_test>0, 1, 0), np.where(y_pred>0, 1, 0))
+            recall = recall_score(np.where(y_test>0, 1, 0), np.where(y_pred>0, 1, 0))
+            average_precision = average_precision_score(np.where(y_test>0, 1, 0), np.where(y_pred>0, 1, 0))
+        else:
+            auc, kappa, f1, precision, recall, average_precision = [np.nan] * 6
+            
+        a = pd.DataFrame({
+            'y_ture':y_test,
+            'pred':y_pred
+        }).dropna()
+        s_r, _ = spearmanr(a.y_ture, a.pred)
+        p_r, _ = pearsonr(a.y_ture, a.pred)
+        r2 = r2_score(a.y_ture, a.pred)
+        MAE = mean_absolute_error(a.y_ture, a.pred)
+        MSE = mean_squared_error(a.y_ture, a.pred)
+        poisson_deviance_explained = d2_tweedie_score(a[a.pred>0].y_ture, a[a.pred>0].pred, power=1)
+        
+        return {
+            'AUC':auc,
+            'kappa':kappa,
+            'f1':f1,
+            'precision':precision,
+            'recall':recall,
+            'average_precision':average_precision,
+            'Spearman_r':s_r,
+            'Pearson_r':p_r,
+            'R2':r2,
+            'MAE':MAE,
+            'MSE':MSE,
+            'poisson_deviance_explained':poisson_deviance_explained
+        }
+
+
+    def score(self, X_test, y_test):
+        y_pred = self.predict(X_test)
+        score_dict = self.eval_STEM_res(self.task, y_test, y_pred)
+        self.score_dict = score_dict
+        return self.score_dict
+        
     
     
     
@@ -405,7 +498,7 @@ class AdaSTEMClassifier(AdaSTEM):
                          temporal_end, temporal_step, temporal_bin_interval, stixel_training_size_threshold, 
                          save_gridding_plot, save_tmp, save_dir, sample_weights_for_classifier)
         
-        self.task='classification'
+        # self.task='classification'
         
         
         
@@ -439,7 +532,8 @@ class AdaSTEMRegressor(AdaSTEM):
                          temporal_end, temporal_step, temporal_bin_interval, stixel_training_size_threshold, 
                          save_gridding_plot, save_tmp, save_dir, sample_weights_for_classifier)
         
-        self.task='regression'
+        # self.task='regression'
+        
         
         
         
@@ -473,4 +567,5 @@ class AdaSTEMHurdle(AdaSTEM):
                          temporal_end, temporal_step, temporal_bin_interval, stixel_training_size_threshold, 
                          save_gridding_plot, save_tmp, save_dir, sample_weights_for_classifier)
         
-        self.task='hurdle'
+        # self.task='hurdle'
+        # warnings.warn('You have choose HURDLE task. The goal is to first conduct classification, and then apply regression on points with *positive values*')

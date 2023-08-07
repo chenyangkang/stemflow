@@ -9,7 +9,6 @@ class Hurdle():
         '''
         The input classifier should have function:
         1. predict
-        2. predict_proba
         
         and the regressor should have
         1. predict
@@ -40,10 +39,16 @@ class Hurdle():
     def predict(self, X_test):
         cls_res = self.classifier.predict(X_test)
         reg_res = self.regressor.predict(X_test)
+        # reg_res = np.where(reg_res>=0, reg_res, 0) ### we constrain the reg value to be positive
         res = np.where(cls_res>0, reg_res, 0)
         return res.reshape(-1,1)
     
     def predict_proba(self, X_test):
+        '''
+        This method output a numpy array with shape (n_sample, 2)
+        However, user should notice that this is only for structuring the sklearn predict_proba-like method
+        Only the res[:,1] is meaningful, aka the last dimension in the two dimensions. The first dimension is always zero.
+        '''
         a = np.zeros(len(X_test)).reshape(-1,1)
         b = self.predict(X_test).reshape(-1,1)
         res = np.concatenate([a, b], axis=1)
