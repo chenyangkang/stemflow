@@ -2,6 +2,7 @@ name: ci
 on:
   push:
     branches:
+      - master 
       - main
 permissions:
   contents: write
@@ -19,4 +20,4 @@ jobs:
           path: .cache
       - run: pip install mkdocs-material
       - run: pip install pillow cairosvg
-      - run: mkdocs main --force
+      - run: mkdocs gh-deploy --force
