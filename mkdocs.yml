@@ -16,7 +16,7 @@ theme:
   palette:
     - scheme: default
       toggle:
-        icon: ##
+        icon:
         name: Switch to dark mode
       primary: teal
       accent: purple 
