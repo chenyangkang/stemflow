@@ -50,16 +50,13 @@ import datetime
 import re
 
 import statsmodels.api as sm
-
-from sklearn.ensemble import RandomForestRegressor,RandomForestClassifier
+from sklearn.base import BaseEstimator
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score,mean_squared_error,mean_tweedie_deviance,\
         mean_absolute_error,mean_absolute_percentage_error
 from sklearn.metrics import roc_auc_score, precision_score, accuracy_score, f1_score,recall_score
 from scipy.stats import spearmanr
-from xgboost import XGBRegressor,XGBClassifier,XGBRFClassifier,XGBRFRegressor
 from sklearn.utils import class_weight
-import xgboost as xgb
 from sklearn.inspection import partial_dependence
 
 ######
@@ -70,7 +67,7 @@ from .dummy_model import dummy_model1
 
 
     
-class AdaSTEM:
+class AdaSTEM(BaseEstimator):
     '''
         attributes:
         
@@ -101,8 +98,8 @@ class AdaSTEM:
                 task='hurdle',
                 ensemble_fold=1,
                 min_ensemble_require = 1,
-                grid_len_long_upper_threshold=25,
-                grid_len_long_lower_threshold=5,
+                grid_len_lon_upper_threshold=25,
+                grid_len_lon_lower_threshold=5,
                 grid_len_lat_upper_threshold=25,
                 grid_len_lat_lower_threshold=5,
                 points_lower_threshold=50,
@@ -110,6 +107,7 @@ class AdaSTEM:
                 temporal_end=366,
                 temporal_step=20, 
                 temporal_bin_interval = 50,
+                temporal_bin_start_jitter = 'random',
                 stixel_training_size_threshold = 50,
                 save_gridding_plot=True,
                 save_tmp = True,
@@ -132,8 +130,8 @@ class AdaSTEM:
                     
         self.ensemble_fold = ensemble_fold
         self.min_ensemble_require = min_ensemble_require
-        self.grid_len_long_upper_threshold=grid_len_long_upper_threshold
-        self.grid_len_long_lower_threshold=grid_len_long_lower_threshold
+        self.grid_len_lon_upper_threshold=grid_len_lon_upper_threshold
+        self.grid_len_lon_lower_threshold=grid_len_lon_lower_threshold
         self.grid_len_lat_upper_threshold=grid_len_lat_upper_threshold
         self.grid_len_lat_lower_threshold=grid_len_lat_lower_threshold
         self.points_lower_threshold=points_lower_threshold
@@ -141,20 +139,61 @@ class AdaSTEM:
         self.temporal_end = temporal_end
         self.temporal_step = temporal_step
         self.temporal_bin_interval = temporal_bin_interval
+        
+        if (not type(temporal_bin_start_jitter) in [str, float, int]):
+            raise AttributeError(f'Input temporal_bin_start_jitter should be \'random\', float or int, got {type(temporal_bin_start_jitter)}')
+        if type(temporal_bin_start_jitter) == str:
+            if not temporal_bin_start_jitter=='random':
+                raise AttributeError(f'The input temporal_bin_start_jitter as string should only be \'random\'. Other options include float or int. Got {temporal_bin_start_jitter}')
+        self.temporal_bin_start_jitter = temporal_bin_start_jitter
+        
         self.stixel_training_size_threshold = stixel_training_size_threshold
         self.save_gridding_plot = save_gridding_plot
         self.save_tmp = save_tmp
         self.save_dir = save_dir
         self.sample_weights_for_classifier = sample_weights_for_classifier
         
+    # def __sklearn_clone__(self):
+    #     return self
+    
+    # def get_params(self, deep=False):
+    #     return {
+    #     'base_model':self.base_model,
+    #     'ensemble_fold':self.ensemble_fold,
+    #     'min_ensemble_require':self.min_ensemble_require,
+    #     'grid_len_lon_upper_threshold':self.grid_len_lon_upper_threshold,
+    #     'grid_len_lon_lower_threshold':self.grid_len_lon_lower_threshold,
+    #     'grid_len_lat_upper_threshold':self.grid_len_lat_upper_threshold,
+    #     'grid_len_lat_lower_threshold':self.grid_len_lat_lower_threshold,
+    #     'points_lower_threshold':self.points_lower_threshold,
+    #     'temporal_start':self.temporal_start,
+    #     'temporal_end':self.temporal_end,
+    #     'temporal_step':self.temporal_step,
+    #     'temporal_bin_interval':self.temporal_bin_interval,
+    #     'stixel_training_size_threshold':self.stixel_training_size_threshold,
+    #     'save_gridding_plot':self.save_gridding_plot,
+    #     'save_tmp':self.save_tmp,
+    #     'save_dir':self.save_dir,
+    #     'sample_weights_for_classifier':self.sample_weights_for_classifier
+    #     }
+        
+    # def set_params(self, **params):
+    #     if not params:
+    #         return self
+
+    #     for key, value in params.items():
+    #         # if hasattr(self, key):
+    #         #     setattr(self, key, value)
+    #         # else:
+    #         self.kwargs[key] = value
 
     def split(self, X_train):
         fold = self.ensemble_fold
         save_path = os.path.join(self.save_dir, 'ensemble_quadtree_df.csv')  if self.save_tmp else ''
         self.ensemble_df, self.gridding_plot_list = get_ensemble_quadtree(X_train,\
                                             size=fold,\
-                                            grid_len_long_upper_threshold=self.grid_len_long_upper_threshold, \
-                                            grid_len_long_lower_threshold=self.grid_len_long_lower_threshold, \
+                                            grid_len_lon_upper_threshold=self.grid_len_lon_upper_threshold, \
+                                            grid_len_lon_lower_threshold=self.grid_len_lon_lower_threshold, \
                                             grid_len_lat_upper_threshold=self.grid_len_lat_upper_threshold, \
                                             grid_len_lat_lower_threshold=self.grid_len_lat_lower_threshold, \
                                             points_lower_threshold=self.points_lower_threshold,
@@ -162,6 +201,7 @@ class AdaSTEM:
                                             temporal_end=self.temporal_end, 
                                             temporal_step=self.temporal_step, 
                                             temporal_bin_interval = self.temporal_bin_interval,
+                                            temporal_bin_start_jitter = self.temporal_bin_start_jitter,
                                             save_gridding_plot=self.save_gridding_plot,
                                             save_path=save_path)
 
@@ -233,6 +273,11 @@ class AdaSTEM:
             sub_X_train = sub_X_train[self.x_names]
             unique_sub_y_train_binary = np.unique(np.where(sub_y_train>0, 1, 0))
             
+            ##### nan check
+            nan_count = np.sum(np.isnan(sub_y_train)) + np.sum(np.isnan(sub_y_train))
+            if nan_count>0:
+                continue
+            
             ##### fit
             if (not self.task == 'regression') and (len(unique_sub_y_train_binary)==1):
                 self.model_dict[f'{name}_model'] = dummy_model1(float(unique_sub_y_train_binary[0]))
@@ -244,10 +289,18 @@ class AdaSTEM:
                     sample_weights = \
                         class_weight.compute_sample_weight(class_weight='balanced',y=np.where(sub_y_train>0,1,0))
                     
-                    self.model_dict[f'{name}_model'].fit(np.array(sub_X_train), np.array(sub_y_train), sample_weight=sample_weights)
+                    try:
+                        self.model_dict[f'{name}_model'].fit(np.array(sub_X_train), np.array(sub_y_train), sample_weight=sample_weights)
+                    except Exception as e:
+                        warnings.warn(e)
+                        continue
                 else:
-                    self.model_dict[f'{name}_model'].fit(np.array(sub_X_train), np.array(sub_y_train))
-
+                    try:
+                        self.model_dict[f'{name}_model'].fit(np.array(sub_X_train), np.array(sub_y_train))
+                    except Exception as e:
+                        warnings.warn(e)
+                        continue
+                    
             # ###### store
             # self.model_dict[f'{name}_model'] = copy.deepcopy(self.base_model)
             
@@ -264,7 +317,7 @@ class AdaSTEM:
         
         round_res_list = []
         ensemble_df = self.ensemble_df
-        for ensemble in tqdm(list(ensemble_df.ensemble_index.unique())):
+        for ensemble in list(ensemble_df.ensemble_index.unique()):
             this_ensemble = ensemble_df[ensemble_df.ensemble_index==ensemble]
             this_ensemble['stixel_calibration_point_transformed_left_bound'] = \
                         [i[0] for i in this_ensemble['stixel_calibration_point(transformed)']]
@@ -290,11 +343,12 @@ class AdaSTEM:
                 grid_index = line['unique_stixel_id']
                 sub_X_test = X_test_copy[
                     (X_test_copy.DOY>=line['DOY_start']) & (X_test_copy.DOY<=line['DOY_end']) & \
-                    (X_test_copy.long_new>=line['stixel_calibration_point_transformed_left_bound']) &\
-                    (X_test_copy.long_new<=line['stixel_calibration_point_transformed_right_bound']) &\
+                    (X_test_copy.lon_new>=line['stixel_calibration_point_transformed_left_bound']) &\
+                    (X_test_copy.lon_new<=line['stixel_calibration_point_transformed_right_bound']) &\
                     (X_test_copy.lat_new>=line['stixel_calibration_point_transformed_lower_bound']) &\
                     (X_test_copy.lat_new<=line['stixel_calibration_point_transformed_upper_bound'])
                 ]
+                
                 if len(sub_X_test)==0:
                     continue
                     
@@ -307,7 +361,7 @@ class AdaSTEM:
 
                 try:
                     model = self.model_dict[f'{ensemble}_{grid_index}_model']
-                    pred = model.predict_proba(sub_X_test)[:,1]
+                    pred = model.predict_proba(np.array(sub_X_test))[:,1]
                     # print(model.predict_proba(sub_X_test).shape, pred.shape)
                     # print(np.sum(pred>0))
                     
@@ -358,8 +412,8 @@ class AdaSTEM:
         
         nan_count = np.sum(np.isnan(new_res['pred_mean'].values))
         nan_frac = nan_count / len(new_res['pred_mean'].values)
-        # warnings.warn(f'There are {nan_frac}% points ({nan_count} points) fell out of predictable range.')
-        print(f'There are {nan_frac*100:0.5f}% points ({nan_count} points) fell out of predictable range.')
+        warnings.warn(f'There are {nan_frac}% points ({nan_count} points) fell out of predictable range.')
+        # print(f'There are {nan_frac*100:0.5f}% points ({nan_count} points) fell out of predictable range.')
         
         return new_res['pred_mean'].values, new_res['pred_std'].values
         
@@ -390,13 +444,13 @@ class AdaSTEM:
         long_new = (coord[:,0] + calibration_point_x_jitter).tolist()
         lat_new = (coord[:,1] + calibration_point_y_jitter).tolist()
 
-        X_train['long_new'] = long_new
+        X_train['lon_new'] = long_new
         X_train['lat_new'] = lat_new
 
         return X_train
     
-    
-    def eval_STEM_res(task, y_test, y_pred):
+    @classmethod
+    def eval_STEM_res(self, task, y_test, y_pred, cls_threashold=None):
         '''
         task: one of 'regression', 'classification' or 'hurdle'
         
@@ -419,31 +473,51 @@ class AdaSTEM:
         if not task in ['regression','classification','hurdle']:
             raise AttributeError(f'task type must be one of \'regression\', \'classification\', or \'hurdle\'! Now it is {task}')
     
+        if cls_threashold==None:
+            if task=='classification':
+                cls_threashold = 0.5
+            elif task=='hurdle':
+                cls_threashold = 0
         
         from sklearn.metrics import roc_auc_score, cohen_kappa_score, r2_score, d2_tweedie_score, \
             f1_score, precision_score, recall_score, average_precision_score, mean_absolute_error, mean_squared_error
         from scipy.stats import pearsonr, spearmanr
 
         if not task=='regression':
-            auc = roc_auc_score(np.where(y_test>0, 1, 0), np.where(y_pred>0, 1, 0))
-            kappa = cohen_kappa_score(np.where(y_test>0, 1, 0), np.where(y_pred>0, 1, 0))
-            f1 = f1_score(np.where(y_test>0, 1, 0), np.where(y_pred>0, 1, 0))
-            precision = precision_score(np.where(y_test>0, 1, 0), np.where(y_pred>0, 1, 0))
-            recall = recall_score(np.where(y_test>0, 1, 0), np.where(y_pred>0, 1, 0))
-            average_precision = average_precision_score(np.where(y_test>0, 1, 0), np.where(y_pred>0, 1, 0))
+            
+            y_test_b = np.where(y_test>cls_threashold, 1, 0)
+            y_pred_b = np.where(y_pred>cls_threashold, 1, 0)
+            
+            if len(np.unique(y_test_b))==1 and len(np.unique(y_pred_b))==1:
+                auc, kappa, f1, precision, recall, average_precision = [np.nan] * 6
+            
+            else:
+                auc = roc_auc_score(y_test_b, y_pred_b)
+                kappa = cohen_kappa_score(y_test_b, y_pred_b)
+                f1 = f1_score(y_test_b, y_pred_b)
+                precision = precision_score(y_test_b, y_pred_b)
+                recall = recall_score(y_test_b, y_pred_b)
+                average_precision = average_precision_score(y_test_b, y_pred_b)
+            
         else:
             auc, kappa, f1, precision, recall, average_precision = [np.nan] * 6
             
-        a = pd.DataFrame({
-            'y_ture':y_test,
-            'pred':y_pred
-        }).dropna()
-        s_r, _ = spearmanr(a.y_ture, a.pred)
-        p_r, _ = pearsonr(a.y_ture, a.pred)
-        r2 = r2_score(a.y_ture, a.pred)
-        MAE = mean_absolute_error(a.y_ture, a.pred)
-        MSE = mean_squared_error(a.y_ture, a.pred)
-        poisson_deviance_explained = d2_tweedie_score(a[a.pred>0].y_ture, a[a.pred>0].pred, power=1)
+        if not task=='classification':
+            a = pd.DataFrame({
+                'y_ture':y_test,
+                'pred':y_pred
+            }).dropna()
+            s_r, _ = spearmanr(a.y_ture, a.pred)
+            p_r, _ = pearsonr(a.y_ture, a.pred)
+            r2 = r2_score(a.y_ture, a.pred)
+            MAE = mean_absolute_error(a.y_ture, a.pred)
+            MSE = mean_squared_error(a.y_ture, a.pred)
+            try:
+                poisson_deviance_explained = d2_tweedie_score(a[a.pred>0].y_ture, a[a.pred>0].pred, power=1)
+            except:
+                poisson_deviance_explained = np.nan
+        else:
+            s_r, p_r, r2, MAE, MSE, poisson_deviance_explained = [np.nan] * 6
         
         return {
             'AUC':auc,
@@ -463,10 +537,11 @@ class AdaSTEM:
 
     def score(self, X_test, y_test):
         y_pred = self.predict(X_test)
-        score_dict = self.eval_STEM_res(self.task, y_test, y_pred)
+        score_dict = AdaSTEM.eval_STEM_res(self.task, y_test, y_pred)
         self.score_dict = score_dict
         return self.score_dict
         
+
     
     
     
@@ -475,8 +550,8 @@ class AdaSTEMClassifier(AdaSTEM):
                  task='classification',
                  ensemble_fold=1, 
                  min_ensemble_require=1, 
-                 grid_len_long_upper_threshold=25, 
-                 grid_len_long_lower_threshold=5, 
+                 grid_len_lon_upper_threshold=25, 
+                 grid_len_lon_lower_threshold=5, 
                  grid_len_lat_upper_threshold=25, 
                  grid_len_lat_lower_threshold=5, 
                  points_lower_threshold=50, 
@@ -484,6 +559,7 @@ class AdaSTEMClassifier(AdaSTEM):
                  temporal_end=366, 
                  temporal_step=20, 
                  temporal_bin_interval=50, 
+                 temporal_bin_start_jitter = 'random',
                  stixel_training_size_threshold=50, 
                  save_gridding_plot=True, 
                  save_tmp=True, 
@@ -493,15 +569,23 @@ class AdaSTEMClassifier(AdaSTEM):
                          task,
                          ensemble_fold, 
                          min_ensemble_require,
-                         grid_len_long_upper_threshold, 
-                         grid_len_long_lower_threshold, 
+                         grid_len_lon_upper_threshold, 
+                         grid_len_lon_lower_threshold, 
                          grid_len_lat_upper_threshold, grid_len_lat_lower_threshold, 
                          points_lower_threshold, temporal_start, 
-                         temporal_end, temporal_step, temporal_bin_interval, stixel_training_size_threshold, 
+                         temporal_end, temporal_step, temporal_bin_interval, 
+                         temporal_bin_start_jitter,
+                         stixel_training_size_threshold, 
                          save_gridding_plot, save_tmp, save_dir, sample_weights_for_classifier)
         
-        # self.task='classification'
+    def predict(self, X_test, verbosity=0, return_std=False):
+        mean, std = self.predict_proba(X_test, verbosity=verbosity)
+        if return_std:
+            return np.where(mean>0.5, 1, 0), std
+        else:
+            return np.where(mean>0.5, 1, 0)
         
+    
         
         
 class AdaSTEMRegressor(AdaSTEM):
@@ -509,8 +593,8 @@ class AdaSTEMRegressor(AdaSTEM):
                  task='regression',
                  ensemble_fold=1, 
                  min_ensemble_require=1, 
-                 grid_len_long_upper_threshold=25, 
-                 grid_len_long_lower_threshold=5, 
+                 grid_len_lon_upper_threshold=25, 
+                 grid_len_lon_lower_threshold=5, 
                  grid_len_lat_upper_threshold=25, 
                  grid_len_lat_lower_threshold=5, 
                  points_lower_threshold=50, 
@@ -518,6 +602,7 @@ class AdaSTEMRegressor(AdaSTEM):
                  temporal_end=366, 
                  temporal_step=20, 
                  temporal_bin_interval=50, 
+                 temporal_bin_start_jitter = 'random',
                  stixel_training_size_threshold=50, 
                  save_gridding_plot=True, 
                  save_tmp=True, 
@@ -527,11 +612,13 @@ class AdaSTEMRegressor(AdaSTEM):
                          task,
                          ensemble_fold, 
                          min_ensemble_require,
-                         grid_len_long_upper_threshold, 
-                         grid_len_long_lower_threshold, 
+                         grid_len_lon_upper_threshold, 
+                         grid_len_lon_lower_threshold, 
                          grid_len_lat_upper_threshold, grid_len_lat_lower_threshold, 
                          points_lower_threshold, temporal_start, 
-                         temporal_end, temporal_step, temporal_bin_interval, stixel_training_size_threshold, 
+                         temporal_end, temporal_step, temporal_bin_interval, 
+                         temporal_bin_start_jitter,
+                         stixel_training_size_threshold, 
                          save_gridding_plot, save_tmp, save_dir, sample_weights_for_classifier)
         
         # self.task='regression'
@@ -544,8 +631,8 @@ class AdaSTEMHurdle(AdaSTEM):
                  task='hurdle',
                  ensemble_fold=1, 
                  min_ensemble_require=1, 
-                 grid_len_long_upper_threshold=25, 
-                 grid_len_long_lower_threshold=5, 
+                 grid_len_lon_upper_threshold=25, 
+                 grid_len_lon_lower_threshold=5, 
                  grid_len_lat_upper_threshold=25, 
                  grid_len_lat_lower_threshold=5, 
                  points_lower_threshold=50, 
@@ -553,6 +640,7 @@ class AdaSTEMHurdle(AdaSTEM):
                  temporal_end=366, 
                  temporal_step=20, 
                  temporal_bin_interval=50, 
+                 temporal_bin_start_jitter = 'random',
                  stixel_training_size_threshold=50, 
                  save_gridding_plot=True, 
                  save_tmp=True, 
@@ -562,11 +650,13 @@ class AdaSTEMHurdle(AdaSTEM):
                          task,
                          ensemble_fold, 
                          min_ensemble_require,
-                         grid_len_long_upper_threshold, 
-                         grid_len_long_lower_threshold, 
+                         grid_len_lon_upper_threshold, 
+                         grid_len_lon_lower_threshold, 
                          grid_len_lat_upper_threshold, grid_len_lat_lower_threshold, 
                          points_lower_threshold, temporal_start, 
-                         temporal_end, temporal_step, temporal_bin_interval, stixel_training_size_threshold, 
+                         temporal_end, temporal_step, temporal_bin_interval, 
+                         temporal_bin_start_jitter,
+                         stixel_training_size_threshold, 
                          save_gridding_plot, save_tmp, save_dir, sample_weights_for_classifier)
         
         # self.task='hurdle'

@@ -1,10 +1,10 @@
 import numpy as np
 import warnings
 from .dummy_model import dummy_model1
+from sklearn.base import BaseEstimator
 
 
-
-class Hurdle():
+class Hurdle(BaseEstimator):
     def __init__(self, classifier, regressor):
         '''
         The input classifier should have function:

@@ -135,12 +135,13 @@ def make_sample_gif_hexagon(data, file_path, col='abundance', log_scale = False,
         ax.set_xlim(-180, 180)
         ax.set_ylim(-90,90)
         # ax.axis('off')
-        ax.set_title(f'DOY: {i+1}', fontsize=5)
+        ax.set_title(f'DOY: {i+1}', fontsize=20)
         
         # tt = ax.axes
         if return_plot_object == True:
             return scat1,
         else:
+            # ax.axis('off')
             return ax.figure, #scat1.get_children() *scat1, #ax.figure,
         
     ### scale the color norm
