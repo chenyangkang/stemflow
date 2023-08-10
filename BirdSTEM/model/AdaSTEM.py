@@ -507,8 +507,8 @@ class AdaSTEM(BaseEstimator):
                 'y_ture':y_test,
                 'pred':y_pred
             }).dropna()
-            s_r, _ = spearmanr(a.y_ture, a.pred)
-            p_r, _ = pearsonr(a.y_ture, a.pred)
+            s_r, _ = spearmanr(np.array(a.y_ture), np.array(a.pred))
+            p_r, _ = pearsonr(np.array(a.y_ture), np.array(a.pred))
             r2 = r2_score(a.y_ture, a.pred)
             MAE = mean_absolute_error(a.y_ture, a.pred)
             MSE = mean_squared_error(a.y_ture, a.pred)
