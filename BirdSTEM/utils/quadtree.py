@@ -47,16 +47,16 @@ class Node():
         return self.points
     
     
-def recursive_subdivide(node, grid_len_long_upper_threshold, grid_len_long_lower_threshold, \
+def recursive_subdivide(node, grid_len_lon_upper_threshold, grid_len_lon_lower_threshold, \
                             grid_len_lat_upper_threshold, grid_len_lat_lower_threshold, \
                             points_lower_threshold):
 
     
     if len(node.points)/2 <= points_lower_threshold:
-        if not ((node.width > grid_len_long_upper_threshold) or (node.height > grid_len_lat_upper_threshold)):
+        if not ((node.width > grid_len_lon_upper_threshold) or (node.height > grid_len_lat_upper_threshold)):
             return
     
-    if (node.width/2 < grid_len_long_lower_threshold) or (node.height/2 < grid_len_lat_lower_threshold):
+    if (node.width/2 < grid_len_lon_lower_threshold) or (node.height/2 < grid_len_lat_lower_threshold):
         return
    
     w_ = float(node.width/2)
@@ -64,25 +64,25 @@ def recursive_subdivide(node, grid_len_long_upper_threshold, grid_len_long_lower
 
     p = contains(node.x0, node.y0, w_, h_, node.points)
     x1 = Node(node.x0, node.y0, w_, h_, p)
-    recursive_subdivide(x1, grid_len_long_upper_threshold, grid_len_long_lower_threshold, \
+    recursive_subdivide(x1, grid_len_lon_upper_threshold, grid_len_lon_lower_threshold, \
                             grid_len_lat_upper_threshold, grid_len_lat_lower_threshold, \
                             points_lower_threshold)
 
     p = contains(node.x0, node.y0+h_, w_, h_, node.points)
     x2 = Node(node.x0, node.y0+h_, w_, h_, p)
-    recursive_subdivide(x2, grid_len_long_upper_threshold, grid_len_long_lower_threshold, \
+    recursive_subdivide(x2, grid_len_lon_upper_threshold, grid_len_lon_lower_threshold, \
                             grid_len_lat_upper_threshold, grid_len_lat_lower_threshold, \
                             points_lower_threshold)
 
     p = contains(node.x0+w_, node.y0, w_, h_, node.points)
     x3 = Node(node.x0 + w_, node.y0, w_, h_, p)
-    recursive_subdivide(x3, grid_len_long_upper_threshold, grid_len_long_lower_threshold, \
+    recursive_subdivide(x3, grid_len_lon_upper_threshold, grid_len_lon_lower_threshold, \
                             grid_len_lat_upper_threshold, grid_len_lat_lower_threshold, \
                             points_lower_threshold)
 
     p = contains(node.x0+w_, node.y0+h_, w_, h_, node.points)
     x4 = Node(node.x0+w_, node.y0+h_, w_, h_, p)
-    recursive_subdivide(x4, grid_len_long_upper_threshold, grid_len_long_lower_threshold, \
+    recursive_subdivide(x4, grid_len_lon_upper_threshold, grid_len_lon_lower_threshold, \
                             grid_len_lat_upper_threshold, grid_len_lat_lower_threshold, \
                             points_lower_threshold)
 
@@ -111,19 +111,19 @@ import matplotlib.pyplot as plt # plotting libraries
 import matplotlib.patches as patches
 
 class QTree():
-    def __init__(self, grid_len_long_upper_threshold, grid_len_long_lower_threshold, \
+    def __init__(self, grid_len_lon_upper_threshold, grid_len_lon_lower_threshold, \
                         grid_len_lat_upper_threshold, grid_len_lat_lower_threshold, \
-                        points_lower_threshold, long_lat_equal_grid=True,\
+                        points_lower_threshold, lon_lat_equal_grid=True,\
                             rotation_angle = 0, \
                     calibration_point_x_jitter = 0,\
                         calibration_point_y_jitter = 0):
 
         self.points_lower_threshold = points_lower_threshold
-        self.grid_len_long_upper_threshold = grid_len_long_upper_threshold
-        self.grid_len_long_lower_threshold = grid_len_long_lower_threshold
+        self.grid_len_lon_upper_threshold = grid_len_lon_upper_threshold
+        self.grid_len_lon_lower_threshold = grid_len_lon_lower_threshold
         self.grid_len_lat_upper_threshold = grid_len_lat_upper_threshold
         self.grid_len_lat_lower_threshold = grid_len_lat_lower_threshold
-        self.long_lat_equal_grid = long_lat_equal_grid
+        self.lon_lat_equal_grid = lon_lat_equal_grid
         # self.points = [Point(random.uniform(0, 10), random.uniform(0, 10)) for x in range(n)]
         self.points = []
         self.rotation_angle = rotation_angle
@@ -131,7 +131,7 @@ class QTree():
         self.calibration_point_y_jitter = calibration_point_y_jitter
 
 
-    def add_long_lat_data(self, indexes, x_array, y_array):
+    def add_lon_lat_data(self, indexes, x_array, y_array):
         if not len(x_array) == len(y_array) or not len(x_array) == len(indexes):
             raise ValueError("input longitude and latitute and indexes not in same length!")
         
@@ -144,11 +144,11 @@ class QTree():
             [np.sin(theta), np.cos(theta)]
         ])
         data = data @ rotation_matrix
-        long_new = (data[:,0] + self.calibration_point_x_jitter).tolist()
+        lon_new = (data[:,0] + self.calibration_point_x_jitter).tolist()
         lat_new = (data[:,1] + self.calibration_point_y_jitter).tolist()
 
-        for index,long,lat in zip(indexes, long_new, lat_new):
-            self.points.append(Point(index, long, lat))
+        for index,lon,lat in zip(indexes, lon_new, lat_new):
+            self.points.append(Point(index, lon, lat))
 
 
     
@@ -162,23 +162,23 @@ class QTree():
         left_bottom_point_y = np.min(y_list)
 
         self.left_bottom_point = (left_bottom_point_x ,left_bottom_point_y)
-        if self.long_lat_equal_grid == True:
+        if self.lon_lat_equal_grid == True:
             self.root = Node(left_bottom_point_x, left_bottom_point_y, \
                 max(self.grid_length_x, self.grid_length_y), \
                     max(self.grid_length_x, self.grid_length_y), self.points)
-        elif self.long_lat_equal_grid == False:
+        elif self.lon_lat_equal_grid == False:
             self.root = Node(left_bottom_point_x, left_bottom_point_y, \
                 self.grid_length_x, \
                     self.grid_length_y, self.points)
         else:
-            raise ValueError('The input long_lat_equal_grid not a boolean value!')            
+            raise ValueError('The input lon_lat_equal_grid not a boolean value!')            
 
     
     def get_points(self):
         return self.points
     
     def subdivide(self):
-        recursive_subdivide(self.root, self.grid_len_long_upper_threshold, self.grid_len_long_lower_threshold, \
+        recursive_subdivide(self.root, self.grid_len_lon_upper_threshold, self.grid_len_lon_lower_threshold, \
                             self.grid_len_lat_upper_threshold, self.grid_len_lat_lower_threshold, \
                             self.points_lower_threshold)
     
@@ -199,8 +199,8 @@ class QTree():
             width_set.add(el.width)
             height_set.add(el.height)
             
-        # print("Minimum segment area: %.3f units^2, min_long: %.3f units, min_lat: %.3f units" %(min(areas),min(width_set),min(height_set)))
-        # print("Maximum segment area: %.3f units^2, max_long: %.3f units, max_lat: %.3f units" %(max(areas),max(width_set),max(height_set)))
+        # print("Minimum segment area: %.3f units^2, min_lon: %.3f units, min_lat: %.3f units" %(min(areas),min(width_set),min(height_set)))
+        # print("Maximum segment area: %.3f units^2, max_lon: %.3f units, max_lat: %.3f units" %(max(areas),max(width_set),max(height_set)))
 
         theta = -(self.rotation_angle/360) * np.pi * 2
         rotation_matrix = np.array([
@@ -269,16 +269,19 @@ class QTree():
         return result
         
 
-def generate_temporal_bins(start, end, step, bin_interval):
+def generate_temporal_bins(start, end, step, bin_interval, temporal_bin_start_jitter):
     '''
     start, end, step, bin_interval
     '''
     bin_interval = bin_interval #50
     step = step #20
-    if not bin_interval - step > step:
-        raise AttributeError('Did not satisfy constrain: bin_interval - step > step')
     
-    start = start - np.random.uniform(low=0, high=bin_interval) ### ensure 20 DOY
+    if type(temporal_bin_start_jitter) == str and temporal_bin_start_jitter=='random':
+        jit = np.random.uniform(low=0, high=bin_interval)
+    elif type(temporal_bin_start_jitter) in [int, float]:
+        jit = temporal_bin_start_jitter
+    
+    start = start - jit ### ensure 20 DOY
     bin_list = []
     
     i=0
@@ -294,10 +297,11 @@ def generate_temporal_bins(start, end, step, bin_interval):
 
 
 def get_ensemble_quadtree(data,size=1,
-                            grid_len_long_upper_threshold=25, grid_len_long_lower_threshold=5,
+                            grid_len_lon_upper_threshold=25, grid_len_lon_lower_threshold=5,
                             grid_len_lat_upper_threshold=25, grid_len_lat_lower_threshold=5,
                             points_lower_threshold=50,
                             temporal_start = 1, temporal_end=366, temporal_step=20, temporal_bin_interval = 50,
+                            temporal_bin_start_jitter = 'random',
                             save_gridding_plot=True,
                             save_path=''):
     '''
@@ -326,8 +330,9 @@ def get_ensemble_quadtree(data,size=1,
         temporal_bins = generate_temporal_bins(start = temporal_start, 
                                                end=temporal_end, 
                                                step=temporal_step, 
-                                                bin_interval = temporal_bin_interval)
-        
+                                                bin_interval = temporal_bin_interval,
+                                                temporal_bin_start_jitter = temporal_bin_start_jitter)
+
         for time_block_index,bin_ in enumerate(temporal_bins):
 
             time_start = bin_[0]
@@ -335,19 +340,21 @@ def get_ensemble_quadtree(data,size=1,
             sub_data=data[(data['DOY']>=time_start) & (data['DOY']<time_end)]
 
 
-            QT_obj = QTree(grid_len_long_upper_threshold=grid_len_long_upper_threshold, \
-                            grid_len_long_lower_threshold=grid_len_long_lower_threshold, \
+            QT_obj = QTree(grid_len_lon_upper_threshold=grid_len_lon_upper_threshold, \
+                            grid_len_lon_lower_threshold=grid_len_lon_lower_threshold, \
                             grid_len_lat_upper_threshold=grid_len_lat_upper_threshold, \
                             grid_len_lat_lower_threshold=grid_len_lat_lower_threshold, \
                             points_lower_threshold=points_lower_threshold, \
 
-                            long_lat_equal_grid = True, rotation_angle = rotation_angle, \
+                            lon_lat_equal_grid = True, rotation_angle = rotation_angle, \
                                 calibration_point_x_jitter = calibration_point_x_jitter,\
                                     calibration_point_y_jitter = calibration_point_y_jitter)
 
             ## Give the data and indexes. The indexes should be used to assign points data so that base model can run on those points,
             ## You need to generate the splitting parameters once giving the data. Like the calibration point and min,max.
-            QT_obj.add_long_lat_data(sub_data.index, sub_data['longitude'].values, sub_data['latitude'].values)
+            
+            # print(sub_data.index, sub_data['longitude'].values, sub_data['latitude'].values)
+            QT_obj.add_lon_lat_data(sub_data.index, sub_data['longitude'].values, sub_data['latitude'].values)
             QT_obj.generate_griding_params()
             
             ## Call subdivide to precess

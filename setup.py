@@ -22,7 +22,8 @@ setup(
     long_description=long_description,
     packages=find_packages(),
     install_requires=[''],
-    keywords=['python', 'ebird', 'spatial-temporal model', 'citizen science'],
+    keywords=['python', 'ebird', 'spatial-temporal model', 'citizen science', 'spatial temporal exploratory model',
+              'STEM','AdaSTEM','abundance','phenology'],
     classifiers=[
         "Development Status :: 1 - Planning",
         "Intended Audience :: quantitative ecologist",
