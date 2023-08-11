@@ -97,7 +97,7 @@ class AdaSTEM(BaseEstimator):
     def __init__(self,base_model,
                 task='hurdle',
                 ensemble_fold=1,
-                min_ensemble_require = 1,
+                min_ensemble_required = 1,
                 grid_len_lon_upper_threshold=25,
                 grid_len_lon_lower_threshold=5,
                 grid_len_lat_upper_threshold=25,
@@ -129,7 +129,7 @@ class AdaSTEM(BaseEstimator):
             warnings.warn('You have chosen HURDLE task. The goal is to first conduct classification, and then apply regression on points with *positive values*')
                     
         self.ensemble_fold = ensemble_fold
-        self.min_ensemble_require = min_ensemble_require
+        self.min_ensemble_required = min_ensemble_required
         self.grid_len_lon_upper_threshold=grid_len_lon_upper_threshold
         self.grid_len_lon_lower_threshold=grid_len_lon_lower_threshold
         self.grid_len_lat_upper_threshold=grid_len_lat_upper_threshold
@@ -160,7 +160,7 @@ class AdaSTEM(BaseEstimator):
     #     return {
     #     'base_model':self.base_model,
     #     'ensemble_fold':self.ensemble_fold,
-    #     'min_ensemble_require':self.min_ensemble_require,
+    #     'min_ensemble_required':self.min_ensemble_required,
     #     'grid_len_lon_upper_threshold':self.grid_len_lon_upper_threshold,
     #     'grid_len_lon_lower_threshold':self.grid_len_lon_lower_threshold,
     #     'grid_len_lat_upper_threshold':self.grid_len_lat_upper_threshold,
@@ -391,10 +391,10 @@ class AdaSTEM(BaseEstimator):
         res_nan_count = res.isnull().sum(axis=1)
         res_not_nan_count = len(round_res_list) - res_nan_count
         
-        pred_mean = np.where(res_not_nan_count.values < self.min_ensemble_require,
+        pred_mean = np.where(res_not_nan_count.values < self.min_ensemble_required,
                                     np.nan,
                                     res_mean.values)
-        pred_std = np.where(res_not_nan_count.values < self.min_ensemble_require,
+        pred_std = np.where(res_not_nan_count.values < self.min_ensemble_required,
                                     np.nan,
                                     res_std.values)
         
@@ -549,7 +549,7 @@ class AdaSTEMClassifier(AdaSTEM):
     def __init__(self, base_model, 
                  task='classification',
                  ensemble_fold=1, 
-                 min_ensemble_require=1, 
+                 min_ensemble_required=1, 
                  grid_len_lon_upper_threshold=25, 
                  grid_len_lon_lower_threshold=5, 
                  grid_len_lat_upper_threshold=25, 
@@ -568,7 +568,7 @@ class AdaSTEMClassifier(AdaSTEM):
         super().__init__(base_model, 
                          task,
                          ensemble_fold, 
-                         min_ensemble_require,
+                         min_ensemble_required,
                          grid_len_lon_upper_threshold, 
                          grid_len_lon_lower_threshold, 
                          grid_len_lat_upper_threshold, grid_len_lat_lower_threshold, 
@@ -592,7 +592,7 @@ class AdaSTEMRegressor(AdaSTEM):
     def __init__(self, base_model, 
                  task='regression',
                  ensemble_fold=1, 
-                 min_ensemble_require=1, 
+                 min_ensemble_required=1, 
                  grid_len_lon_upper_threshold=25, 
                  grid_len_lon_lower_threshold=5, 
                  grid_len_lat_upper_threshold=25, 
@@ -611,7 +611,7 @@ class AdaSTEMRegressor(AdaSTEM):
         super().__init__(base_model, 
                          task,
                          ensemble_fold, 
-                         min_ensemble_require,
+                         min_ensemble_required,
                          grid_len_lon_upper_threshold, 
                          grid_len_lon_lower_threshold, 
                          grid_len_lat_upper_threshold, grid_len_lat_lower_threshold, 
@@ -630,7 +630,7 @@ class AdaSTEMHurdle(AdaSTEM):
     def __init__(self, base_model, 
                  task='hurdle',
                  ensemble_fold=1, 
-                 min_ensemble_require=1, 
+                 min_ensemble_required=1, 
                  grid_len_lon_upper_threshold=25, 
                  grid_len_lon_lower_threshold=5, 
                  grid_len_lat_upper_threshold=25, 
@@ -649,7 +649,7 @@ class AdaSTEMHurdle(AdaSTEM):
         super().__init__(base_model,
                          task,
                          ensemble_fold, 
-                         min_ensemble_require,
+                         min_ensemble_required,
                          grid_len_lon_upper_threshold, 
                          grid_len_lon_lower_threshold, 
                          grid_len_lat_upper_threshold, grid_len_lat_lower_threshold, 
