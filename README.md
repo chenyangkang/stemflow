@@ -3,7 +3,7 @@ AdaSTEM model for daily abundance estimation using eBird citizen science data
 
 ## Installation
 
-```
+```py
 pip install BirdSTEM
 ```
 

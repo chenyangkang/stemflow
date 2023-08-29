@@ -4,7 +4,7 @@
 
 ## Installation
 
-```
+```py
 pip install BirdSTEM
 ```
 
