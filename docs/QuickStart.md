@@ -1,7 +1,5 @@
 # Quick Start
 
-
-## Fit an AdaSTEM model
 ```py
 from BirdSTEM.model.AdaSTEM import AdaSTEM, AdaSTEMHurdle
 from BirdSTEM.model.Hurdle import Hurdle
@@ -13,6 +11,7 @@ base_model = Hurdle(classifier=XGBClassifier(tree_method='hist',random_state=42,
                     regressor=XGBRegressor(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1))
 
 
+
 model = AdaSTEMHurdle(base_model=base_model,
                         ensemble_fold = 10,
                         min_ensemble_required= 7,
@@ -21,7 +20,7 @@ model = AdaSTEMHurdle(base_model=base_model,
                             grid_len_lat_upper_threshold=50,
                             grid_len_lat_lower_threshold=10,
                             points_lower_threshold = 50,
-                            temporal_start = 0, temporal_end=1400, temporal_step=100, temporal_bin_interval = 100,
+                            temporal_start = 0, temporal_end=366, temporal_step=20, temporal_bin_interval = 50,
                             stixel_training_size_threshold = 50, ## important, should be consistent with points_lower_threshold
                             save_gridding_plot = True,
                             save_tmp = True,
