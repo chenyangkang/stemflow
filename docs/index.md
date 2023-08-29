@@ -14,9 +14,9 @@ In the demo, we first split the training data using temporal sliding windows wit
 
 This process is excecuted 10 times (`ensemble_fold = 10`), each time with random jitter and random rotation of the gridding, generating 10 ensembles. In the prediciton phase, only spatial-temporal points with more than 7 (`min_ensemble_required = 7`)ensemble usable are predicted (otherwise, set as `np.nan`)
 
-Fitting and prediction follow the convention of sklearn estimator class:
+Fitting and prediction follow the convention of sklearn `estimator` class:
 
-```
+```py
 ## fit
 model.fit(X_train,y_train)
 
@@ -76,3 +76,10 @@ print(eval_metrics)
 
 ----
 ![QuadTree example](QuadTree.png)
+
+-----
+References:
+
+1. [Fink, D., Damoulas, T., & Dave, J. (2013, June). Adaptive Spatio-Temporal Exploratory Models: Hemisphere-wide species distributions from massively crowdsourced eBird data. In Proceedings of the AAAI Conference on Artificial Intelligence (Vol. 27, No. 1, pp. 1284-1290).](https://ojs.aaai.org/index.php/AAAI/article/view/8484)
+
+2. [Fink, D., Auer, T., Johnston, A., Ruiz‐Gutierrez, V., Hochachka, W. M., & Kelling, S. (2020). Modeling avian full annual cycle distribution and population trends with citizen science data. Ecological Applications, 30(3), e02056.](https://esajournals.onlinelibrary.wiley.com/doi/full/10.1002/eap.2056)
