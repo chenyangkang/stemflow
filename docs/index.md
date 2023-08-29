@@ -12,7 +12,7 @@ pip install BirdSTEM
 Daily Abundance &amp; phenology estimation using eBird citizen science data
 
 ## Brief introduction
-Bird STEM is an AdaSTEM model for daily abundance estimation using eBird citizen science data. It leverages the "adjacency" information of surrounding bird observation in space and time, to predict the occurence and abundance of target spatial-temporal point. In the demo, we use a two-step hurdle model as "base model", with XGBoostClassifier for occurence modeling and XGBoostRegressor for abundance modeling.
+BirdSTEM is an AdaSTEM model for daily abundance estimation using eBird citizen science data. It leverages the "adjacency" information of surrounding bird observation in space and time, to predict the occurence and abundance of target spatial-temporal point. In the demo, we use a two-step hurdle model as "base model", with XGBoostClassifier for occurence modeling and XGBoostRegressor for abundance modeling.
 
 User can define the size of stixel (spatial temporal pixel) in terms of space and time. Larger stixel guarantees generalizability but loses precision in fine resolution; Smaller stixel may have better predictability in the exact area but reduced extrapolability for points outside the stixel.
 
