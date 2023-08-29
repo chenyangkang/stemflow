@@ -2,6 +2,12 @@
 
 <!-- For full documentation visit [mkdocs.org](https://www.mkdocs.org). -->
 
+## Installation
+
+```
+pip install BirdSTEM
+```
+
 # BirdSTEM
 Daily Abundance &amp; phenology estimation using eBird citizen science data
 
