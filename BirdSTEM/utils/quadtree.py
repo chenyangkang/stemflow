@@ -3,23 +3,20 @@ import pandas as pd
 import numpy as np
 import os
 import warnings
-import matplotlib.pyplot as plt
-import os
 import numpy as np
 from tqdm import tqdm
+import matplotlib.pyplot as plt # plotting libraries
+import matplotlib.patches as patches
 
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ["OMP_NUM_THREADS"] = "1"
-# os.environ['PROJ_LIB'] = r'/usr/proj80/share/proj'
-# os.environ['GDAL_DATA'] = r'/beegfs/store4/chenyangkang/miniconda3/share'
 
 warnings.filterwarnings("ignore")
 pd.set_option("display.max_columns",None)
 
-np.random.seed(42)
-
 from .generate_soft_colors import generate_soft_color
+from .validation import check_random_state
 
 
 class Point():
@@ -106,10 +103,6 @@ def find_children(node):
             children += (find_children(child))
     return children
 
-
-import matplotlib.pyplot as plt # plotting libraries
-import matplotlib.patches as patches
-
 class QTree():
     def __init__(self, grid_len_lon_upper_threshold, grid_len_lon_lower_threshold, \
                         grid_len_lat_upper_threshold, grid_len_lat_lower_threshold, \
@@ -182,13 +175,9 @@ class QTree():
                             self.grid_len_lat_upper_threshold, self.grid_len_lat_lower_threshold, \
                             self.points_lower_threshold)
     
-    def graph(self, scatter=True, show=True):
+    def graph(self, scatter=True):
         the_color = generate_soft_color()
-        
-        plt.figure(figsize=(20, 20))
-        plt.xlim([-180,180])
-        plt.ylim([-90,90])
-        plt.title("Quadtree")
+    
         c = find_children(self.root)
         # print("Number of segments: %d" %len(c))
         areas = set()
@@ -230,16 +219,9 @@ class QTree():
 
         data = np.array([x,y]).T @ rotation_matrix
         if scatter:
-            plt.scatter(data[:,0].tolist(), data[:,1].tolist(), s=0.2, c='tab:blue') # plots the points as red dots
+            plt.scatter(data[:,0].tolist(), data[:,1].tolist(), s=0.2, c='tab:blue', alpha=0.7) # plots the points as red dots
             
-        plt.tight_layout()
-        plt.gca().set_aspect('equal')
-        
-        ax = plt.gcf()
-        
-        ###
-        plt.show() if show else plt.close()
-        return ax
+        return 
 
     def get_final_result(self):
         ## get points assignment to each grid and transform the data into pandas df.
@@ -281,7 +263,7 @@ def generate_temporal_bins(start, end, step, bin_interval, temporal_bin_start_ji
     elif type(temporal_bin_start_jitter) in [int, float]:
         jit = temporal_bin_start_jitter
     
-    start = start - jit ### ensure 20 DOY
+    start = start - jit
     bin_list = []
     
     i=0
@@ -296,34 +278,42 @@ def generate_temporal_bins(start, end, step, bin_interval, temporal_bin_start_ji
     return bin_list
 
 
-def get_ensemble_quadtree(data,size=1,
+def get_ensemble_quadtree(data,
+                            Spatio1 = 'longitude',
+                            Spatio2 = 'latitude',
+                            Temporal1 = 'DOY',
+                            size=1,
                             grid_len_lon_upper_threshold=25, grid_len_lon_lower_threshold=5,
                             grid_len_lat_upper_threshold=25, grid_len_lat_lower_threshold=5,
                             points_lower_threshold=50,
                             temporal_start = 1, temporal_end=366, temporal_step=20, temporal_bin_interval = 50,
                             temporal_bin_start_jitter = 'random',
+                            spatio_bin_jitter_maginitude = 10,
                             save_gridding_plot=True,
+                            plot_xlims = (-180,180),
+                            plot_ylims = (-90,90),
                             save_path=''):
     '''
     Must have columns:
-    1. sampling_event_identifier
-    2. DOY
-    3. longitude
-    4. latitude
+    1. DOY
+    2. longitude
+    3. latitude
     '''
+    
     ensemble_all_df_list = []
-
-    gridding_plot_list = []
+        
+    if save_gridding_plot:
+        plt.figure(figsize=(20, 20))
+        plt.xlim([plot_xlims[0],plot_xlims[1]])
+        plt.ylim([plot_ylims[0],plot_ylims[1]])
+        plt.title("Quadtree", fontsize=20)
+        
         
     for ensemble_count in tqdm(range(size), total=size, desc='Generating Ensemble: '):
-        if ensemble_count==0:
-            time_jitter = 0
-        else:
-            time_jitter = -(ensemble_count/size)*30.5
             
         rotation_angle = np.random.uniform(0,360)
-        calibration_point_x_jitter = np.random.uniform(-10,10)
-        calibration_point_y_jitter = np.random.uniform(-10,10)
+        calibration_point_x_jitter = np.random.uniform(-spatio_bin_jitter_maginitude, spatio_bin_jitter_maginitude)
+        calibration_point_y_jitter = np.random.uniform(-spatio_bin_jitter_maginitude, spatio_bin_jitter_maginitude)
 
         # print(f'ensembel_count: {ensemble_count}')
         
@@ -337,24 +327,25 @@ def get_ensemble_quadtree(data,size=1,
 
             time_start = bin_[0]
             time_end = bin_[1]
-            sub_data=data[(data['DOY']>=time_start) & (data['DOY']<time_end)]
-
+            sub_data=data[(data[Temporal1]>=time_start) & (data[Temporal1]<time_end)]
+            
+            if len(sub_data)==0:
+                continue
 
             QT_obj = QTree(grid_len_lon_upper_threshold=grid_len_lon_upper_threshold, \
                             grid_len_lon_lower_threshold=grid_len_lon_lower_threshold, \
                             grid_len_lat_upper_threshold=grid_len_lat_upper_threshold, \
                             grid_len_lat_lower_threshold=grid_len_lat_lower_threshold, \
                             points_lower_threshold=points_lower_threshold, \
-
-                            lon_lat_equal_grid = True, rotation_angle = rotation_angle, \
-                                calibration_point_x_jitter = calibration_point_x_jitter,\
-                                    calibration_point_y_jitter = calibration_point_y_jitter)
+                            lon_lat_equal_grid = True, 
+                            rotation_angle = rotation_angle, \
+                            calibration_point_x_jitter = calibration_point_x_jitter,\
+                            calibration_point_y_jitter = calibration_point_y_jitter)
 
             ## Give the data and indexes. The indexes should be used to assign points data so that base model can run on those points,
             ## You need to generate the splitting parameters once giving the data. Like the calibration point and min,max.
             
-            # print(sub_data.index, sub_data['longitude'].values, sub_data['latitude'].values)
-            QT_obj.add_lon_lat_data(sub_data.index, sub_data['longitude'].values, sub_data['latitude'].values)
+            QT_obj.add_lon_lat_data(sub_data.index, sub_data[Spatio1].values, sub_data[Spatio2].values)
             QT_obj.generate_griding_params()
             
             ## Call subdivide to precess
@@ -362,21 +353,14 @@ def get_ensemble_quadtree(data,size=1,
             this_slice = QT_obj.get_final_result()
             
             if save_gridding_plot:
-                ax = QT_obj.graph(scatter=False, show=False)
-                gridding_plot_list.append({
-                    'ensemble':ensemble_count,
-                    'time_block_index':time_block_index,
-                    'time_bin_start':bin_[0],
-                    'time_bin_end':bin_[1],
-                    'ax':ax
-                })
+                if time_block_index == int(len(temporal_bins)/2):
+                    QT_obj.graph(scatter=False)
                 
             this_slice['ensemble_index'] = ensemble_count
-            this_slice['DOY_start'] = time_start
-            this_slice['DOY_end'] = time_end
-            # this_slice['checklist_name'] = [sub_data.loc[i,:]['sampling_event_identifier'].values.tolist() for i in this_slice['checklist_indexes']]
-            this_slice['DOY_start']=round(this_slice['DOY_start'],1)
-            this_slice['DOY_end']=round(this_slice['DOY_end'],1)
+            this_slice[f'{Temporal1}_start'] = time_start
+            this_slice[f'{Temporal1}_end'] = time_end
+            this_slice[f'{Temporal1}_start']=round(this_slice[f'{Temporal1}_start'],1)
+            this_slice[f'{Temporal1}_end']=round(this_slice[f'{Temporal1}_end'],1)
             this_slice['unique_stixel_id'] = [str(time_block_index)+"_"+str(i)+"_"+str(k) for i,k in zip (this_slice['ensemble_index'].values, 
                                                                                                           this_slice['stixel_indexes'].values)]
             ensemble_all_df_list.append(this_slice)
@@ -386,5 +370,10 @@ def get_ensemble_quadtree(data,size=1,
         ensemble_df.to_csv(save_path,index=False)
         print(f'Saved! {save_path}')
         
-    return ensemble_df, gridding_plot_list
+    plt.tight_layout()
+    plt.gca().set_aspect('equal')
+    ax = plt.gcf()
+    plt.close()
+        
+    return ensemble_df, ax
 
