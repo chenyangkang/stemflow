@@ -20,55 +20,67 @@ Fitting and prediction methods follow the convention of sklearn `estimator` clas
 
 ```py
 ## fit
-model.fit(X_train,y_train)
+model.fit(X_train.reset_index(drop=True), y_train)
 
 ## predict
-pred_mean, pred_std = model.predict(X_test)
-pred_mean = np.where(pred_mean>0, pred_mean, 0)
+pred = model.predict(X_test)
+pred = np.where(pred<0, 0, pred)
 ```
 
-Where the pred_mean and pred_std are the mean and standard deviation of the predicted values across ensembles.
+Where the pred is the mean of the predicted values across ensembles.
 
 
-## Full usage:
+## Usage
 
 ```py
-from BirdSTEM.model.AdaSTEM import AdaSTEM, AdaSTEMHurdle
-from BirdSTEM.model.Hurdle import Hurdle
+from BirdSTEM.model.AdaSTEM import AdaSTEM, AdaSTEMClassifier, AdaSTEMRegressor
+from BirdSTEM.model.Hurdle import Hurdle_for_AdaSTEM
 from xgboost import XGBClassifier, XGBRegressor
 
 SAVE_DIR = './'
 
-base_model = Hurdle(classifier=XGBClassifier(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1),
-                    regressor=XGBRegressor(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1))
 
+model = Hurdle_for_AdaSTEM(
+    classifier=AdaSTEMClassifier(base_model=XGBClassifier(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1),
+                                save_gridding_plot = True,
+                                ensemble_fold=10, 
+                                min_ensemble_required=7,
+                                grid_len_lon_upper_threshold=25,
+                                grid_len_lon_lower_threshold=5,
+                                grid_len_lat_upper_threshold=25,
+                                grid_len_lat_lower_threshold=5,
+                                points_lower_threshold=50, 
+                                save_dir = SAVE_DIR),
+    regressor=AdaSTEMRegressor(base_model=XGBRegressor(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1),
+                                save_gridding_plot = True,
+                                ensemble_fold=10, 
+                                min_ensemble_required=7,
+                                grid_len_lon_upper_threshold=25,
+                                grid_len_lon_lower_threshold=5,
+                                grid_len_lat_upper_threshold=25,
+                                grid_len_lat_lower_threshold=5,
+                                points_lower_threshold=50,
+                                save_dir = SAVE_DIR)
+)
 
-
-model = AdaSTEMHurdle(base_model=base_model,
-                        ensemble_fold = 10,
-                        min_ensemble_required= 7,
-                        grid_len_lon_upper_threshold=50,
-                            grid_len_lon_lower_threshold=10,
-                            grid_len_lat_upper_threshold=50,
-                            grid_len_lat_lower_threshold=10,
-                            points_lower_threshold = 50,
-                            temporal_start = 0, temporal_end=366, temporal_step=20, temporal_bin_interval = 50,
-                            stixel_training_size_threshold = 50, ## important, should be consistent with points_lower_threshold
-                            save_gridding_plot = True,
-                            save_tmp = True,
-                            save_dir=SAVE_DIR,
-                            sample_weights_for_classifier=True)
 
 ## fit
-model.fit(X_train,y_train)
+model.fit(X_train.reset_index(drop=True), y_train)
 
 ## predict
-pred_mean, pred_std = model.predict(X_test)
-pred_mean = np.where(pred_mean>0, pred_mean, 0)
+pred = model.predict(X_test)
+pred = np.where(pred<0, 0, pred)
 eval_metrics = AdaSTEM.eval_STEM_res('hurdle',y_test, pred_mean)
 print(eval_metrics)
 
 ```
+
+# Plot QuadTree ensembles
+```
+model.classifier.gridding_plot
+# or model.regressor.gridding_plot
+```
+
 
 
 ----

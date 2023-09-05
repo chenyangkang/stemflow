@@ -34,7 +34,7 @@ class Hurdle(BaseEstimator):
             self.classifier.fit(new_dat[:,:-1], np.where(new_dat[:,-1]>0, 1, 0), sample_weight=sample_weight)
         else:
             self.classifier.fit(new_dat[:,:-1], np.where(new_dat[:,-1]>0, 1, 0))
-        self.regressor.fit(new_dat[new_dat[:,-1]>0,:][:,:-1], new_dat[new_dat[:,-1]>0,:][:,-1])
+        self.regressor.fit(new_dat[new_dat[:,-1]>0,:][:,:-1], np.array(new_dat[new_dat[:,-1]>0,:][:,-1]))
         
     def predict(self, X_test):
         cls_res = self.classifier.predict(X_test)
@@ -60,3 +60,44 @@ class Hurdle(BaseEstimator):
     #     res = cls_res * reg_res
     #     return res
         
+        
+class Hurdle_for_AdaSTEM(BaseEstimator):
+    def __init__(self, classifier, regressor):
+        '''
+        The input classifier should have function:
+        1. predict
+        
+        and the regressor should have
+        1. predict
+        
+        '''
+        self.classifier = classifier
+        self.regressor = regressor
+        
+    
+    def fit(self, X_train, y_train):
+        '''
+        y_train should be a continued feature
+        '''
+        binary_ =np.unique(np.where(y_train>0, 1, 0))
+        if len(binary_)==1:
+            warnings.warn('Warning: only one class presented. Replace with dummy classifier & regressor.')
+            self.classifier = dummy_model1(binary_[0])
+            self.regressor = dummy_model1(binary_[0])
+            return
+        
+        X_train['y_train'] = y_train
+        
+        self.classifier.fit(X_train.iloc[:,:-1], np.where(X_train.iloc[:,-1].values>0, 1, 0))
+        self.regressor.fit(X_train[X_train['y_train']>0].iloc[:,:-1], np.array(X_train[X_train['y_train']>0].iloc[:,-1]))
+        
+    def predict(self, X_test):
+        cls_res = self.classifier.predict(X_test)
+        reg_res = self.regressor.predict(X_test)
+        # reg_res = np.where(reg_res>=0, reg_res, 0) ### we constrain the reg value to be positive
+        res = np.where(cls_res<0.5, 0, cls_res)
+        res = np.where(cls_res>0.5, reg_res, cls_res)
+        return res.reshape(-1,1)
+    
+    def predict_proba(self, X_test):
+        return self.predict(self, X_test)
