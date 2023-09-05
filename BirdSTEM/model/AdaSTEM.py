@@ -48,20 +48,26 @@ import numpy as np
 from io import StringIO
 import datetime
 import re
+import copy
 
-import statsmodels.api as sm
 from sklearn.base import BaseEstimator
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score,mean_squared_error,mean_tweedie_deviance,\
         mean_absolute_error,mean_absolute_percentage_error
-from sklearn.metrics import roc_auc_score, precision_score, accuracy_score, f1_score,recall_score
+from sklearn.metrics import roc_auc_score, precision_score, accuracy_score, f1_score, recall_score
 from scipy.stats import spearmanr
 from sklearn.utils import class_weight
 from sklearn.inspection import partial_dependence
 
+#validation check
+from pandas.core.frame import DataFrame
+from numpy import ndarray
+#
+
 ######
 from ..utils.quadtree import QTree, get_ensemble_quadtree, generate_temporal_bins
 from .dummy_model import dummy_model1
+from ..utils.validation import check_random_state
 ######
 
 
@@ -96,8 +102,8 @@ class AdaSTEM(BaseEstimator):
     '''
     def __init__(self,base_model,
                 task='hurdle',
-                ensemble_fold=1,
-                min_ensemble_required = 1,
+                ensemble_fold=10,
+                min_ensemble_required = 7,
                 grid_len_lon_upper_threshold=25,
                 grid_len_lon_lower_threshold=5,
                 grid_len_lat_upper_threshold=25,
@@ -108,12 +114,20 @@ class AdaSTEM(BaseEstimator):
                 temporal_step=20, 
                 temporal_bin_interval = 50,
                 temporal_bin_start_jitter = 'random',
-                stixel_training_size_threshold = 50,
-                save_gridding_plot=True,
-                save_tmp = True,
+                spatio_bin_jitter_maginitude = 10,
+                save_gridding_plot=False,
+                save_tmp = False,
                 save_dir='./',
-                sample_weights_for_classifier=True):
+                sample_weights_for_classifier=True,
+                plot_xlims = (-180,180),
+                plot_ylims = (-90,90)                    
+                ):
 
+        # # random state
+        # self.random_state = random_state
+        # rng = check_random_state(random_state)
+        
+        # save base model
         self.base_model = base_model
         
         for func in ['fit','predict']:
@@ -139,7 +153,10 @@ class AdaSTEM(BaseEstimator):
         self.temporal_end = temporal_end
         self.temporal_step = temporal_step
         self.temporal_bin_interval = temporal_bin_interval
-        
+        self.spatio_bin_jitter_maginitude = spatio_bin_jitter_maginitude
+        self.plot_xlims = plot_xlims
+        self.plot_ylims = plot_ylims
+                                                               
         if (not type(temporal_bin_start_jitter) in [str, float, int]):
             raise AttributeError(f'Input temporal_bin_start_jitter should be \'random\', float or int, got {type(temporal_bin_start_jitter)}')
         if type(temporal_bin_start_jitter) == str:
@@ -147,62 +164,35 @@ class AdaSTEM(BaseEstimator):
                 raise AttributeError(f'The input temporal_bin_start_jitter as string should only be \'random\'. Other options include float or int. Got {temporal_bin_start_jitter}')
         self.temporal_bin_start_jitter = temporal_bin_start_jitter
         
-        self.stixel_training_size_threshold = stixel_training_size_threshold
+        self.stixel_training_size_threshold = points_lower_threshold
         self.save_gridding_plot = save_gridding_plot
         self.save_tmp = save_tmp
         self.save_dir = save_dir
         self.sample_weights_for_classifier = sample_weights_for_classifier
         
-    # def __sklearn_clone__(self):
-    #     return self
-    
-    # def get_params(self, deep=False):
-    #     return {
-    #     'base_model':self.base_model,
-    #     'ensemble_fold':self.ensemble_fold,
-    #     'min_ensemble_required':self.min_ensemble_required,
-    #     'grid_len_lon_upper_threshold':self.grid_len_lon_upper_threshold,
-    #     'grid_len_lon_lower_threshold':self.grid_len_lon_lower_threshold,
-    #     'grid_len_lat_upper_threshold':self.grid_len_lat_upper_threshold,
-    #     'grid_len_lat_lower_threshold':self.grid_len_lat_lower_threshold,
-    #     'points_lower_threshold':self.points_lower_threshold,
-    #     'temporal_start':self.temporal_start,
-    #     'temporal_end':self.temporal_end,
-    #     'temporal_step':self.temporal_step,
-    #     'temporal_bin_interval':self.temporal_bin_interval,
-    #     'stixel_training_size_threshold':self.stixel_training_size_threshold,
-    #     'save_gridding_plot':self.save_gridding_plot,
-    #     'save_tmp':self.save_tmp,
-    #     'save_dir':self.save_dir,
-    #     'sample_weights_for_classifier':self.sample_weights_for_classifier
-    #     }
-        
-    # def set_params(self, **params):
-    #     if not params:
-    #         return self
-
-    #     for key, value in params.items():
-    #         # if hasattr(self, key):
-    #         #     setattr(self, key, value)
-    #         # else:
-    #         self.kwargs[key] = value
 
     def split(self, X_train):
         fold = self.ensemble_fold
         save_path = os.path.join(self.save_dir, 'ensemble_quadtree_df.csv')  if self.save_tmp else ''
-        self.ensemble_df, self.gridding_plot_list = get_ensemble_quadtree(X_train,\
-                                            size=fold,\
-                                            grid_len_lon_upper_threshold=self.grid_len_lon_upper_threshold, \
-                                            grid_len_lon_lower_threshold=self.grid_len_lon_lower_threshold, \
-                                            grid_len_lat_upper_threshold=self.grid_len_lat_upper_threshold, \
-                                            grid_len_lat_lower_threshold=self.grid_len_lat_lower_threshold, \
+        self.ensemble_df, self.gridding_plot = get_ensemble_quadtree(X_train,\
+                                            Spatio1 = self.Spatio1,
+                                            Spatio2 = self.Spatio2,
+                                            Temporal1 = self.Temporal1,
+                                            size=fold,
+                                            grid_len_lon_upper_threshold=self.grid_len_lon_upper_threshold,
+                                            grid_len_lon_lower_threshold=self.grid_len_lon_lower_threshold,
+                                            grid_len_lat_upper_threshold=self.grid_len_lat_upper_threshold,
+                                            grid_len_lat_lower_threshold=self.grid_len_lat_lower_threshold,
                                             points_lower_threshold=self.points_lower_threshold,
                                             temporal_start = self.temporal_start, 
                                             temporal_end=self.temporal_end, 
                                             temporal_step=self.temporal_step, 
                                             temporal_bin_interval = self.temporal_bin_interval,
                                             temporal_bin_start_jitter = self.temporal_bin_start_jitter,
+                                            spatio_bin_jitter_maginitude = self.spatio_bin_jitter_maginitude,
                                             save_gridding_plot=self.save_gridding_plot,
+                                            plot_xlims = self.plot_xlims,
+                                            plot_ylims = self.plot_ylims,
                                             save_path=save_path)
 
         self.grid_dict = {}
@@ -244,23 +234,44 @@ class AdaSTEM(BaseEstimator):
             return model
         
         
-    def fit(self, X_train, y_train):
-        type_X_train = type(X_train)
-        if not type_X_train == pd.core.frame.DataFrame:
-            raise TypeError(f'Input X_train should be type \'pd.core.frame.DataFrame\'. Got {type_X_train}')
+    def fit(self, X_train, y_train, 
+            Spatio1: str = 'longitude', 
+            Spatio2: str = 'latitude', 
+            Temporal1: str = 'DOY', use_temporal_to_train=True):
         
+        # stixel specific x_names list
+        self.stixel_specific_x_names = {}
+        
+        # check type
+        type_X_train = type(X_train)
+    
+        if not type_X_train == pd.core.frame.DataFrame:
+            raise TypeError(f'Input X_train should be type \'pd.core.frame.DataFrame\'. Got {str(type_X_train)}')
+        
+        type_y_train = type(y_train)
+        if not (isinstance(y_train, ndarray) or isinstance(y_train, DataFrame)):
+            raise TypeError(f'Input y_train should be type \'pd.core.frame.DataFrame\' or \'np.ndarray\'. Got {str(type_y_train)}')
+        
+        # store variables
+        self.Spatio1 = Spatio1
+        self.Spatio2 = Spatio2
+        self.Temporal1 = Temporal1
+        
+        # store x_names
         self.x_names = list(X_train.columns)
-        for i in ['longitude','latitude','sampling_event_identifier','y_true','y','y_pred','abundance']:
+        for i in [Spatio1, Spatio2]:
             if i in list(self.x_names):
                 del self.x_names[self.x_names.index(i)]
-
-        import copy
+        if not use_temporal_to_train:
+            if Temporal1 in list(self.x_names):
+                del self.x_names[self.x_names.index(Temporal1)]
+            
+        # quadtree
         X_train_copy = X_train.copy().reset_index(drop=True) ### I reset index here!! caution!
-        X_train_copy['true_y'] = np.array(y_train)
-        
+        X_train_copy['true_y'] = np.array(y_train).flatten()
         grid_dict = self.split(X_train_copy)
 
-        ##### define model dict
+        # define model dict
         self.model_dict = {}
         for index,line in tqdm(self.ensemble_df.iterrows(),total=len(self.ensemble_df),desc='training: '):
             name = f'{line.ensemble_index}_{line.unique_stixel_id}'
@@ -283,31 +294,40 @@ class AdaSTEM(BaseEstimator):
                 self.model_dict[f'{name}_model'] = dummy_model1(float(unique_sub_y_train_binary[0]))
                 continue
             else:
-                self.model_dict[f'{name}_model'] = copy.deepcopy(self.base_model)
+                # Remove the varibales that have no variation
+                self.stixel_specific_x_names[name] = self.x_names.copy()
+                for name_to_remove in list(sub_X_train.columns[sub_X_train.std(axis=0)==0]):
+                    
+                    del self.stixel_specific_x_names[name][self.stixel_specific_x_names[name].index(name_to_remove)]
+                # continue, if not variable left
+                if len(self.stixel_specific_x_names[name])==0:
+                    continue
                 
+                # now we are sure to fit a model
+                self.model_dict[f'{name}_model'] = copy.deepcopy(self.base_model)
+                    
                 if (not self.task == 'regression') and self.sample_weights_for_classifier:
                     sample_weights = \
                         class_weight.compute_sample_weight(class_weight='balanced',y=np.where(sub_y_train>0,1,0))
                     
                     try:
-                        self.model_dict[f'{name}_model'].fit(np.array(sub_X_train), np.array(sub_y_train), sample_weight=sample_weights)
+                        self.model_dict[f'{name}_model'].fit(np.array(sub_X_train[self.stixel_specific_x_names[name]]), 
+                                                            np.array(sub_y_train),
+                                                            sample_weight=sample_weights)
                     except Exception as e:
                         warnings.warn(e)
                         continue
                 else:
                     try:
-                        self.model_dict[f'{name}_model'].fit(np.array(sub_X_train), np.array(sub_y_train))
+                        self.model_dict[f'{name}_model'].fit(np.array(sub_X_train[self.stixel_specific_x_names[name]]), 
+                                                            np.array(sub_y_train))
                     except Exception as e:
                         warnings.warn(e)
                         continue
-                    
-            # ###### store
-            # self.model_dict[f'{name}_model'] = copy.deepcopy(self.base_model)
             
-
-
             
-    def predict_proba(self,X_test,verbosity=0):
+    def predict_proba(self,X_test,verbosity=0, return_std=False):
+        
         type_X_test = type(X_test)
         if not type_X_test == pd.core.frame.DataFrame:
             raise TypeError(f'Input X_test should be type \'pd.core.frame.DataFrame\'. Got {type_X_test}')
@@ -353,7 +373,7 @@ class AdaSTEM(BaseEstimator):
                     continue
                     
                 ##### get training data
-                for i in ['longitude','latitude','sampling_event_identifier','y_true']:
+                for i in [self.Spatio1,self.Spatio2,'sampling_event_identifier','y_true']:
                     if i in list(self.x_names):
                         del self.x_names[self.x_names.index(i)]
 
@@ -361,9 +381,12 @@ class AdaSTEM(BaseEstimator):
 
                 try:
                     model = self.model_dict[f'{ensemble}_{grid_index}_model']
-                    pred = model.predict_proba(np.array(sub_X_test))[:,1]
-                    # print(model.predict_proba(sub_X_test).shape, pred.shape)
-                    # print(np.sum(pred>0))
+                    stixel_specific_x_names = self.stixel_specific_x_names[f'{ensemble}_{grid_index}']
+                    
+                    if self.task=='regression':
+                        pred = model.predict(np.array(sub_X_test[stixel_specific_x_names]))
+                    else:
+                        pred = model.predict_proba(np.array(sub_X_test[stixel_specific_x_names]))[:,1]
                     
                     res = pd.DataFrame({'index':list(sub_X_test.index),
                                         'pred':pred}).set_index('index')
@@ -415,11 +438,14 @@ class AdaSTEM(BaseEstimator):
         warnings.warn(f'There are {nan_frac}% points ({nan_count} points) fell out of predictable range.')
         # print(f'There are {nan_frac*100:0.5f}% points ({nan_count} points) fell out of predictable range.')
         
-        return new_res['pred_mean'].values, new_res['pred_std'].values
+        if return_std:
+            return new_res['pred_mean'].values, new_res['pred_std'].values
+        else:
+            return new_res['pred_mean'].values
         
         
-    def predict(self,X_test, verbosity=0):
-        return self.predict_proba(X_test, verbosity=verbosity)
+    def predict(self,X_test, verbosity=0, return_std=False):
+        return self.predict_proba(X_test, verbosity=verbosity, return_std=return_std)
     
             
     def transform_pred_set_to_STEM_quad(self,X_train,ensemble_info):
@@ -536,7 +562,7 @@ class AdaSTEM(BaseEstimator):
 
 
     def score(self, X_test, y_test):
-        y_pred = self.predict(X_test)
+        y_pred, _ = self.predict(X_test)
         score_dict = AdaSTEM.eval_STEM_res(self.task, y_test, y_pred)
         self.score_dict = score_dict
         return self.score_dict
@@ -546,25 +572,28 @@ class AdaSTEM(BaseEstimator):
     
     
 class AdaSTEMClassifier(AdaSTEM):
-    def __init__(self, base_model, 
-                 task='classification',
-                 ensemble_fold=1, 
-                 min_ensemble_required=1, 
-                 grid_len_lon_upper_threshold=25, 
-                 grid_len_lon_lower_threshold=5, 
-                 grid_len_lat_upper_threshold=25, 
-                 grid_len_lat_lower_threshold=5, 
-                 points_lower_threshold=50, 
-                 temporal_start=1, 
-                 temporal_end=366, 
-                 temporal_step=20, 
-                 temporal_bin_interval=50, 
-                 temporal_bin_start_jitter = 'random',
-                 stixel_training_size_threshold=50, 
-                 save_gridding_plot=True, 
-                 save_tmp=True, 
-                 save_dir='./', 
-                 sample_weights_for_classifier=True):
+    def __init__(self,base_model,
+                task='classification',
+                ensemble_fold=10,
+                min_ensemble_required = 7,
+                grid_len_lon_upper_threshold=25,
+                grid_len_lon_lower_threshold=5,
+                grid_len_lat_upper_threshold=25,
+                grid_len_lat_lower_threshold=5,
+                points_lower_threshold=50,
+                temporal_start = 1, 
+                temporal_end=366,
+                temporal_step=20, 
+                temporal_bin_interval = 50,
+                temporal_bin_start_jitter = 'random',
+                spatio_bin_jitter_maginitude = 10,
+                save_gridding_plot=False,
+                save_tmp = False,
+                save_dir='./',
+                sample_weights_for_classifier=True,
+                plot_xlims = (-180,180),
+                plot_ylims = (-90,90),
+                ):
         super().__init__(base_model, 
                          task,
                          ensemble_fold, 
@@ -575,39 +604,49 @@ class AdaSTEMClassifier(AdaSTEM):
                          points_lower_threshold, temporal_start, 
                          temporal_end, temporal_step, temporal_bin_interval, 
                          temporal_bin_start_jitter,
-                         stixel_training_size_threshold, 
-                         save_gridding_plot, save_tmp, save_dir, sample_weights_for_classifier)
+                         spatio_bin_jitter_maginitude,
+                         save_gridding_plot, save_tmp, save_dir, 
+                         sample_weights_for_classifier,
+                         plot_xlims, plot_ylims
+                         )
         
     def predict(self, X_test, verbosity=0, return_std=False):
-        mean, std = self.predict_proba(X_test, verbosity=verbosity)
         if return_std:
-            return np.where(mean>0.5, 1, 0), std
+            mean, std = self.predict_proba(X_test, verbosity=verbosity, return_std=True)
+            mean = np.where(mean<0.5, 0, mean)
+            mean = np.where(mean>=0.5, 1, mean)
+            return mean, std
         else:
-            return np.where(mean>0.5, 1, 0)
-        
-    
+            mean = self.predict_proba(X_test, verbosity=verbosity, return_std=False)
+            mean = np.where(mean<0.5, 0, mean)
+            mean = np.where(mean>=0.5, 1, mean)
+            return mean
+            
         
         
 class AdaSTEMRegressor(AdaSTEM):
-    def __init__(self, base_model, 
-                 task='regression',
-                 ensemble_fold=1, 
-                 min_ensemble_required=1, 
-                 grid_len_lon_upper_threshold=25, 
-                 grid_len_lon_lower_threshold=5, 
-                 grid_len_lat_upper_threshold=25, 
-                 grid_len_lat_lower_threshold=5, 
-                 points_lower_threshold=50, 
-                 temporal_start=1, 
-                 temporal_end=366, 
-                 temporal_step=20, 
-                 temporal_bin_interval=50, 
-                 temporal_bin_start_jitter = 'random',
-                 stixel_training_size_threshold=50, 
-                 save_gridding_plot=True, 
-                 save_tmp=True, 
-                 save_dir='./', 
-                 sample_weights_for_classifier=True):
+    def __init__(self,base_model,
+                task='regression',
+                ensemble_fold=10,
+                min_ensemble_required = 7,
+                grid_len_lon_upper_threshold=25,
+                grid_len_lon_lower_threshold=5,
+                grid_len_lat_upper_threshold=25,
+                grid_len_lat_lower_threshold=5,
+                points_lower_threshold=50,
+                temporal_start = 1, 
+                temporal_end=366,
+                temporal_step=20, 
+                temporal_bin_interval = 50,
+                temporal_bin_start_jitter = 'random',
+                spatio_bin_jitter_maginitude = 10,
+                save_gridding_plot=False,
+                save_tmp = False,
+                save_dir='./',
+                sample_weights_for_classifier=True,
+                plot_xlims = (-180,180),
+                plot_ylims = (-90,90)
+                ):
         super().__init__(base_model, 
                          task,
                          ensemble_fold, 
@@ -618,46 +657,54 @@ class AdaSTEMRegressor(AdaSTEM):
                          points_lower_threshold, temporal_start, 
                          temporal_end, temporal_step, temporal_bin_interval, 
                          temporal_bin_start_jitter,
-                         stixel_training_size_threshold, 
-                         save_gridding_plot, save_tmp, save_dir, sample_weights_for_classifier)
+                         spatio_bin_jitter_maginitude,
+                         save_gridding_plot, save_tmp, save_dir,
+                         sample_weights_for_classifier,
+                         plot_xlims, plot_ylims,
+                         )
         
-        # self.task='regression'
+    def predict(self, X_test, verbosity=0, return_std=False):
+        if return_std:
+            mean, std = self.predict_proba(X_test, verbosity=verbosity, return_std=True)
+            return mean, std
+        else:
+            mean = self.predict_proba(X_test, verbosity=verbosity, return_std=False)
+            return mean
+
         
         
         
         
-class AdaSTEMHurdle(AdaSTEM):
-    def __init__(self, base_model, 
-                 task='hurdle',
-                 ensemble_fold=1, 
-                 min_ensemble_required=1, 
-                 grid_len_lon_upper_threshold=25, 
-                 grid_len_lon_lower_threshold=5, 
-                 grid_len_lat_upper_threshold=25, 
-                 grid_len_lat_lower_threshold=5, 
-                 points_lower_threshold=50, 
-                 temporal_start=1, 
-                 temporal_end=366, 
-                 temporal_step=20, 
-                 temporal_bin_interval=50, 
-                 temporal_bin_start_jitter = 'random',
-                 stixel_training_size_threshold=50, 
-                 save_gridding_plot=True, 
-                 save_tmp=True, 
-                 save_dir='./', 
-                 sample_weights_for_classifier=True):
-        super().__init__(base_model,
-                         task,
-                         ensemble_fold, 
-                         min_ensemble_required,
-                         grid_len_lon_upper_threshold, 
-                         grid_len_lon_lower_threshold, 
-                         grid_len_lat_upper_threshold, grid_len_lat_lower_threshold, 
-                         points_lower_threshold, temporal_start, 
-                         temporal_end, temporal_step, temporal_bin_interval, 
-                         temporal_bin_start_jitter,
-                         stixel_training_size_threshold, 
-                         save_gridding_plot, save_tmp, save_dir, sample_weights_for_classifier)
+# class AdaSTEMHurdle(AdaSTEM):
+#     def __init__(self, base_model, 
+#                  task='hurdle',
+#                  ensemble_fold=1, 
+#                  min_ensemble_required=1, 
+#                  grid_len_lon_upper_threshold=25, 
+#                  grid_len_lon_lower_threshold=5, 
+#                  grid_len_lat_upper_threshold=25, 
+#                  grid_len_lat_lower_threshold=5, 
+#                  points_lower_threshold=50, 
+#                  temporal_start=1, 
+#                  temporal_end=366, 
+#                  temporal_step=20, 
+#                  temporal_bin_interval=50, 
+#                  temporal_bin_start_jitter = 'random',
+#                  save_gridding_plot=False, 
+#                  save_tmp=False, 
+#                  save_dir='./', 
+#                  sample_weights_for_classifier=True):
+#         super().__init__(base_model,
+#                          task,
+#                          ensemble_fold, 
+#                          min_ensemble_required,
+#                          grid_len_lon_upper_threshold, 
+#                          grid_len_lon_lower_threshold, 
+#                          grid_len_lat_upper_threshold, grid_len_lat_lower_threshold, 
+#                          points_lower_threshold, temporal_start, 
+#                          temporal_end, temporal_step, temporal_bin_interval, 
+#                          temporal_bin_start_jitter,
+#                          save_gridding_plot, save_tmp, save_dir, sample_weights_for_classifier)
         
-        # self.task='hurdle'
-        # warnings.warn('You have choose HURDLE task. The goal is to first conduct classification, and then apply regression on points with *positive values*')
+#         # self.task='hurdle'
+#         # warnings.warn('You have choose HURDLE task. The goal is to first conduct classification, and then apply regression on points with *positive values*')
