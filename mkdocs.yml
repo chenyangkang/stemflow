@@ -2,9 +2,8 @@ site_name: BirdSTEM
 site_url: https://chenyangkag.github.io/BirdSTEM/
 theme:
   name: material
+
   features:
-    - navigation.tabs
-    - navigation.sections
     - toc.integrate
     - navigation.top
     - search.suggest
@@ -12,23 +11,37 @@ theme:
     - content.tabs.link
     - content.code.annotation
     - content.code.copy
+    - search.share
+    - navigation.expand
+    - navigation.indexes
+
   language: en
+
   palette:
+    # Palette toggle for light mode
     - scheme: default
+      accent: light green
+      primary: green
       toggle:
-        icon: material/toggle-switch-off-outline
+        icon: material/brightness-7
         name: Switch to dark mode
-      primary: teal
-      accent: purple 
-    - scheme: slate 
+
+    # Palette toggle for dark mode
+    - scheme: slate
+      accent: light green
+      primary: black
       toggle:
-        icon: material/toggle-switch
-        name: Switch to light mode    
-      primary: teal
-      accent: lime
+        icon: material/brightness-4
+        name: Switch to light mode
+
+  font:
+    text: Open Sans
+
+
 
 plugins:
   - social
+  - mkdocs-jupyter
 
 extra:
   social:
@@ -38,6 +51,17 @@ extra:
     #   link: https://twitter.com/TheJamesWillett
     # - icon: fontawesome/brands/linkedin
     #   link: https://www.linkedin.com/in/willettjames/
+
+
+nav:
+  - Home: index.md
+  - Examples:
+    - Examples/01.AdaSTEM_demo.ipynb
+    - Examples/02.AdaSTEM_learning_curve_analysis.ipynb
+    - Examples/03.Binding_with_Maxent.ipynb
+    - Examples/04.Prediction_visualization.ipynb
+
+
 
 markdown_extensions:
   - pymdownx.highlight:
