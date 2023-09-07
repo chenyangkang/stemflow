@@ -1,5 +1,5 @@
-site_name: BirdSTEM
-site_url: https://chenyangkag.github.io/BirdSTEM/
+site_name: stemflow
+site_url: https://chenyangkag.github.io/stemflow/
 theme:
   name: material
 
@@ -36,6 +36,8 @@ theme:
 
   font:
     text: Open Sans
+  logo: logo.png
+  favicon: logo.png
 
 
 
