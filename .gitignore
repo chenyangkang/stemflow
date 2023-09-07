@@ -2,6 +2,5 @@
 *.csv
 *.txt
 *.pkl
-*.gif
 */__pycache__/*
 __pycache__/*
