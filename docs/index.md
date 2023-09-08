@@ -1,8 +1,8 @@
 # stemflow
 <p align="center">
-  <img src="logo_with_words.png" alt="stemflow logo" width="600" height="300"/>
+  <img src="https://chenyangkang.github.io/stemflow/logo_with_words.png" alt="stemflow logo" width="600" height="300"/>
 </p>
-<!-- https://chenyangkang.github.io/stemflow/ -->
+<!--  -->
 <p align="center">
   <em>A package for Adaptive Spatio-Temporal Model (AdaSTEM) in python.</em>
 </p>
@@ -102,11 +102,11 @@ model.classifier.gridding_plot
 ```
 
 ----
-![QuadTree example](QuadTree.png)
+![QuadTree example](https://chenyangkang.github.io/stemflow/QuadTree.png)
 
 ---- 
 ## Example of visualization
-![GIF visualization](pred_gif.gif)
+![GIF visualization](https://chenyangkang.github.io/stemflow/pred_gif.gif)
 
 ----
 ## Documentation
