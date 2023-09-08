@@ -1,14 +1,11 @@
 # stemflow
 <p align="center">
-  <img src="https://chenyangkang.github.io/stemflow/docs/logo.png" alt="stemflow logo"/>
+  <img src="logo_with_words.png" alt="stemflow logo" width="600" height="300"/>
 </p>
-
+<!-- https://chenyangkang.github.io/stemflow/ -->
 <p align="center">
   <em>A package for Adaptive Spatio-Temporal Model (AdaSTEM) in python.</em>
 </p>
-
-
-<!-- For full documentation visit [mkdocs.org](https://www.mkdocs.org). -->
 
 ![GitHub](https://img.shields.io/github/license/chenyangkang/stemflow)
 ![PyPI version](https://img.shields.io/pypi/v/stemflow)
