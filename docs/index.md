@@ -1,6 +1,6 @@
 # stemflow
 <p align="center">
-  <img src="https://chenyangkang.github.io/stemflow/logo_with_words.png" alt="stemflow logo" width="600" height="300"/>
+  <img src="https://chenyangkang.github.io/stemflow/logo_with_words.png" alt="stemflow logo" width="600"/>
 </p>
 <!--  -->
 <p align="center">
