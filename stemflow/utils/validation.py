@@ -1,19 +1,17 @@
 import numpy as np
+from typing import Union
 
-def check_random_state(seed):
+def check_random_state(seed: Union[None, int, np.random.RandomState]) -> np.random.RandomState:
     """Turn seed into a np.random.RandomState instance.
 
-    Parameters
-    ----------
-    seed : None, int or instance of RandomState
-        If seed is None, return the RandomState singleton used by np.random.
-        If seed is an int, return a new RandomState instance seeded with seed.
-        If seed is already a RandomState instance, return it.
-        Otherwise raise ValueError.
+    Args:
+        seed:
+            If seed is None, return the RandomState singleton used by np.random.
+            If seed is an int, return a new RandomState instance seeded with seed.
+            If seed is already a RandomState instance, return it.
+            Otherwise raise ValueError.
 
-    Returns
-    -------
-    :class:`numpy:numpy.random.RandomState`
+    Returns:
         The random state object based on `seed` parameter.
     """
     if seed is None or seed is np.random:

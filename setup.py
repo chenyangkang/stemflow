@@ -26,7 +26,7 @@ setup(
                       'pandas>=2.0.3',
                       'geopandas>=0.11.1',
                       'tqdm>=4.65.0',
-                      'h3pandas>=0.2.4',
+                      'h3pandas>=0.2.3',
                       'scikit-learn>=1.2.2',
                       'seaborn>=0.11.2'],
     keywords=['python', 'spatial-temporal model', 'ebird', 'citizen science', 'spatial temporal exploratory model',

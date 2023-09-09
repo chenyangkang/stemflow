@@ -5,14 +5,31 @@ from sklearn.base import BaseEstimator
 
 
 class Hurdle(BaseEstimator):
-    def __init__(self, classifier, regressor):
-        '''
-        The input classifier should have function:
-        1. predict
+    """A simple Hurdle model class"""
+    def __init__(self, 
+                 classifier: BaseEstimator, 
+                 regressor: BaseEstimator):
+        '''Make a Hurdle class object
         
-        and the regressor should have
-        1. predict
-        
+        Args:
+            classifier:
+                A sklearn style classifier estimator. Must have `fit` and `predict` methods. 
+                Will be better if it has `predict_proba` method, which returns a numpy array of shape (n_sample, 2)
+            regressor:
+                A sklearn style regressor estimator. Must have `fit` and `predict` methods.
+                
+        Example:
+            ```
+            >> from xgboost import XGBClassifier, XGBRegressor
+            >> from stemflow.model.Hurdle import Hurdle
+            >> model = Hurdle(classifier = XGBClassifier(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1),
+                              regressor = XGBRegressor(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1))
+            >> model.fit(X_train, y_train)
+            >> pred = model.predict(X_test)
+            >> ...
+            
+            ```
+            
         '''
         self.classifier = classifier
         self.regressor = regressor

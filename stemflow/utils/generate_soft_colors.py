@@ -1,7 +1,13 @@
 import matplotlib
 import random
+import numpy as np
 
-def generate_soft_color():
+def generate_soft_color() -> np.ndarray:
+    """generating random soft colors
+
+    Returns:
+        rgb (tuple): a rgb color
+    """
     
     # Generate random hue (between 0 and 1)
     hue = random.random()
