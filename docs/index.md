@@ -13,8 +13,6 @@
 ![PyPI downloads](https://img.shields.io/pypi/dm/stemflow)
 ![GitHub last commit](https://img.shields.io/github/last-commit/chenyangkang/stemflow)
 
-
- https://anaconda.org/chenyangkang/stemflow
  
 ## Installation
 
