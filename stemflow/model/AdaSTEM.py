@@ -541,6 +541,7 @@ class AdaSTEM(BaseEstimator):
     
     
 class AdaSTEMClassifier(AdaSTEM):
+    """AdaSTEM model Classifier interface"""
     def __init__(self,base_model,
                 task='classification',
                 ensemble_fold=10,
@@ -600,6 +601,7 @@ class AdaSTEMClassifier(AdaSTEM):
         
         
 class AdaSTEMRegressor(AdaSTEM):
+    """AdaSTEM model Regressor interface"""
     def __init__(self,base_model,
                 task='regression',
                 ensemble_fold=10,

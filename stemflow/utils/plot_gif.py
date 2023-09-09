@@ -4,20 +4,70 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 import numpy as np
 import h3pandas
 import geopandas as gpd
+import pandas
+import numpy
+from typing import Union
 
-def make_sample_gif(data, file_path, col='abundance', 
-                            Spatio1='longitude', Spatio2='latitude', Temporal1='DOY',
-                            figsize=(18,9), xlims=(-180, 180), ylims=(-90,90), grid=True,
-                            lng_size = 360, lat_size = 180, xtick_interval=30, ytick_interval=30,
-                            max_frame = 366, log_scale = False, dpi=300, fps=30):
-    '''
-    data must have:
-    1. longitude,
-    2. latitude,
-    3. DOY
-    4. abundance
+def make_sample_gif(data: pandas.core.frame.DataFrame, 
+                    file_path: str, 
+                    col: str='abundance', 
+                    Spatio1: str='longitude',
+                    Spatio2: str='latitude', 
+                    Temporal1: str='DOY',
+                    figsize: tuple[Union[float, int]]=(18,9), 
+                    xlims: tuple[Union[float, int]]=(-180, 180), 
+                    ylims: tuple[Union[float, int]]=(-90,90), 
+                    grid: bool=True,
+                    lng_size: int = 360, 
+                    lat_size: int = 180, 
+                    xtick_interval: Union[float, int]=30, 
+                    ytick_interval: Union[float, int]=30,
+                    max_frame: int = 366, 
+                    log_scale: bool = False, 
+                    dpi: Union[float, int]=300, 
+                    fps: int=30):
+    '''make GIF with plt.imshow function
     
-    if log_scale==True, y = np.log(y + 1)
+    A function to generate GIF file of spatio-temporal pattern.
+    
+    Args:
+        data: 
+            Input dataframe
+        file_path: 
+            Output GIF file path
+        col: 
+            Column that contain the value to plot
+        Spatio1: 
+            Spatio variable column 1
+        Spatio2: 
+            Spatio variable column 2
+        Temporal1: 
+            Temporal variable column 1
+        figsize: 
+            Size of the figure. In matplotlib style.
+        xlims: 
+            xlim of the figure. In matplotlib style.
+        ylims: 
+            ylim of the figure. In matplotlib style.
+        grid: 
+            Whether to add grids.
+        lng_size: 
+            pixel count to aggregate at longitudinal direction. Larger means finner resolution.
+        lat_size: 
+            pixel count to aggregate at latitudinal direction. Larger means finner resolution.
+        xtick_interval: 
+            the size of x tick interval.
+        ytick_interval: 
+            the size of y tick interval.
+        max_frame: 
+            how many frames there are (temporal scale).
+        log_scale: 
+            log transfrom the target value or not.
+        dpi: 
+            dpi of the GIF.
+        fps: 
+            speed of GIF playing (frames per second).
+        
     '''
     
     lng_gird = np.linspace(xlims[0],xlims[1],lng_size)
@@ -88,18 +138,59 @@ def make_sample_gif(data, file_path, col='abundance',
     print('Finish!')
     
 
-def make_sample_gif_scatter(data, file_path, col='abundance', 
-                            Spatio1='longitude', Spatio2='latitude', Temporal1='DOY',
-                            figsize=(18,9), xlims=(-180, 180), ylims=(-90,90), grid=True,
-                            max_frame = 366, log_scale = False, s=0.2, dpi=300, fps=30):
-    '''
-    data must have:
-    1. longitude,
-    2. latitude,
-    3. DOY
-    4. abundance
+
+                    
+def make_sample_gif_scatter(data: pandas.core.frame.DataFrame, 
+                            file_path: str, 
+                            col: str='abundance',
+                            Spatio1: str='longitude',
+                            Spatio2: str='latitude', 
+                            Temporal1: str='DOY',
+                            figsize: tuple[Union[float, int]]=(18,9), 
+                            xlims: tuple[Union[float, int]]=(-180, 180), 
+                            ylims: tuple[Union[float, int]]=(-90,90), 
+                            grid: bool=True,
+                            max_frame: int = 366, 
+                            log_scale: bool = False, 
+                            s: float = 0.2,
+                            dpi: Union[float, int]=300, 
+                            fps: int=30):
+    '''make GIF with plt.scatter function
     
-    if log_scale==True, y = np.log(y + 1)
+    A function to generate GIF file of spatio-temporal pattern.
+    
+    Parameters:
+        data: 
+            Input dataframe
+        file_path: 
+            Output GIF file path
+        col: 
+            Column that contain the value to plot
+        Spatio1: 
+            Spatio variable column 1
+        Spatio2: 
+            Spatio variable column 2
+        Temporal1: 
+            Temporal variable column 1
+        figsize: 
+            Size of the figure. In matplotlib style.
+        xlims: 
+            xlim of the figure. In matplotlib style.
+        ylims: 
+            ylim of the figure. In matplotlib style.
+        grid: 
+            Whether to add grids.
+        max_frame: 
+            how many frames there are (temporal scale).
+        log_scale: 
+            log transfrom the target value or not.
+        s: 
+            size of the scatter. 
+        dpi: 
+            dpi of the GIF.
+        fps: 
+            speed of GIF playing (frames per second).
+        
     '''
         
     fig,ax = plt.subplots(figsize=figsize)
@@ -153,108 +244,4 @@ def make_sample_gif_scatter(data, file_path, col='abundance',
     print('Finish!')
 
 
-
-def make_sample_gif_hexagon(data, file_path, col='abundance', log_scale = False, H3_RESOLUTION=2, dpi=300, fps=30):
-    '''
-    data must have:
-    1. longitude,
-    2. latitude,
-    3. DOY
-    4. abundance
-    
-    if log_scale==True, y = np.log(y + 1)
-    '''
-    if f'h3_0{H3_RESOLUTION}' in data.columns:
-        del data[f'h3_0{H3_RESOLUTION}']
-        
-    u = data[['longitude','latitude']].drop_duplicates()
-    u['lng'] = u['longitude']
-    u['lat'] = u['latitude']
-    u = u.h3.geo_to_h3(H3_RESOLUTION).reset_index(drop=False)
-    # u = u[u.geometry.area<200]
-    data = data.merge(u, on=['longitude','latitude'], how='left')
-    
-    uu = u.drop_duplicates(subset=[f'h3_0{H3_RESOLUTION}']).set_index(f'h3_0{H3_RESOLUTION}').h3.h3_to_geo_boundary()
-    uu = uu[uu.geometry.area<200]
-    # u['val'] = 
-
-    fig,ax = plt.subplots(figsize=(15,15))
-    
-    def animate(i, log_scale=log_scale, legend=False, return_plot_object=False):
-        print(i,end='.')
-        ax.clear()
-        
-        sub = data[data.DOY==i+1]
-        sub = sub.groupby([f'h3_0{H3_RESOLUTION}'])[[col]].mean().reset_index(drop=False)
-        
-        if log_scale:
-            sub[col] = np.log(sub[col]+1)
-        else:
-            pass
-        sub = sub.set_index(f'h3_0{H3_RESOLUTION}').h3.h3_to_geo_boundary()
-        sub = sub[sub.geometry.area<200]
-        scat1 = sub.plot(column=col,
-                            # figsize=(15,15),
-                            edgecolor='grey',
-                            linewidth=0.05,
-                            legend=legend,
-                            norm=norm,
-                            ax=ax,
-                            # xlim=(-180, 180),
-                            # ylim=(-90, 90)
-                        # style_kwds={'shrinkage':0.3},
-                            )
-        uuu = uu[~uu.index.isin(sub.index)]
-        if not len(uuu)==0:
-            scat2 = uuu.plot(column=None,
-                                # figsize=(15,15),
-                                edgecolor=None,
-                                linewidth=0,
-                                legend=False,
-                                alpha=0,
-                                ax=ax,
-                                )
-        
-        # Set the extent of the plot
-        ax.set_xlim(-180, 180)
-        ax.set_ylim(-90,90)
-        # ax.axis('off')
-        ax.set_title(f'DOY: {i+1}', fontsize=20)
-        
-        # tt = ax.axes
-        if return_plot_object == True:
-            return scat1,
-        else:
-            # ax.axis('off')
-            return ax.figure, #scat1.get_children() *scat1, #ax.figure,
-        
-    ### scale the color norm
-    if log_scale:
-        norm = matplotlib.colors.Normalize(vmin=np.log(data[col].min()+1), vmax=np.log(data[col].max()+1))
-    else:
-        norm = matplotlib.colors.Normalize(vmin=data[col].min(), vmax=data[col].max())
-
-    # ### for getting the color bar
-    scat1 = animate(0, return_plot_object=True)
-
-    # Add colorbar
-    from mpl_toolkits.axes_grid1 import make_axes_locatable
-    
-    # Create a divider for existing axes instance
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", size="5%", pad=0.1)
-    sm = scat1[0].get_children()[0]
-    cbar = plt.colorbar(sm, cax=cax, norm=norm, shrink=0.3)
-
-    if log_scale:
-        cbar.set_label(f'log {col}', rotation=270, labelpad=15)
-    else:
-        cbar.set_label(f'{col}', rotation=270, labelpad=15)
-        
-    ### animate!
-    from functools import partial
-    ani = FuncAnimation(fig, partial(animate, legend=False), interval=40, blit=True, repeat=True, frames=366)
-    ani.save(file_path, dpi=dpi, writer=PillowWriter(fps=fps))
-    print()
-    print('Finish!')
 

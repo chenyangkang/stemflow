@@ -2,6 +2,7 @@ import numpy as np
 from sklearn.base import BaseEstimator
 
 class dummy_model1(BaseEstimator):
+    """ss"""
     def __init__(self, the_value):
         self.the_value = float(the_value)
         pass

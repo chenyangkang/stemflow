@@ -1,9 +1,16 @@
 site_name: stemflow
+site_description: 'A package for Adaptive Spatio-Temporal Model (AdaSTEM) in python.'
+repo_name: 'chenyangkang/stemflow'
+repo_url: 'https://github.com/chenyangkang/stemflow'
 site_url: https://chenyangkag.github.io/stemflow/
+use_directory_urls: false
+
 theme:
   name: material
-
+  icon:
+      repo: 'fontawesome/brands/github'
   features:
+    # - toc.follow
     - toc.integrate
     - navigation.top
     - search.suggest
@@ -12,8 +19,8 @@ theme:
     - content.code.annotation
     - content.code.copy
     - search.share
-    - navigation.expand
     - navigation.indexes
+
 
   language: en
 
@@ -39,11 +46,17 @@ theme:
   logo: logo.png
   favicon: logo.png
 
-
-
 plugins:
   - social
   - mkdocs-jupyter
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            docstring_section_style: list
+            show_object_full_path: true
+            show_root_full_path: true
 
 extra:
   social:
@@ -62,10 +75,21 @@ nav:
     - Examples/02.AdaSTEM_learning_curve_analysis.ipynb
     - Examples/03.Binding_with_Maxent.ipynb
     - Examples/04.Prediction_visualization.ipynb
-
+  - API:
+    - stemflow.model:
+      - 'AdaSTEM': API/stemflow.model.AdaSTEM.md
+      - 'dummy_model': API/stemflow.model.dummy_model.md
+      - 'Hurdle': API/stemflow.model.Hurdle.md
+    - stemflow.model_selection: API/stemflow.model_selection.md
+    - stemflow.utils:
+      - 'quadtree': API/stemflow.utils.quadtree.md
+      - 'plot_gif': API/stemflow.utils.plot_gif.md
+      - 'generate_soft_colors': API/stemflow.utils.generate_soft_colors.md
 
 
 markdown_extensions:
+  - toc:
+      toc_depth : "1-1"
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.inlinehilite
@@ -81,6 +105,10 @@ markdown_extensions:
   - pymdownx.emoji:
       emoji_index: !!python/name:materialx.emoji.twemoji
       emoji_generator: !!python/name:materialx.emoji.to_svg
+
+extra_css:
+  - css/extra.css
+
 
 copyright: |
   &copy; 2023 <a href="https://github.com/chenyangkang"  target="_blank" rel="noopener">Yangkang Chen</a>
