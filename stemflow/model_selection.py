@@ -15,7 +15,7 @@ def ST_train_test_split(X: DataFrame,
                         Temporal_blocks_count: int = 10,
                         test_size: float = 0.3,
                         random_state: Union[None, int] = None,
-                        ) -> tuple(DataFrame, DataFrame, ndarray, ndarray):
+                        ) -> tuple[DataFrame, DataFrame, ndarray, ndarray]:
     """Spatial Temporal train-test split
     
     Args:
@@ -102,7 +102,7 @@ def ST_CV(X: DataFrame,
           Spatio_blocks_count: int = 10,
           Temporal_blocks_count: int = 10,
           random_state: Union[np.random.RandomState, None, int] = None,
-          CV: int=3) -> Generator[tuple(DataFrame, DataFrame, ndarray, ndarray)]:
+          CV: int=3) -> Generator[tuple[DataFrame, DataFrame, ndarray, ndarray], None, None]:
     """Spatial Temporal train-test split
     
     Args:
@@ -125,7 +125,7 @@ def ST_CV(X: DataFrame,
         CV:
             fold cross validation
         
-    Returns
+    Returns:
         X_train, X_test, y_train, y_test
     
     """

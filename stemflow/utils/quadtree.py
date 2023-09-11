@@ -416,8 +416,8 @@ def get_ensemble_quadtree(data: pandas.core.frame.DataFrame,
                             save_gridding_plot: bool=True,
                             plot_xlims: tuple[Union[float, int]] = (-180,180),
                             plot_ylims: tuple[Union[float, int]] = (-90,90),
-                            save_path: str='') -> tuple(pandas.core.frame.DataFrame, 
-                                                        Union[matplotlib.figure.Figure, float]):
+                            save_path: str='') -> tuple[pandas.core.frame.DataFrame, 
+                                                        Union[matplotlib.figure.Figure, float]]:
     '''Generate QuadTree gridding based on the input dataframe
     
     Args:
@@ -439,6 +439,9 @@ def get_ensemble_quadtree(data: pandas.core.frame.DataFrame,
             force divide if grid latitude larger than the threshold
         grid_len_lat_lower_threshold: 
             stop divide if grid latitude **will** be below than the threshold
+        points_lower_threshold:
+            Do not train the model if the available data records for this stixel is less than this threshold,
+            and directly set the value to np.nan.
         temporal_start: 
             start of the temporal sequence
         temporal_end: 
