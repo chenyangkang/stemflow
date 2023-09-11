@@ -1,16 +1,26 @@
 import numpy as np
 from sklearn.base import BaseEstimator
+from typing import Union
 
 class dummy_model1(BaseEstimator):
-    """ss"""
-    def __init__(self, the_value):
+    """A dummy model that predict the constant value all the time"""
+    def __init__(self, the_value: Union[float, int]):
+        """Make dummy model1 class
+
+        Args:
+            the_value: The dummy value
+            
+        """
         self.the_value = float(the_value)
         pass
     def fit(self, X_train, y_train):
+        """Fake fit"""
         pass
     def predict(self,X_test):
+        """Fake predict"""
         return np.array([self.the_value] * len(X_test))
     def predict_proba(self,X_test):
+        """Fake predict_proba"""
         if self.the_value==0:
             return np.array([[1,0]] * len(X_test))
         elif self.the_value==1:

@@ -10,6 +10,7 @@ import time
 from tqdm import tqdm
 import random
 import geopandas as gpd
+import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
 import json
@@ -26,9 +27,11 @@ from scipy.stats import spearmanr
 from sklearn.utils import class_weight
 from sklearn.inspection import partial_dependence
 
+
 #validation check
 from pandas.core.frame import DataFrame
 from numpy import ndarray
+from typing import Union
 #
 
 ######
@@ -41,63 +44,116 @@ from ..utils.validation import check_random_state
 
     
 class AdaSTEM(BaseEstimator):
-    '''
-        attributes:
-        
-        self.model1: after init
-        self.model2: after init
-        self.x_names: after init
-        self.sp: after init
-        self.positive_count: after init
-        
-        self.sample_size: after fit
-        self.month1_sample_size: after fit
-        ...
-        self.month12_sample_size: after fit
-        
-        self.bias_df: after get_bias_df
-        
-        
-        Functions:
-        __init__(self,model1, model2,x_names,sp)
-        fit(self,X_train, y_train)
-        predict(self,X_test)
-        get_bias_df(self, data)
-        score(self,X_test,y_test)
-        plot_error(self)
-        
-    '''
-    def __init__(self,base_model,
-                task='hurdle',
-                ensemble_fold=10,
-                min_ensemble_required = 7,
-                grid_len_lon_upper_threshold=25,
-                grid_len_lon_lower_threshold=5,
-                grid_len_lat_upper_threshold=25,
-                grid_len_lat_lower_threshold=5,
-                points_lower_threshold=50,
-                temporal_start = 1, 
-                temporal_end=366,
-                temporal_step=20, 
-                temporal_bin_interval = 50,
-                temporal_bin_start_jitter = 'random',
-                spatio_bin_jitter_maginitude = 10,
-                save_gridding_plot=False,
-                save_tmp = False,
-                save_dir='./',
-                sample_weights_for_classifier=True,
-                Spatio1='longitude', 
-                Spatio2 = 'latitude', 
-                Temporal1 = 'DOY',
-                use_temporal_to_train=True,                
-                plot_xlims = (-180,180),
-                plot_ylims = (-90,90)                    
+    """A AdaSTEM model class inherited by AdaSTEMClassifier and AdaSTEMRegressor"""
+    def __init__(self,
+                base_model: BaseEstimator,
+                task: str='hurdle',
+                ensemble_fold: int=10,
+                min_ensemble_required: int = 7,
+                grid_len_lon_upper_threshold: Union[float, int]=25,
+                grid_len_lon_lower_threshold: Union[float, int]=5,
+                grid_len_lat_upper_threshold: Union[float, int]=25,
+                grid_len_lat_lower_threshold: Union[float, int]=5,
+                points_lower_threshold: int=50,
+                temporal_start: Union[float, int] = 1, 
+                temporal_end: Union[float, int]=366,
+                temporal_step: Union[float, int]=20,
+                temporal_bin_interval: Union[float, int] = 50,
+                temporal_bin_start_jitter: Union[float, int, str] = 'random',
+                spatio_bin_jitter_maginitude: Union[float, int] = 10,
+                save_gridding_plot: bool=True,
+                save_tmp: bool = False,
+                save_dir: str='./',
+                sample_weights_for_classifier: bool=True,
+                Spatio1: str='longitude', 
+                Spatio2: str = 'latitude', 
+                Temporal1: str = 'DOY',
+                use_temporal_to_train: bool=True,                
+                plot_xlims: tuple[Union[float, int], Union[float, int]] = (-180,180),
+                plot_ylims: tuple[Union[float, int], Union[float, int]] = (-90,90)                    
                 ):
+        """Make a AdaSTEM object
 
-        # # random state
-        # self.random_state = random_state
-        # rng = check_random_state(random_state)
-        
+        Args:
+            base_model: 
+                base model estimator
+            task: 
+                task of the model. One of 'classifier', 'regressor' and 'hurdle'. Defaults to 'hurdle'.
+            ensemble_fold:
+                Ensembles count. Higher, better for the model performance. Time complexity O(N). Defaults to 10.
+            min_ensemble_required:
+                Only points with more than this number of model ensembles available are predicted. 
+                In the training phase, if stixels contain less than `points_lower_threshold` of data records, 
+                the results are set to np.nan, making them `unpredictable`. Defaults to 7.
+            grid_len_lon_upper_threshold: 
+                force divide if grid longitude larger than the threshold. Defaults to 25.
+            grid_len_lon_lower_threshold: 
+                stop divide if grid longitude **will** be below than the threshold. Defaults to 5.
+            grid_len_lat_upper_threshold: 
+                force divide if grid latitude larger than the threshold. Defaults to 25.
+            grid_len_lat_lower_threshold: 
+                stop divide if grid latitude **will** be below than the threshold. Defaults to 5.
+            points_lower_threshold:
+                Do not train the model if the available data records for this stixel is less than this threshold,
+                and directly set the value to np.nan. Defaults to 25.
+            temporal_start: 
+                start of the temporal sequence. Defualts to 1.
+            temporal_end: 
+                end of the temporal sequence. Defualts to 366.
+            temporal_step: 
+                step of the sliding window. Defualts to 20.
+            temporal_bin_interval: 
+                size of the sliding window. Defualts to 50.
+            temporal_bin_start_jitter: 
+                jitter of the start of the sliding window. 
+                If 'random', a random jitter of range (-bin_interval, 0) will be generated
+                for the start. Defualts to 'random'.
+            spatio_bin_jitter_maginitude:
+                jitter of the spatial gridding. Defualts to 10.
+            save_gridding_plot:
+                Whether ot save gridding plots. Defualts to True.
+            save_tmp: 
+                Whether to save the ensemble dataframe. Defualts to False.
+            save_dir:
+                If save_tmp==True, save the ensemble dataframe to this path. Defualts to './'.
+            sample_weights_for_classifier:
+                Whether to balance the sample weights of classifier for impalanced datasets. Defaults to True.
+            Spatio1:
+                Spatial column name 1 in data. Defaults to 'longitude'.
+            Spatio2:
+                Spatial column name 2 in data. Defaults to 'latitude'.
+            Temporal1:
+                Temporal column name 1 in data.  Defaults to 'DOY'.
+            use_temporal_to_train:
+                Whether to use temporal varibale to train. For example in modeling the daily aboundance of bird populaiton,
+                whether use 'day of year (DOY)' as a training variable. Defaults to True.
+            plot_xlims:
+                If save_gridding_plot=Ture, what is the xlims of the plot. Defaults to (-180,180).
+            plot_ylims:
+                If save_gridding_plot=Ture, what is the ylims of the plot. Defaults to (-90,90).
+
+
+        Raises:
+            AttributeError: Base model do not have method 'fit' or 'predict'
+            AttributeError: task not in one of ['regression', 'classification', 'hurdle']
+            AttributeError: temporal_bin_start_jitter not in one of [str, float, int]
+            AttributeError: temporal_bin_start_jitter is type str, but not 'random'
+            
+        Attributes:
+            x_names (list):
+                All training variables used.
+            stixel_specific_x_names (dict):
+                stixel specific x_names (predictor variable names) for each stixel. 
+                We remove the varibales that have no variation for each stixel.
+                Therefore, the x_names are different for each stixel.
+            ensemble_df (pd.core.frame.DataFrame):
+                A dataframe storing the stixel gridding information.
+            gridding_plot (matplotlib.figure.Figure):
+                Ensemble plot.
+            model_dict (dict):
+                Dictionary of {stixel_index: trained_model}.
+            
+        """
         # save base model
         self.base_model = base_model
         self.Spatio1 = Spatio1
@@ -146,7 +202,16 @@ class AdaSTEM(BaseEstimator):
         self.sample_weights_for_classifier = sample_weights_for_classifier
         
 
-    def split(self, X_train):
+    def split(self, 
+              X_train: pd.core.frame.DataFrame) -> dict:
+        """QuadTree indexing the input data
+
+        Args:
+            X_train: Input training data
+        
+        Returns:
+            self.grid_dict, a dictionary of one DataFrame for each grid, containing the gridding information
+        """
         fold = self.ensemble_fold
         save_path = os.path.join(self.save_dir, 'ensemble_quadtree_df.csv')  if self.save_tmp else ''
         self.ensemble_df, self.gridding_plot = get_ensemble_quadtree(X_train,\
@@ -182,8 +247,6 @@ class AdaSTEM(BaseEstimator):
                 this_ensemble_gird_info['stixel'].extend([line['unique_stixel_id']]*len(line['checklist_indexes']))
             
             cores = pd.DataFrame(this_ensemble_gird_info)
-#             return cores
-        
             cores2 = pd.DataFrame(list(X_train.index),columns=['data_point_index'])
             cores = pd.merge(cores, cores2, 
                              left_on='checklist_index',right_on = 'data_point_index',how='right')
@@ -193,14 +256,33 @@ class AdaSTEM(BaseEstimator):
         return self.grid_dict
     
     @staticmethod
-    def _monkey_patched_predict_proba(model, X_test):
-        pred = model.predict(X_test)
+    def _monkey_patched_predict_proba(model: BaseEstimator, 
+                                      X_train: Union[pd.core.frame.DataFrame,
+                                                    np.ndarray]) -> np.ndarray:
+        """the monkey patching predict_proba method
+
+        Args:
+            model: the input model
+            X_train: input training data
+
+        Returns:
+            predicted proba
+        """
+        pred = model.predict(X_train)
         pred = np.array(pred).reshape(-1,1)
         return np.concatenate([np.zeros(shape=pred.shape), pred], axis=1)
     
-    def model_wrapper(self, model):
-        '''
-        wrap a predict_proba function for those models who don't have
+    def model_wrapper(self, 
+                      model: BaseEstimator) -> BaseEstimator:
+        '''wrap a predict_proba function for those models who don't have
+        
+        Args:
+            model:
+                Input model
+        
+        Returns:
+            Wrapped model that has a `predict_proba` method
+            
         '''
         if 'predict_proba' in dir(model):
             return model
@@ -211,8 +293,19 @@ class AdaSTEM(BaseEstimator):
             return model
         
         
-    def fit(self, X_train, y_train):
-        
+    def fit(self, 
+            X_train: pd.core.frame.DataFrame, 
+            y_train: Union[pd.core.frame.DataFrame, np.ndarray]):
+        """Fitting method
+
+        Args:
+            X_train: Training variables
+            y_train: Training target
+
+        Raises:
+            TypeError: X_train is not a type of pd.core.frame.DataFrame
+            TypeError: y_train is not a type of np.ndarray or pd.core.frame.DataFrame
+        """
         # stixel specific x_names list
         self.stixel_specific_x_names = {}
         
@@ -223,7 +316,7 @@ class AdaSTEM(BaseEstimator):
             raise TypeError(f'Input X_train should be type \'pd.core.frame.DataFrame\'. Got {str(type_X_train)}')
         
         type_y_train = type(y_train)
-        if not (isinstance(y_train, ndarray) or isinstance(y_train, DataFrame)):
+        if not (isinstance(y_train, np.ndarray) or isinstance(y_train, pd.core.frame.DataFrame)):
             raise TypeError(f'Input y_train should be type \'pd.core.frame.DataFrame\' or \'np.ndarray\'. Got {str(type_y_train)}')
         
         # store x_names
@@ -295,11 +388,39 @@ class AdaSTEM(BaseEstimator):
                         continue
             
             
-    def predict_proba(self,X_test,verbosity=0, return_std=False):
-        
+    def predict_proba(self,
+                      X_test: pd.core.frame.DataFrame,
+                      verbosity: int=0, 
+                      return_std: bool=False,
+                      aggregation: str='mean') -> Union[np.ndarray, tuple[np.ndarray]]:
+        """Predict probability
+
+        Args:
+            X_test (pd.core.frame.DataFrame): 
+                Testing variables.
+            verbosity (int, optional): 
+                show progress bar or not. Yes for 0, and No for other. Defaults to 0.
+            return_std (bool, optional): 
+                Whether return the standard deviation among ensembles. Defaults to False.
+            aggregation (str, optional):
+                'mean' or 'median' for aggregation method across ensembles.
+
+        Raises:
+            TypeError: 
+                X_test is not of type pd.core.frame.DataFrame.
+            ValueError:
+                aggregation is not in ['mean','median'].
+            
+        Returns:
+            predicted results. (pred_mean, pred_std) if return_std==Ture, and pred_mean if return_std==False.
+            
+        """
         type_X_test = type(X_test)
         if not type_X_test == pd.core.frame.DataFrame:
             raise TypeError(f'Input X_test should be type \'pd.core.frame.DataFrame\'. Got {type_X_test}')
+        #
+        if not aggregation in ['mean','median']:
+            raise ValueError(f'aggregation must be one of \'mean\' and \'median\'. Got {aggregation}')
         
         ##### predict
         X_test_copy = X_test.copy()
@@ -374,10 +495,14 @@ class AdaSTEM(BaseEstimator):
             
             round_res_list.append(res_list)
         
-        ####### only sites that meet the minimum ensemble requirement is remained
+        ####### only sites that meet the minimum ensemble requirement are kept
         res = pd.concat([df['pred'] for df in round_res_list], axis=1)
-    
-        res_mean = res.mean(axis=1, skipna=True)  ##### mean of all grid model that predicts this stixel
+
+        if aggregation=='mean':
+            res_mean = res.mean(axis=1, skipna=True)  ##### mean of all grid model that predicts this stixel
+        elif aggregation=='median':
+            res_mean = res.median(axis=1, skipna=True)
+            
         res_std = res.std(axis=1, skipna=True)
         
         res_nan_count = res.isnull().sum(axis=1)
@@ -413,11 +538,50 @@ class AdaSTEM(BaseEstimator):
             return new_res['pred_mean'].values
         
         
-    def predict(self,X_test, verbosity=0, return_std=False):
-        return self.predict_proba(X_test, verbosity=verbosity, return_std=return_std)
+    def predict(self,
+                X_test: pd.core.frame.DataFrame,
+                verbosity: int=0, 
+                return_std: bool=False,
+                aggregation: str='mean') -> Union[np.ndarray, tuple[np.ndarray]]:
+        """A rewrite of predict_proba
+
+        Args:
+            X_test (pd.core.frame.DataFrame): 
+                Testing variables.
+            verbosity (int, optional): 
+                show progress bar or not. Yes for 0, and No for other. Defaults to 0.
+            return_std (bool, optional): 
+                Whether return the standard deviation among ensembles. Defaults to False.
+            aggregation (str, optional):
+                'mean' or 'median' for aggregation method across ensembles.
+
+        Raises:
+            TypeError: 
+                X_test is not of type pd.core.frame.DataFrame.
+            ValueError:
+                aggregation is not in ['mean','median'].
+            
+        Returns:
+            predicted results. (pred_mean, pred_std) if return_std==Ture, and pred_mean if return_std==False.
+            
+        """
+        
+        return self.predict_proba(X_test, verbosity=verbosity, return_std=return_std, aggregation=aggregation)
     
             
-    def transform_pred_set_to_STEM_quad(self,X_train,ensemble_info):
+    def transform_pred_set_to_STEM_quad(self,
+                                        X_train: pd.core.frame.DataFrame,
+                                        ensemble_info: pd.core.frame.DataFrame) -> pd.core.frame.DataFrame:
+        """Project the input data points to the space of quadtree stixels.
+
+        Args:
+            X_train (pd.core.frame.DataFrame): Training/Testing variables
+            ensemble_info (pd.core.frame.DataFrame): the DataFrame with information of the stixel.
+
+        Returns:
+            Projected X_train
+            
+        """
 
         x_array = X_train['longitude']
         y_array = X_train['latitude']
@@ -445,9 +609,12 @@ class AdaSTEM(BaseEstimator):
         return X_train
     
     @classmethod
-    def eval_STEM_res(self, task, y_test, y_pred, cls_threashold=None):
-        '''
-        task: one of 'regression', 'classification' or 'hurdle'
+    def eval_STEM_res(self,
+                      task: str,
+                      y_test: Union[pd.core.series.Series, np.ndarray], 
+                      y_pred: Union[pd.core.series.Series, np.ndarray], 
+                      cls_threashold: Union[float, None]=None) -> dict:
+        """Evaluation using multiple metrics
         
         Classification metrics used: 
         1. AUC
@@ -464,7 +631,26 @@ class AdaSTEM(BaseEstimator):
         4. mean absolute error (MAE)
         5. mean squared error (MSE)
         6. poisson deviance explained (PDE)
-        '''
+        
+        Args:
+            task (str): 
+                one of 'regression', 'classification' or 'hurdle'.
+            y_test (Union[pd.core.series.Series, np.ndarray]): 
+                y true
+            y_pred (Union[pd.core.series.Series, np.ndarray]): 
+                y predicted
+            cls_threashold (Union[float, None], optional): 
+                Cutting threashold for the classification. 
+                Values above cls_threashold will be labeled as 1 and 0 otherwise. 
+                Defaults to None (0.5 for classification and 0 for hurdle).
+
+        Raises:
+            AttributeError: task not one of 'regression', 'classification' or 'hurdle'.
+
+        Returns:
+            dict: dictionary containing the metric names and their values.
+        """
+
         if not task in ['regression','classification','hurdle']:
             raise AttributeError(f'task type must be one of \'regression\', \'classification\', or \'hurdle\'! Now it is {task}')
     
@@ -530,12 +716,27 @@ class AdaSTEM(BaseEstimator):
         }
 
 
-    def score(self, X_test, y_test):
+    def score(self, 
+              X_test: pd.core.frame.DataFrame, 
+              y_test: Union[pd.core.series.Series, np.ndarray]) -> dict:
+        """Combine predicting and evaluating in one method
+
+        Args:
+            X_test (pd.core.frame.DataFrame): Testing variables
+            y_test (Union[pd.core.series.Series, np.ndarray]): y true
+
+        Returns:
+            dict: dictionary containing the metric names and their values.
+        """
+        
         y_pred, _ = self.predict(X_test)
         score_dict = AdaSTEM.eval_STEM_res(self.task, y_test, y_pred)
         self.score_dict = score_dict
         return self.score_dict
         
+    def calclate_feature_importance():
+        
+        raise NotImplementedError()
 
     
     
@@ -568,6 +769,30 @@ class AdaSTEMClassifier(AdaSTEM):
                 plot_xlims = (-180,180),
                 plot_ylims = (-90,90),
                 ):
+        """
+        
+        Example:
+            ```
+            >>> from stemflow.model.AdaSTEM import AdaSTEMClassifier
+            >>> from xgboost import XGBClassifier
+            >>> model = AdaSTEMClassifier(base_model=XGBClassifier(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1),
+                                    save_gridding_plot = True,
+                                    ensemble_fold=10, 
+                                    min_ensemble_required=7,
+                                    grid_len_lon_upper_threshold=25,
+                                    grid_len_lon_lower_threshold=5,
+                                    grid_len_lat_upper_threshold=25,
+                                    grid_len_lat_lower_threshold=5,
+                                    points_lower_threshold=50,
+                                    Spatio1='longitude',
+                                    Spatio2 = 'latitude', 
+                                    Temporal1 = 'DOY',
+                                    use_temporal_to_train=True)
+            >>> model.fit(X_train, y_train)
+            >>> pred = model.predict(X_test)
+            ```
+                                
+        """
         super().__init__(base_model, 
                          task,
                          ensemble_fold, 
@@ -586,16 +811,49 @@ class AdaSTEMClassifier(AdaSTEM):
                          plot_xlims, plot_ylims
                          )
         
-    def predict(self, X_test, verbosity=0, return_std=False):
+        
+    def predict(self, 
+                X_test: pd.core.frame.DataFrame, 
+                verbosity:int =0, 
+                return_std: bool=False, 
+                cls_threashold: float=0.5, 
+                aggregation: str='mean') -> Union[np.ndarray, tuple[np.ndarray]]:
+        """A rewrite of predict_proba
+
+        Args:
+            X_test (pd.core.frame.DataFrame): 
+                Testing variables.
+            verbosity (int, optional): 
+                show progress bar or not. Yes for 0, and No for other. Defaults to 0.
+            return_std (bool, optional): 
+                Whether return the standard deviation among ensembles. Defaults to False.
+            cls_threashold (float, optional): 
+                Cutting threashold for the classification. 
+                Values above cls_threashold will be labeled as 1 and 0 otherwise. 
+                Defaults to 0.5.
+            aggregation (str, optional):
+                'mean' or 'median' for aggregation method across ensembles.
+
+        Raises:
+            TypeError:
+                X_test is not of type pd.core.frame.DataFrame.
+            ValueError:
+                aggregation is not in ['mean','median'].
+            
+        Returns:
+            predicted results. (pred_mean, pred_std) if return_std==Ture, and pred_mean if return_std==False.
+            
+        """
+        
         if return_std:
-            mean, std = self.predict_proba(X_test, verbosity=verbosity, return_std=True)
-            mean = np.where(mean<0.5, 0, mean)
-            mean = np.where(mean>=0.5, 1, mean)
+            mean, std = self.predict_proba(X_test, verbosity=verbosity, return_std=True, aggregation=aggregation)
+            mean = np.where(mean<cls_threashold, 0, mean)
+            mean = np.where(mean>=cls_threashold, 1, mean)
             return mean, std
         else:
-            mean = self.predict_proba(X_test, verbosity=verbosity, return_std=False)
-            mean = np.where(mean<0.5, 0, mean)
-            mean = np.where(mean>=0.5, 1, mean)
+            mean = self.predict_proba(X_test, verbosity=verbosity, return_std=False, aggregation=aggregation)
+            mean = np.where(mean<cls_threashold, 0, mean)
+            mean = np.where(mean>=cls_threashold, 1, mean)
             return mean
             
         
@@ -628,6 +886,30 @@ class AdaSTEMRegressor(AdaSTEM):
                 plot_xlims = (-180,180),
                 plot_ylims = (-90,90)
                 ):
+        """
+        
+        Example:
+            ```
+            >>> from stemflow.model.AdaSTEM import AdaSTEMRegressor
+            >>> from xgboost import XGBRegressor
+            >>> model = AdaSTEMRegressor(base_model=XGBRegressor(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1),
+                                    save_gridding_plot = True,
+                                    ensemble_fold=10, 
+                                    min_ensemble_required=7,
+                                    grid_len_lon_upper_threshold=25,
+                                    grid_len_lon_lower_threshold=5,
+                                    grid_len_lat_upper_threshold=25,
+                                    grid_len_lat_lower_threshold=5,
+                                    points_lower_threshold=50,
+                                    Spatio1='longitude',
+                                    Spatio2 = 'latitude', 
+                                    Temporal1 = 'DOY',
+                                    use_temporal_to_train=True)
+            >>> model.fit(X_train, y_train)
+            >>> pred = model.predict(X_test)
+            ```
+                                
+        """
         super().__init__(base_model, 
                          task,
                          ensemble_fold, 
@@ -646,48 +928,4 @@ class AdaSTEMRegressor(AdaSTEM):
                          plot_xlims, plot_ylims,
                          )
         
-    def predict(self, X_test, verbosity=0, return_std=False):
-        if return_std:
-            mean, std = self.predict_proba(X_test, verbosity=verbosity, return_std=True)
-            return mean, std
-        else:
-            mean = self.predict_proba(X_test, verbosity=verbosity, return_std=False)
-            return mean
-
-        
-        
-        
-        
-# class AdaSTEMHurdle(AdaSTEM):
-#     def __init__(self, base_model, 
-#                  task='hurdle',
-#                  ensemble_fold=1, 
-#                  min_ensemble_required=1, 
-#                  grid_len_lon_upper_threshold=25, 
-#                  grid_len_lon_lower_threshold=5, 
-#                  grid_len_lat_upper_threshold=25, 
-#                  grid_len_lat_lower_threshold=5, 
-#                  points_lower_threshold=50, 
-#                  temporal_start=1, 
-#                  temporal_end=366, 
-#                  temporal_step=20, 
-#                  temporal_bin_interval=50, 
-#                  temporal_bin_start_jitter = 'random',
-#                  save_gridding_plot=False, 
-#                  save_tmp=False, 
-#                  save_dir='./', 
-#                  sample_weights_for_classifier=True):
-#         super().__init__(base_model,
-#                          task,
-#                          ensemble_fold, 
-#                          min_ensemble_required,
-#                          grid_len_lon_upper_threshold, 
-#                          grid_len_lon_lower_threshold, 
-#                          grid_len_lat_upper_threshold, grid_len_lat_lower_threshold, 
-#                          points_lower_threshold, temporal_start, 
-#                          temporal_end, temporal_step, temporal_bin_interval, 
-#                          temporal_bin_start_jitter,
-#                          save_gridding_plot, save_tmp, save_dir, sample_weights_for_classifier)
-        
-#         # self.task='hurdle'
-#         # warnings.warn('You have choose HURDLE task. The goal is to first conduct classification, and then apply regression on points with *positive values*')
+       
