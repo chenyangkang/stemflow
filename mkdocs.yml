@@ -20,6 +20,7 @@ theme:
     - content.code.copy
     - search.share
     - navigation.indexes
+    - navigation.expand
 
 
   language: en
@@ -53,10 +54,11 @@ plugins:
       handlers:
         python:
           options:
+            # inherited_members: true
             docstring_style: google
             docstring_section_style: list
-            show_object_full_path: true
-            show_root_full_path: true
+            # show_object_full_path: true
+            # show_root_full_path: true
 
 extra:
   social:
@@ -78,16 +80,16 @@ nav:
   - API:
     - stemflow.model:
       - 'AdaSTEM': API/stemflow.model.AdaSTEM.md
-      - 'dummy_model': API/stemflow.model.dummy_model.md
       - 'Hurdle': API/stemflow.model.Hurdle.md
+      - 'dummy_model': API/stemflow.model.dummy_model.md
     - stemflow.model_selection: API/stemflow.model_selection.md
     - stemflow.utils:
       - 'quadtree': API/stemflow.utils.quadtree.md
       - 'plot_gif': API/stemflow.utils.plot_gif.md
       - 'generate_soft_colors': API/stemflow.utils.generate_soft_colors.md
 
-
 markdown_extensions:
+  - tables
   - toc:
       toc_depth : "1-1"
   - pymdownx.highlight:

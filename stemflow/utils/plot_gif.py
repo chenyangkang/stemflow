@@ -5,10 +5,12 @@ import numpy as np
 import h3pandas
 import geopandas as gpd
 import pandas
+import pandas as pd
 import numpy
 from typing import Union
+from sklearn.preprocessing import LabelEncoder
 
-def make_sample_gif(data: pandas.core.frame.DataFrame, 
+def make_sample_gif(data: pd.core.frame.DataFrame, 
                     file_path: str, 
                     col: str='abundance', 
                     Spatio1: str='longitude',
@@ -22,7 +24,6 @@ def make_sample_gif(data: pandas.core.frame.DataFrame,
                     lat_size: int = 180, 
                     xtick_interval: Union[float, int]=30, 
                     ytick_interval: Union[float, int]=30,
-                    max_frame: int = 366, 
                     log_scale: bool = False, 
                     dpi: Union[float, int]=300, 
                     fps: int=30):
@@ -59,8 +60,6 @@ def make_sample_gif(data: pandas.core.frame.DataFrame,
             the size of x tick interval.
         ytick_interval: 
             the size of y tick interval.
-        max_frame: 
-            how many frames there are (temporal scale).
         log_scale: 
             log transfrom the target value or not.
         dpi: 
@@ -69,7 +68,11 @@ def make_sample_gif(data: pandas.core.frame.DataFrame,
             speed of GIF playing (frames per second).
         
     '''
+    #
+    data = data.sort_values(by=Temporal1)
+    data['Temporal_indexer'] = LabelEncoder().fit_transform(data[Temporal1])
     
+    #
     lng_gird = np.linspace(xlims[0],xlims[1],lng_size)
     lat_gird = np.linspace(ylims[0],ylims[1],lat_size)[::-1]
         
@@ -78,7 +81,8 @@ def make_sample_gif(data: pandas.core.frame.DataFrame,
     def animate(i, log_scale=log_scale):
         print(i,end='.')
         ax.clear()
-        sub = data[data[Temporal1]==i+1]
+        sub = data[data['Temporal_indexer']==i]
+        temporal_value = np.array(sub[Temporal1].values)[0]
         
         sub[f'{Spatio1}_grid'] = np.digitize(sub[Spatio1], lng_gird, right=True)
         sub[f'{Spatio2}_grid'] = np.digitize(sub[Spatio2], lat_gird, right=False)
@@ -93,7 +97,7 @@ def make_sample_gif(data: pandas.core.frame.DataFrame,
             
         scat1 = ax.imshow(im, norm=norm)
         
-        ax.set_title(f'{Temporal1}: {i+1}')
+        ax.set_title(f'{Temporal1}: {temporal_value}', fontsize=30)
         
         old_x_ticks = np.arange(0,xlims[1] - xlims[0],xtick_interval)
         new_x_ticks = np.arange(xlims[0], xlims[1],xtick_interval)[:len(old_x_ticks)]
@@ -132,8 +136,9 @@ def make_sample_gif(data: pandas.core.frame.DataFrame,
     plt.tight_layout()
         
     ### animate!
-    ani = FuncAnimation(fig, animate, interval=40, blit=True, repeat=True, frames=max_frame)
+    ani = FuncAnimation(fig, animate, interval=40, blit=True, repeat=True, frames=len(data['Temporal_indexer'].unique()))
     ani.save(file_path, dpi=dpi, writer=PillowWriter(fps=fps))
+    plt.close()
     print()
     print('Finish!')
     
@@ -150,7 +155,6 @@ def make_sample_gif_scatter(data: pandas.core.frame.DataFrame,
                             xlims: tuple[Union[float, int]]=(-180, 180), 
                             ylims: tuple[Union[float, int]]=(-90,90), 
                             grid: bool=True,
-                            max_frame: int = 366, 
                             log_scale: bool = False, 
                             s: float = 0.2,
                             dpi: Union[float, int]=300, 
@@ -180,8 +184,6 @@ def make_sample_gif_scatter(data: pandas.core.frame.DataFrame,
             ylim of the figure. In matplotlib style.
         grid: 
             Whether to add grids.
-        max_frame: 
-            how many frames there are (temporal scale).
         log_scale: 
             log transfrom the target value or not.
         s: 
@@ -192,7 +194,10 @@ def make_sample_gif_scatter(data: pandas.core.frame.DataFrame,
             speed of GIF playing (frames per second).
         
     '''
-        
+    #
+    data = data.sort_values(by=Temporal1)
+    data['Temporal_indexer'] = LabelEncoder().fit_transform(data[Temporal1])
+    
     fig,ax = plt.subplots(figsize=figsize)
     plt.xlim(xlims[0], xlims[1])
     plt.ylim(ylims[0], ylims[1])
@@ -200,7 +205,8 @@ def make_sample_gif_scatter(data: pandas.core.frame.DataFrame,
     def animate(i, log_scale=log_scale):
         print(i,end='.')
         ax.clear()
-        sub = data[data[Temporal1]==i+1]
+        sub = data[data['Temporal_indexer']==i]
+        temporal_value = np.array(sub[Temporal1].values)[0]
         
         if log_scale:
             sub[col] = np.log(sub[col]+1)
@@ -209,7 +215,7 @@ def make_sample_gif_scatter(data: pandas.core.frame.DataFrame,
             
         scat1 = ax.scatter(sub[Spatio1], sub[Spatio2], s=s, c=sub[col], marker='s')
         
-        ax.set_title(f'{Temporal1}: {i+1}')
+        ax.set_title(f'{Temporal1}: {temporal_value}', fontsize=30)
         ax.set_xlim(xlims[0], xlims[1])
         ax.set_ylim(ylims[0], ylims[1])
         plt.tight_layout()
@@ -238,8 +244,9 @@ def make_sample_gif_scatter(data: pandas.core.frame.DataFrame,
         plt.grid(alpha=0.5)
     
     ### animate!
-    ani = FuncAnimation(fig, animate, interval=40, blit=True, repeat=True, frames=max_frame)
+    ani = FuncAnimation(fig, animate, interval=40, blit=True, repeat=True, frames=len(data['Temporal_indexer'].unique()))
     ani.save(file_path, dpi=dpi, writer=PillowWriter(fps=fps))
+    plt.close()
     print()
     print('Finish!')
 
