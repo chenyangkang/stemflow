@@ -152,6 +152,10 @@ class AdaSTEM(BaseEstimator):
                 Ensemble plot.
             model_dict (dict):
                 Dictionary of {stixel_index: trained_model}.
+            grid_dict (dict):
+                An array of stixels assigned to each emsemble.
+            feature_importances_ (pd.core.frame.DataFrame):
+                Feature importance dataframe for each stixel.
             
         """
         # save base model
@@ -361,7 +365,7 @@ class AdaSTEM(BaseEstimator):
                 self.stixel_specific_x_names[name] = [i for i in self.stixel_specific_x_names[name] if not i in \
                                                         list(sub_X_train.columns[sub_X_train.std(axis=0)==0])]
 
-                # continue, if not variable left
+                # continue, if no variable left
                 if len(self.stixel_specific_x_names[name])==0:
                     continue
                 
@@ -386,6 +390,9 @@ class AdaSTEM(BaseEstimator):
                     except Exception as e:
                         warnings.warn(e)
                         continue
+                    
+        # Finally, calculate feature importance
+        self.calculate_feature_importances()
             
             
     def predict_proba(self,
@@ -426,9 +433,8 @@ class AdaSTEM(BaseEstimator):
         X_test_copy = X_test.copy()
         
         round_res_list = []
-        ensemble_df = self.ensemble_df
-        for ensemble in list(ensemble_df.ensemble_index.unique()):
-            this_ensemble = ensemble_df[ensemble_df.ensemble_index==ensemble]
+        for ensemble in list(self.ensemble_df.ensemble_index.unique()):
+            this_ensemble = self.ensemble_df[self.ensemble_df.ensemble_index==ensemble]
             this_ensemble['stixel_calibration_point_transformed_left_bound'] = \
                         [i[0] for i in this_ensemble['stixel_calibration_point(transformed)']]
 
@@ -452,11 +458,11 @@ class AdaSTEM(BaseEstimator):
             for index,line in iter_func:
                 grid_index = line['unique_stixel_id']
                 sub_X_test = X_test_copy[
-                    (X_test_copy.DOY>=line['DOY_start']) & (X_test_copy.DOY<=line['DOY_end']) & \
-                    (X_test_copy.lon_new>=line['stixel_calibration_point_transformed_left_bound']) &\
-                    (X_test_copy.lon_new<=line['stixel_calibration_point_transformed_right_bound']) &\
-                    (X_test_copy.lat_new>=line['stixel_calibration_point_transformed_lower_bound']) &\
-                    (X_test_copy.lat_new<=line['stixel_calibration_point_transformed_upper_bound'])
+                    (X_test_copy[self.Temporal1]>=line[f'{self.Temporal1}_start']) & (X_test_copy[self.Temporal1]<=line[f'{self.Temporal1}_end']) & \
+                    (X_test_copy[f'{self.Spatio1}_new']>=line['stixel_calibration_point_transformed_left_bound']) &\
+                    (X_test_copy[f'{self.Spatio1}_new']<=line['stixel_calibration_point_transformed_right_bound']) &\
+                    (X_test_copy[f'{self.Spatio2}_new']>=line['stixel_calibration_point_transformed_lower_bound']) &\
+                    (X_test_copy[f'{self.Spatio2}_new']<=line['stixel_calibration_point_transformed_upper_bound'])
                 ]
                 
                 if len(sub_X_test)==0:
@@ -471,7 +477,10 @@ class AdaSTEM(BaseEstimator):
 
                 try:
                     model = self.model_dict[f'{ensemble}_{grid_index}_model']
-                    stixel_specific_x_names = self.stixel_specific_x_names[f'{ensemble}_{grid_index}']
+                    if isinstance(model, dummy_model1):
+                        stixel_specific_x_names = self.x_names
+                    else:
+                        stixel_specific_x_names = self.stixel_specific_x_names[f'{ensemble}_{grid_index}']
                     
                     if self.task=='regression':
                         pred = model.predict(np.array(sub_X_test[stixel_specific_x_names]))
@@ -583,8 +592,8 @@ class AdaSTEM(BaseEstimator):
             
         """
 
-        x_array = X_train['longitude']
-        y_array = X_train['latitude']
+        x_array = X_train[self.Spatio1]
+        y_array = X_train[self.Spatio2]
         coord = np.array([x_array, y_array]).T
         angle = float(ensemble_info.iloc[0,:]['rotation'])
         r = angle/360
@@ -603,8 +612,8 @@ class AdaSTEM(BaseEstimator):
         long_new = (coord[:,0] + calibration_point_x_jitter).tolist()
         lat_new = (coord[:,1] + calibration_point_y_jitter).tolist()
 
-        X_train['lon_new'] = long_new
-        X_train['lat_new'] = lat_new
+        X_train[f'{self.Spatio1}_new'] = long_new
+        X_train[f'{self.Spatio2}_new'] = lat_new
 
         return X_train
     
@@ -734,9 +743,186 @@ class AdaSTEM(BaseEstimator):
         self.score_dict = score_dict
         return self.score_dict
         
-    def calclate_feature_importance():
+    def calculate_feature_importances(self):
+        """A method to generate feature importance values for each stixel.
         
-        raise NotImplementedError()
+        Feature importances are saved in self.feature_importances_.
+        
+        Attribute dependence:
+            1. self.ensemble_df
+            2. self.model_dict
+            3. self.stixel_specific_x_names
+            4. The input base model should have attribute `feature_importances_`
+            
+        """
+        # generate feature importance dict
+        feature_importance_list = []
+        
+        for index,ensemble_row in self.ensemble_df.drop('checklist_indexes', axis=1).iterrows():
+            if ensemble_row['stixel_checklist_count']<self.stixel_training_size_threshold:
+                continue
+            try:
+                ensemble_index = ensemble_row['ensemble_index']
+                stixel_index = ensemble_row['unique_stixel_id']
+                the_model = self.model_dict[f'{ensemble_index}_{stixel_index}_model']
+                x_names = self.stixel_specific_x_names[f'{ensemble_index}_{stixel_index}']
+                
+                if isinstance(the_model, dummy_model1):
+                    importance_dict = dict(zip(self.x_names, [1/len(self.x_names)] * len(self.x_names)))
+                else:
+                    feature_imp = the_model.feature_importances_
+                    importance_dict = dict(zip(x_names, feature_imp))
+                    
+                importance_dict['stixel_index'] = stixel_index
+                feature_importance_list.append(importance_dict)
+                
+            except Exception as e:
+                print(e)
+                continue
+        
+        self.feature_importances_ = pd.DataFrame(feature_importance_list).set_index('stixel_index').reset_index(drop=False).fillna(0)
+        
+    def assign_feature_importances_by_points(self,
+                                             Sample_ST_df: Union[pd.core.frame.DataFrame, None] = None,
+                                             verbosity: int=0,
+                                             aggregation: str='mean'
+                                             ) -> pd.core.frame.DataFrame:
+        """Assign feature importance to the input spatio-temporal points
+
+        Args:
+            Sample_ST_df (Union[pd.core.frame.DataFrame, None], optional): 
+                Dataframe that indicate the spatio-temporal points of interest. 
+                Must contain `self.Spatio1`, `self.Spatio2`, and `self.Temporal1` in columns. 
+                If None, the resolution will be:
+
+                | varibale|values|
+                |---------|--------|
+                |Spatio_var1|np.arange(-180,180,1)|
+                |Spatio_var2|np.arange(-90,90,1)|
+                |Temporal_var1|np.arange(1,366,7)|
+
+                Defaults to None.
+            verbosity (int, optional):
+                Whether to show progressbar during assigning. 0 for No, otherwise Yes. Defaults to 0.
+            aggregation (str, optional):
+                One of 'mean' and 'median' to aggregate feature importance across ensembles.
+        
+        Raises:
+            NameError: 
+                feature_importances_ attribute is not calculated. Try model.calculate_feature_importances() first.
+            ValueError:
+                f'aggregation not one of [\'mean\',\'median\'].'
+            KeyError: 
+                One of [`self.Spatio1`, `self.Spatio2`, `self.Temporal1`] not found in `Sample_ST_df.columns`
+
+        Returns:
+            DataFrame with feature importance assigned.
+        """
+        #
+        if not 'feature_importances_' in dir(self):
+            raise NameError(f'feature_importances_ attribute is not calculated. Try model.calculate_feature_importances() first.')
+        #
+        if not aggregation in ['mean','median']:
+            raise ValueError(f'aggregation not one of [\'mean\',\'median\'].')
+        
+        #
+        if not (Sample_ST_df is None):
+            for var_name in [self.Spatio1, self.Spatio2, self.Temporal1]:
+                if not var_name in Sample_ST_df.columns:
+                    raise KeyError(f'{var_name} not found in Sample_ST_df.columns')
+        else:
+            Spatio_var1 = np.arange(-180,180,1)
+            Spatio_var2 = np.arange(-90,90,1)
+            Temporal_var1 = np.arange(1,366,7)
+            new_Spatio_var1, new_Spatio_var2, new_Temporal_var1 = np.meshgrid(
+                Spatio_var1,Spatio_var2,Temporal_var1
+            )
+            
+            Sample_ST_df = pd.DataFrame({
+                self.Temporal1: new_Temporal_var1.flatten(),
+                self.Spatio1: new_Spatio_var1.flatten(),
+                self.Spatio2: new_Spatio_var2.flatten()
+            })
+        
+        # assign input spatio-temporal points to stixels
+        round_res_list = []
+        for ensemble in list(self.ensemble_df.ensemble_index.unique()):
+            this_ensemble = self.ensemble_df[self.ensemble_df.ensemble_index==ensemble]
+            this_ensemble['stixel_calibration_point_transformed_left_bound'] = \
+                        [i[0] for i in this_ensemble['stixel_calibration_point(transformed)']]
+
+            this_ensemble['stixel_calibration_point_transformed_lower_bound'] = \
+                        [i[1] for i in this_ensemble['stixel_calibration_point(transformed)']]
+
+            this_ensemble['stixel_calibration_point_transformed_right_bound'] = \
+                        this_ensemble['stixel_calibration_point_transformed_left_bound'] + this_ensemble['stixel_width']
+
+            this_ensemble['stixel_calibration_point_transformed_upper_bound'] = \
+                        this_ensemble['stixel_calibration_point_transformed_lower_bound'] + this_ensemble['stixel_height']
+
+            Sample_ST_df = self.transform_pred_set_to_STEM_quad(Sample_ST_df.reset_index(drop=True),
+                                                                this_ensemble)
+            
+            ##### pred each stixel
+            res_list = []
+            iter_func = this_ensemble.iterrows() if verbosity==0 else tqdm(this_ensemble.iterrows(), 
+                                                                     total=len(this_ensemble), 
+                                                                     desc=f'Processing {ensemble} ')
+            
+            for index,line in iter_func:
+                stixel_index = line['unique_stixel_id']
+                sub_Sample_ST_df = Sample_ST_df[
+                    (Sample_ST_df[self.Temporal1]>=line[f'{self.Temporal1}_start']) & (Sample_ST_df[self.Temporal1]<=line[f'{self.Temporal1}_end']) & \
+                    (Sample_ST_df[f'{self.Spatio1}_new']>=line['stixel_calibration_point_transformed_left_bound']) &\
+                    (Sample_ST_df[f'{self.Spatio1}_new']<=line['stixel_calibration_point_transformed_right_bound']) &\
+                    (Sample_ST_df[f'{self.Spatio2}_new']>=line['stixel_calibration_point_transformed_lower_bound']) &\
+                    (Sample_ST_df[f'{self.Spatio2}_new']<=line['stixel_calibration_point_transformed_upper_bound'])
+                ]
+                
+                if len(sub_Sample_ST_df)==0:
+                    continue
+                    
+                # load feature_importances
+                try:
+                    this_feature_importance = self.feature_importances_[self.feature_importances_['stixel_index']==stixel_index]
+                    if len(this_feature_importance)==0:
+                        continue
+                    this_feature_importance = dict(this_feature_importance.iloc[0,:])
+                    res_list.append({
+                        'sample_index':list(sub_Sample_ST_df.index),
+                        **{a:[b]*len(sub_Sample_ST_df) for a,b in zip(this_feature_importance.keys(),
+                                                                      this_feature_importance.values())}
+                    })
+                    
+                except Exception as e:
+                    print(e)
+                    continue
+
+            res_list = pd.concat([pd.DataFrame(i) for i in res_list], axis=0).drop('stixel_index', axis=1)
+            res_list = res_list.groupby('sample_index').mean().reset_index(drop=False)
+            round_res_list.append(res_list)
+            
+        round_res_df = pd.concat(round_res_list, axis=0)
+
+        ensemble_available_count = round_res_df.groupby('sample_index').count().iloc[:,0]
+        
+        # Only points with more than self.min_ensemble_required ensembles available are used
+        usable_sample = ensemble_available_count[ensemble_available_count>=self.min_ensemble_required] #
+        round_res_df = round_res_df[round_res_df['sample_index'].isin(list(usable_sample.index))]
+        
+        # aggregate across ensembles
+        if aggregation=='mean':
+            mean_feature_importances_across_ensembles = round_res_df.groupby('sample_index').mean()
+        elif aggregation=='median':
+            mean_feature_importances_across_ensembles = round_res_df.groupby('sample_index').median()
+            
+        if self.use_temporal_to_train:
+            mean_feature_importances_across_ensembles = mean_feature_importances_across_ensembles.rename(columns={self.Temporal1:f'{self.Temporal1}_predictor'})
+        out_ = pd.concat([Sample_ST_df, mean_feature_importances_across_ensembles], axis=1).dropna()
+        return out_
+    
+        
+        
 
     
     
