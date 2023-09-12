@@ -4,3 +4,4 @@
 *.pkl
 */__pycache__/*
 __pycache__/*
+stemflow/model/__pycache__/*
