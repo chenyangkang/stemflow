@@ -372,7 +372,7 @@ class AdaSTEM(BaseEstimator):
                                                                   base_model = self.base_model, 
                                                                   sample_weights_for_classifier = self.sample_weights_for_classifier,
                                                                   X_train_copy = X_train_copy, 
-                                                                  checklist_indexeschecklist_indexes = checklist_indexes)
+                                                                  checklist_indexes = checklist_indexes)
 
                 if model is None:
                     continue
