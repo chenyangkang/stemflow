@@ -73,6 +73,7 @@ extra:
 nav:
   - Home: index.md
   - Examples:
+    - Examples/00.Mini_test.ipynb
     - Examples/01.AdaSTEM_demo.ipynb
     - Examples/02.AdaSTEM_learning_curve_analysis.ipynb
     - Examples/03.Binding_with_Maxent.ipynb
