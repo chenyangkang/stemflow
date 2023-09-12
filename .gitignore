@@ -9,3 +9,4 @@ stemflow/model/__pycache__/*
 stemflow/utils/__pycache__/*
 stemflow/*/__pycache__/*
 stemflow/__pycache__/*
+*.DS_Store
