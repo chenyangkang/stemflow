@@ -80,6 +80,7 @@ nav:
   - API:
     - stemflow.model:
       - 'AdaSTEM': API/stemflow.model.AdaSTEM.md
+      - 'static_func_AdaSTEM': API/stemflow.model.static_func_AdaSTEM.md
       - 'Hurdle': API/stemflow.model.Hurdle.md
       - 'dummy_model': API/stemflow.model.dummy_model.md
     - stemflow.model_selection: API/stemflow.model_selection.md
