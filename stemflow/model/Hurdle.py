@@ -175,13 +175,16 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
     
     def fit(self, 
             X_train: Union[pd.core.frame.DataFrame,np.ndarray], 
-            y_train: Sequence):
+            y_train: Sequence, 
+            verbosity: int=1):
         '''Fitting model
         Args:
             X_train:
                 Training variables
             y_train:
                 Training target
+            verbosity:
+                Whehter to show progress bar. 0 for No, and Yes other wise.
                 
         '''
         binary_ =np.unique(np.where(y_train>0, 1, 0))
@@ -193,12 +196,17 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
         
         X_train['y_train'] = y_train
         
-        self.classifier.fit(X_train.iloc[:,:-1], np.where(X_train.iloc[:,-1].values>0, 1, 0))
-        self.regressor.fit(X_train[X_train['y_train']>0].iloc[:,:-1], np.array(X_train[X_train['y_train']>0].iloc[:,-1]))
-        
+        if verbosity ==0:
+            self.classifier.fit(X_train.iloc[:,:-1], np.where(X_train.iloc[:,-1].values>0, 1, 0), verbosity=0)
+            self.regressor.fit(X_train[X_train['y_train']>0].iloc[:,:-1], np.array(X_train[X_train['y_train']>0].iloc[:,-1]), verbosity=0)
+        else:
+            self.classifier.fit(X_train.iloc[:,:-1], np.where(X_train.iloc[:,-1].values>0, 1, 0), verbosity=1)
+            self.regressor.fit(X_train[X_train['y_train']>0].iloc[:,:-1], np.array(X_train[X_train['y_train']>0].iloc[:,-1]), verbosity=1)
+      
     def predict(self, 
                 X_test: Union[pd.core.frame.DataFrame,np.ndarray],
-                njobs:int = 1) -> np.ndarray:
+                njobs:int = 1,
+                verbosity: int=1) -> np.ndarray:
         """Predict
 
         Args:
@@ -206,13 +214,18 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
                 Test variables
             njobs:
                 Multi-processing in prediction.
-
+            verbosity:
+                Whehter to show progress bar. 0 for No, and Yes other wise.
+                
         Returns:
             A prediciton array with shape (-1,1)
         """
-        
-        cls_res = self.classifier.predict(X_test, njobs=njobs)
-        reg_res = self.regressor.predict(X_test, njobs=njobs)
+        if verbosity==0:
+            cls_res = self.classifier.predict(X_test, njobs=njobs, verbosity=0)
+            reg_res = self.regressor.predict(X_test, njobs=njobs, verbosity=0)
+        else:
+            cls_res = self.classifier.predict(X_test, njobs=njobs, verbosity=1)
+            reg_res = self.regressor.predict(X_test, njobs=njobs, verbosity=1)
         # reg_res = np.where(reg_res>=0, reg_res, 0) ### we constrain the reg value to be positive
         res = np.where(cls_res<0.5, 0, cls_res)
         res = np.where(cls_res>0.5, reg_res, cls_res)
@@ -220,7 +233,8 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
     
     def predict_proba(self, 
                       X_test: Union[pd.core.frame.DataFrame,np.ndarray], 
-                      njobs: int = 1) -> np.ndarray:
+                      njobs: int = 1,
+                      verbosity: int=0) -> np.ndarray:
         '''Just a rewrite of `predict` method
         
         Args:
@@ -228,9 +242,11 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
                 Testing varibales
             njobs:
                 Multi-processing in prediction.
-        
+            verbosity:
+                Whehter to show progress bar. 0 for No, and Yes other wise.
+                
         Returns:
             A prediciton array with shape (-1,1)
         '''
         
-        return self.predict(self, X_test, njobs=njobs)
+        return self.predict(self, X_test, njobs=njobs, verbosity=verbosity)
