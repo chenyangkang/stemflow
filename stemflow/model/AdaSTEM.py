@@ -358,8 +358,8 @@ class AdaSTEM(BaseEstimator):
         # Training function for each stixel
         if not self.njobs > 1:
             # single processing
-            func_ = [tqdm(self.ensemble_df.iterrows(),total=len(self.ensemble_df),desc='training: ') \
-                        if verbosity>0 else self.ensemble_df.iterrows()]
+            func_ = tqdm(self.ensemble_df.iterrows(),total=len(self.ensemble_df),desc='training: ') \
+                        if verbosity>0 else self.ensemble_df.iterrows()
             
             for index,line in func_:
                 ensemble_index = line['ensemble_index']
