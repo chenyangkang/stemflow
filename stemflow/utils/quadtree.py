@@ -422,6 +422,7 @@ def get_ensemble_quadtree(data: pandas.core.frame.DataFrame,
                             spatio_bin_jitter_maginitude: Union[float, int] = 10,
                             save_gridding_plot: bool=True,
                             njobs: int=1,
+                            verbosity: int=1,
                             plot_xlims: tuple[Union[float, int]] = (-180,180),
                             plot_ylims: tuple[Union[float, int]] = (-90,90),
                             save_path: str='') -> tuple[pandas.core.frame.DataFrame, 
@@ -490,7 +491,9 @@ def get_ensemble_quadtree(data: pandas.core.frame.DataFrame,
         plt.ylim([plot_ylims[0],plot_ylims[1]])
         plt.title("Quadtree", fontsize=20)
         
-    for ensemble_count in tqdm(range(size), total=size, desc='Generating Ensemble: '):
+    iter_func_ = tqdm(range(size), total=size, desc='Generating Ensemble: ') if verbosity>0 else range(size)
+    
+    for ensemble_count in iter_func_:
         rotation_angle = np.random.uniform(0,360)
         calibration_point_x_jitter = np.random.uniform(-spatio_bin_jitter_maginitude, spatio_bin_jitter_maginitude)
         calibration_point_y_jitter = np.random.uniform(-spatio_bin_jitter_maginitude, spatio_bin_jitter_maginitude)
