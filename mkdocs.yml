@@ -88,7 +88,7 @@ nav:
       - 'quadtree': API/stemflow.utils.quadtree.md
       - 'plot_gif': API/stemflow.utils.plot_gif.md
       - 'generate_soft_colors': API/stemflow.utils.generate_soft_colors.md
-  - Download mini data: mini_data/mini_data.csv
+  # - Download mini data: mini_data/mini_data.csv
 
 markdown_extensions:
   - tables
