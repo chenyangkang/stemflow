@@ -194,8 +194,8 @@ def run_mini_test(delet_tmp_files: bool=True, show: bool = False):
                                     col=var_, log_scale = False,
                                     Spatio1='longitude', Spatio2='latitude', Temporal1='DOY',
                                     figsize=(18,9), 
-                                    xlims=(data.longitude.min(), data.longitude.max()), 
-                                    ylims=(data.latitude.min(),data.latitude.max()), grid=True,
+                                    xlims=(data.longitude.min()-10, data.longitude.max()+10), 
+                                    ylims=(data.latitude.min()-10,data.latitude.max()+10), grid=True,
                                     xtick_interval=(data.longitude.max() - data.longitude.min())/8, 
                                     ytick_interval=(data.longitude.max() - data.longitude.min())/8,
                                     lng_size = 360, lat_size = 180, dpi=100, fps=10)
@@ -233,7 +233,7 @@ def run_mini_test(delet_tmp_files: bool=True, show: bool = False):
     # plot mean error in hexagon
     error_df.plot('pred_std', legend=True, legend_kwds={'shrink':0.7})
     plt.grid(alpha=0.3)
-    plt.title('Variation in estimated mean occurence')
+    plt.title('Standard deviation in estimated mean occurence')
     plt.savefig('./stemflow_mini_test/error_plot.pdf')
     
     if show:
@@ -269,6 +269,7 @@ def run_mini_test(delet_tmp_files: bool=True, show: bool = False):
     # # Plot QuadTree ensembles
 
     # %%
+    
     if show:
         model.classifier.gridding_plot.show()
 
@@ -290,6 +291,8 @@ def run_mini_test(delet_tmp_files: bool=True, show: bool = False):
         shutil.rmtree('./stemflow_mini_test')
     
     print('Finish!')
+    if show:
+        return model.classifier.gridding_plot
 
 
 

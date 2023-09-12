@@ -426,8 +426,6 @@ class AdaSTEM(BaseEstimator):
                     else:
                         self.stixel_specific_x_names[name] = stixel_specific_x_names_
                           
-        # Finally, calculate feature importance
-        self.calculate_feature_importances()
         
         
     def predict_proba(self,
