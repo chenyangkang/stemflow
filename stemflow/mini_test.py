@@ -18,7 +18,7 @@ import h3pandas
 
 # warnings.filterwarnings('ignore')
 
-def run_mini_test(delet_tmp_files: bool=True):
+def run_mini_test(delet_tmp_files: bool=True, show: bool = False):
     """Run a mini test
     
     Processes:
@@ -40,6 +40,10 @@ def run_mini_test(delet_tmp_files: bool=True):
     #
     print('Start Runing Mini-test...')
     print(f'Temporary files will be stored at: ./stemflow_mini_test/')
+    if delet_tmp_files:
+        print('Temporary files will be deleted.')
+    else:
+        print('Temporary files will *NOT* be deleted.')
     # download mini data
     if not os.path.exists('./stemflow_mini_test'):
         os.makedirs('./stemflow_mini_test')
@@ -68,7 +72,10 @@ def run_mini_test(delet_tmp_files: bool=True):
         s=0.2
     )
     plt.savefig('./stemflow_mini_test/data_plot.pdf')
-    plt.close()
+    if show:
+        plt.show()
+    else:
+        plt.close()
 
     # %% [markdown]
     # # Get X and y
@@ -115,7 +122,10 @@ def run_mini_test(delet_tmp_files: bool=True):
                                     Spatio2 = 'latitude', 
                                     Temporal1 = 'DOY',
                                     use_temporal_to_train=True,
-                                    njobs=1),
+                                    njobs=1,
+                                    plot_xlims=(data.longitude.min(), data.longitude.max()), 
+                                    plot_ylims=(data.latitude.min(),data.latitude.max())
+                                    ),
         regressor=AdaSTEMRegressor(base_model=XGBRegressor(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1),
                                     save_gridding_plot = True,
                                     ensemble_fold=5, 
@@ -129,7 +139,10 @@ def run_mini_test(delet_tmp_files: bool=True):
                                     Spatio2 = 'latitude', 
                                     Temporal1 = 'DOY',
                                     use_temporal_to_train=True,
-                                    njobs=1)
+                                    njobs=1,
+                                    plot_xlims=(data.longitude.min(), data.longitude.max()), 
+                                    plot_ylims=(data.latitude.min(),data.latitude.max())
+                                    )
     )
     print('Done.')
 
@@ -180,8 +193,11 @@ def run_mini_test(delet_tmp_files: bool=True):
         make_sample_gif(importances_by_points, f'./stemflow_mini_test/FTR_IPT_{var_}.gif',
                                     col=var_, log_scale = False,
                                     Spatio1='longitude', Spatio2='latitude', Temporal1='DOY',
-                                    figsize=(18,9), xlims=(-180, 180), ylims=(-90,90), grid=True,
-                                    xtick_interval=20, ytick_interval=20,
+                                    figsize=(18,9), 
+                                    xlims=(data.longitude.min(), data.longitude.max()), 
+                                    ylims=(data.latitude.min(),data.latitude.max()), grid=True,
+                                    xtick_interval=(data.longitude.max() - data.longitude.min())/8, 
+                                    ytick_interval=(data.longitude.max() - data.longitude.min())/8,
                                     lng_size = 360, lat_size = 180, dpi=100, fps=10)
         
     print('Done.')
@@ -219,7 +235,11 @@ def run_mini_test(delet_tmp_files: bool=True):
     plt.grid(alpha=0.3)
     plt.title('Variation in estimated mean occurence')
     plt.savefig('./stemflow_mini_test/error_plot.pdf')
-    plt.close()
+    
+    if show:
+        plt.show()
+    else:
+        plt.close()
 
     # %% [markdown]
     # # Evaluation
@@ -249,10 +269,12 @@ def run_mini_test(delet_tmp_files: bool=True):
     # # Plot QuadTree ensembles
 
     # %%
-    model.classifier.gridding_plot
+    if show:
+        model.classifier.gridding_plot.show()
 
     # %%
-    model.regressor.gridding_plot
+    if show:
+        model.regressor.gridding_plot.show()
 
     # %%
     from watermark import watermark

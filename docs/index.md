@@ -9,7 +9,7 @@
 
 ![GitHub](https://img.shields.io/github/license/chenyangkang/stemflow)
 ![PyPI version](https://img.shields.io/pypi/v/stemflow)
-![Anaconda version](https://anaconda.org/conda-forge/stemflow/badges/version.svg)
+<!-- ![Anaconda version](https://anaconda.org/conda-forge/stemflow/badges/version.svg) -->
 ![PyPI downloads](https://img.shields.io/pypi/dm/stemflow)
 ![GitHub last commit](https://img.shields.io/github/last-commit/chenyangkang/stemflow)
 
@@ -32,7 +32,7 @@ run_mini_test(delet_tmp_files=True)
 
 ```
 
-Or, if you cloned the package from the github repo, you can run the python script:
+Or, if the package were cloned from the github repo, you can run the python script:
 
 ```py
 git clone https://github.com/chenyangkang/stemflow.git
