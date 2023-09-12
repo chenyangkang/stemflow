@@ -20,6 +20,32 @@
 pip install stemflow
 ```
 
+## Mini Test
+
+To run a auto-mini test, one can simply call:
+
+```py
+
+from stemflow.mini_test import run_mini_test
+
+run_mini_test(delet_tmp_files=True)
+
+```
+
+Or, if you cloned the package from the github repo, you can run the python script:
+
+```py
+git clone https://github.com/chenyangkang/stemflow.git
+cd stemflow
+chmod 755 setup.py
+python setup.py # installation
+
+chmod 755 mini_test.py
+python mini_test.py # run the test
+
+```
+
+
 ## Brief introduction
 stemflow is a toolkit for Adaptive Spatio-Temporal Model (AdaSTEM) in python. A typical usage is daily abundance estimation using eBird citizen science data. It leverages the "adjacency" information of surrounding target values in space and time, to predict the classes/continues values of target spatial-temporal point. In the demo, we use a two-step hurdle model as "base model", with XGBoostClassifier for occurence modeling and XGBoostRegressor for abundance modeling.
 
