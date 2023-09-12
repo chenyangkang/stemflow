@@ -83,11 +83,12 @@ nav:
       - 'static_func_AdaSTEM': API/stemflow.model.static_func_AdaSTEM.md
       - 'Hurdle': API/stemflow.model.Hurdle.md
       - 'dummy_model': API/stemflow.model.dummy_model.md
-    - stemflow.model_selection: API/stemflow.model_selection.md
     - stemflow.utils:
       - 'quadtree': API/stemflow.utils.quadtree.md
       - 'plot_gif': API/stemflow.utils.plot_gif.md
       - 'generate_soft_colors': API/stemflow.utils.generate_soft_colors.md
+    - stemflow.model_selection: API/stemflow.model_selection.md
+    - stemflow.mini_test: API/stemflow.mini_test.md
   # - Download mini data: mini_data/mini_data.csv
 
 markdown_extensions:
