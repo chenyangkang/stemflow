@@ -238,7 +238,7 @@ class AdaSTEM(BaseEstimator):
         
 
     def split(self, 
-              X_train: pd.core.frame.DataFrame) -> dict:
+              X_train: pd.core.frame.DataFrame, verbosity: int=1) -> dict:
         """QuadTree indexing the input data
 
         Args:
@@ -267,6 +267,7 @@ class AdaSTEM(BaseEstimator):
                                             spatio_bin_jitter_maginitude = self.spatio_bin_jitter_maginitude,
                                             save_gridding_plot=self.save_gridding_plot,
                                             njobs=self.njobs,
+                                            verbosity=verbosity,
                                             plot_xlims = self.plot_xlims,
                                             plot_ylims = self.plot_ylims,
                                             save_path=save_path)
@@ -348,7 +349,7 @@ class AdaSTEM(BaseEstimator):
         X_train_copy = X_train.copy().reset_index(drop=True) ### I reset index here!! caution!
         del X_train
         X_train_copy['true_y'] = np.array(y_train).flatten()
-        grid_dict = self.split(X_train_copy)
+        grid_dict = self.split(X_train_copy, verbosity=verbosity)
 
         # define model dict
         self.model_dict = {}
