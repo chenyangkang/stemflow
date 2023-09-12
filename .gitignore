@@ -1,5 +1,5 @@
 */dataset/test_data/*
-*.csv
+*.csv !*mini_data.csv
 *.txt
 *.pkl
 */__pycache__/*
