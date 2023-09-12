@@ -11,6 +11,8 @@ from collections.abc import Sequence
 from typing import Union
 import pandas
 import matplotlib
+from multiprocessing import Pool
+from itertools import repeat
 
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
@@ -353,6 +355,8 @@ class QTree():
         return result
         
 
+
+
 def generate_temporal_bins(start: Union[float, int], 
                            end: Union[float, int], 
                            step: Union[float, int], 
@@ -401,6 +405,9 @@ def generate_temporal_bins(start: Union[float, int],
     return bin_list
 
 
+
+
+
 def get_ensemble_quadtree(data: pandas.core.frame.DataFrame,
                             Spatio1: str='longitude',
                             Spatio2: str='latitude',
@@ -414,6 +421,7 @@ def get_ensemble_quadtree(data: pandas.core.frame.DataFrame,
                             temporal_bin_start_jitter: Union[float, int, str]= 'random',
                             spatio_bin_jitter_maginitude: Union[float, int] = 10,
                             save_gridding_plot: bool=True,
+                            njobs: int=1,
                             plot_xlims: tuple[Union[float, int]] = (-180,180),
                             plot_ylims: tuple[Union[float, int]] = (-90,90),
                             save_path: str='') -> tuple[pandas.core.frame.DataFrame, 
@@ -458,6 +466,8 @@ def get_ensemble_quadtree(data: pandas.core.frame.DataFrame,
             jitter of the spatial gridding.
         save_gridding_plot:
             Whether ot save gridding plots
+        njobs:
+            Multi-processes count.
         plot_xlims:
             If save_gridding_plot=Ture, what is the xlims of the plot
         plot_ylims:
@@ -480,9 +490,7 @@ def get_ensemble_quadtree(data: pandas.core.frame.DataFrame,
         plt.ylim([plot_ylims[0],plot_ylims[1]])
         plt.title("Quadtree", fontsize=20)
         
-        
     for ensemble_count in tqdm(range(size), total=size, desc='Generating Ensemble: '):
-            
         rotation_angle = np.random.uniform(0,360)
         calibration_point_x_jitter = np.random.uniform(-spatio_bin_jitter_maginitude, spatio_bin_jitter_maginitude)
         calibration_point_y_jitter = np.random.uniform(-spatio_bin_jitter_maginitude, spatio_bin_jitter_maginitude)
@@ -490,13 +498,12 @@ def get_ensemble_quadtree(data: pandas.core.frame.DataFrame,
         # print(f'ensembel_count: {ensemble_count}')
         
         temporal_bins = generate_temporal_bins(start = temporal_start, 
-                                               end=temporal_end, 
-                                               step=temporal_step, 
+                                                end=temporal_end, 
+                                                step=temporal_step, 
                                                 bin_interval = temporal_bin_interval,
                                                 temporal_bin_start_jitter = temporal_bin_start_jitter)
 
         for time_block_index,bin_ in enumerate(temporal_bins):
-
             time_start = bin_[0]
             time_end = bin_[1]
             sub_data=data[(data[Temporal1]>=time_start) & (data[Temporal1]<time_end)]
@@ -534,9 +541,10 @@ def get_ensemble_quadtree(data: pandas.core.frame.DataFrame,
             this_slice[f'{Temporal1}_start']=round(this_slice[f'{Temporal1}_start'],1)
             this_slice[f'{Temporal1}_end']=round(this_slice[f'{Temporal1}_end'],1)
             this_slice['unique_stixel_id'] = [str(time_block_index)+"_"+str(i)+"_"+str(k) for i,k in zip (this_slice['ensemble_index'].values, 
-                                                                                                          this_slice['stixel_indexes'].values)]
+                                                                                                            this_slice['stixel_indexes'].values)]
             ensemble_all_df_list.append(this_slice)
             
+
     ensemble_df = pd.concat(ensemble_all_df_list).reset_index(drop=True)
     if not save_path=='':
         ensemble_df.to_csv(save_path,index=False)
@@ -552,4 +560,6 @@ def get_ensemble_quadtree(data: pandas.core.frame.DataFrame,
 
     else:
         return ensemble_df, np.nan
+
+
 

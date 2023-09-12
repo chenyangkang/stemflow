@@ -66,7 +66,8 @@ model = Hurdle_for_AdaSTEM(
                                 Spatio1='longitude',
                                 Spatio2 = 'latitude', 
                                 Temporal1 = 'DOY',
-                                use_temporal_to_train=True),
+                                use_temporal_to_train=True,
+                                njobs=4),
     regressor=AdaSTEMRegressor(base_model=XGBRegressor(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1),
                                 save_gridding_plot = True,
                                 ensemble_fold=10, 
@@ -79,7 +80,8 @@ model = Hurdle_for_AdaSTEM(
                                 Spatio1='longitude',
                                 Spatio2 = 'latitude', 
                                 Temporal1 = 'DOY',
-                                use_temporal_to_train=True)
+                                use_temporal_to_train=True,
+                                njobs=4)
 )
 
 ## fit

@@ -27,6 +27,10 @@ from scipy.stats import spearmanr
 from sklearn.utils import class_weight
 from sklearn.inspection import partial_dependence
 
+#
+from multiprocessing import Pool, cpu_count
+from functools import partial
+from itertools import repeat
 
 #validation check
 from pandas.core.frame import DataFrame
@@ -35,9 +39,19 @@ from typing import Union
 #
 
 ######
-from ..utils.quadtree import QTree, get_ensemble_quadtree, generate_temporal_bins
+from ..utils.quadtree import get_ensemble_quadtree
 from .dummy_model import dummy_model1
 from ..utils.validation import check_random_state
+from .static_func_AdaSTEM import (
+    _monkey_patched_predict_proba,
+    train_one_stixel,
+    assign_points_to_one_ensemble,
+    transform_pred_set_to_STEM_quad,
+    # predict_one_ensemble
+    get_model_and_stixel_specific_x_names,
+    predict_one_stixel,
+    
+)
 ######
 
 
@@ -68,9 +82,10 @@ class AdaSTEM(BaseEstimator):
                 Spatio1: str='longitude', 
                 Spatio2: str = 'latitude', 
                 Temporal1: str = 'DOY',
-                use_temporal_to_train: bool=True,                
+                use_temporal_to_train: bool=True,
+                njobs: int=1,          
                 plot_xlims: tuple[Union[float, int], Union[float, int]] = (-180,180),
-                plot_ylims: tuple[Union[float, int], Union[float, int]] = (-90,90)                    
+                plot_ylims: tuple[Union[float, int], Union[float, int]] = (-90,90)                   
                 ):
         """Make a AdaSTEM object
 
@@ -127,6 +142,8 @@ class AdaSTEM(BaseEstimator):
             use_temporal_to_train:
                 Whether to use temporal varibale to train. For example in modeling the daily aboundance of bird populaiton,
                 whether use 'day of year (DOY)' as a training variable. Defaults to True.
+            njobs:
+                Number of multiprocessing in fitting the model. Defaults to 1.
             plot_xlims:
                 If save_gridding_plot=Ture, what is the xlims of the plot. Defaults to (-180,180).
             plot_ylims:
@@ -191,7 +208,8 @@ class AdaSTEM(BaseEstimator):
         self.spatio_bin_jitter_maginitude = spatio_bin_jitter_maginitude
         self.plot_xlims = plot_xlims
         self.plot_ylims = plot_ylims
-                                                               
+                      
+        # validate temporal_bin_start_jitter                                         
         if (not type(temporal_bin_start_jitter) in [str, float, int]):
             raise AttributeError(f'Input temporal_bin_start_jitter should be \'random\', float or int, got {type(temporal_bin_start_jitter)}')
         if type(temporal_bin_start_jitter) == str:
@@ -199,10 +217,23 @@ class AdaSTEM(BaseEstimator):
                 raise AttributeError(f'The input temporal_bin_start_jitter as string should only be \'random\'. Other options include float or int. Got {temporal_bin_start_jitter}')
         self.temporal_bin_start_jitter = temporal_bin_start_jitter
         
+        #
         self.stixel_training_size_threshold = points_lower_threshold
         self.save_gridding_plot = save_gridding_plot
         self.save_tmp = save_tmp
         self.save_dir = save_dir
+        
+        # validate njobs setting
+        if not isinstance(njobs, int):
+            raise TypeError(f'njobs is not a interger. Got {njobs}.')
+        
+        my_cpu_count = cpu_count()
+        if njobs > my_cpu_count:
+            raise ValueError(f'Setting of njobs ({njobs}) exceed the maxmimum ({my_cpu_count}).')
+        
+        self.njobs = njobs
+        
+        #
         self.sample_weights_for_classifier = sample_weights_for_classifier
         
 
@@ -235,6 +266,7 @@ class AdaSTEM(BaseEstimator):
                                             temporal_bin_start_jitter = self.temporal_bin_start_jitter,
                                             spatio_bin_jitter_maginitude = self.spatio_bin_jitter_maginitude,
                                             save_gridding_plot=self.save_gridding_plot,
+                                            njobs=self.njobs,
                                             plot_xlims = self.plot_xlims,
                                             plot_ylims = self.plot_ylims,
                                             save_path=save_path)
@@ -258,24 +290,7 @@ class AdaSTEM(BaseEstimator):
             self.grid_dict[ensemble_index] = cores.stixel.values
             
         return self.grid_dict
-    
-    @staticmethod
-    def _monkey_patched_predict_proba(model: BaseEstimator, 
-                                      X_train: Union[pd.core.frame.DataFrame,
-                                                    np.ndarray]) -> np.ndarray:
-        """the monkey patching predict_proba method
 
-        Args:
-            model: the input model
-            X_train: input training data
-
-        Returns:
-            predicted proba
-        """
-        pred = model.predict(X_train)
-        pred = np.array(pred).reshape(-1,1)
-        return np.concatenate([np.zeros(shape=pred.shape), pred], axis=1)
-    
     def model_wrapper(self, 
                       model: BaseEstimator) -> BaseEstimator:
         '''wrap a predict_proba function for those models who don't have
@@ -293,13 +308,13 @@ class AdaSTEM(BaseEstimator):
         else:
             warnings.warn(f'predict_proba function not in base_model. Monkey patching one.')
                 
-            model.predict_proba = self._monkey_patched_predict_proba
+            model.predict_proba = _monkey_patched_predict_proba
             return model
-        
         
     def fit(self, 
             X_train: pd.core.frame.DataFrame, 
-            y_train: Union[pd.core.frame.DataFrame, np.ndarray]):
+            y_train: Union[pd.core.frame.DataFrame, np.ndarray],
+            verbosity: int=1):
         """Fitting method
 
         Args:
@@ -310,9 +325,6 @@ class AdaSTEM(BaseEstimator):
             TypeError: X_train is not a type of pd.core.frame.DataFrame
             TypeError: y_train is not a type of np.ndarray or pd.core.frame.DataFrame
         """
-        # stixel specific x_names list
-        self.stixel_specific_x_names = {}
-        
         # check type
         type_X_train = type(X_train)
     
@@ -334,71 +346,94 @@ class AdaSTEM(BaseEstimator):
             
         # quadtree
         X_train_copy = X_train.copy().reset_index(drop=True) ### I reset index here!! caution!
+        del X_train
         X_train_copy['true_y'] = np.array(y_train).flatten()
         grid_dict = self.split(X_train_copy)
 
         # define model dict
         self.model_dict = {}
-        for index,line in tqdm(self.ensemble_df.iterrows(),total=len(self.ensemble_df),desc='training: '):
-            name = f'{line.ensemble_index}_{line.unique_stixel_id}'
-            sub_X_train = X_train_copy[X_train_copy.index.isin(line.checklist_indexes)]
+        # stixel specific x_names list
+        self.stixel_specific_x_names = {}
+        
+        # Training function for each stixel
+        if not self.njobs > 1:
+            # single processing
+            func_ = [tqdm(self.ensemble_df.iterrows(),total=len(self.ensemble_df),desc='training: ') \
+                        if verbosity>0 else self.ensemble_df.iterrows()]
             
-            if len(sub_X_train)<self.stixel_training_size_threshold: ####### threshold
-                continue
-            
-            sub_y_train = sub_X_train.iloc[:,-1]
-            sub_X_train = sub_X_train[self.x_names]
-            unique_sub_y_train_binary = np.unique(np.where(sub_y_train>0, 1, 0))
-            
-            ##### nan check
-            nan_count = np.sum(np.isnan(sub_y_train)) + np.sum(np.isnan(sub_y_train))
-            if nan_count>0:
-                continue
-            
-            ##### fit
-            if (not self.task == 'regression') and (len(unique_sub_y_train_binary)==1):
-                self.model_dict[f'{name}_model'] = dummy_model1(float(unique_sub_y_train_binary[0]))
-                continue
-            else:
-                # Remove the varibales that have no variation
-                self.stixel_specific_x_names[name] = self.x_names.copy()
-                self.stixel_specific_x_names[name] = [i for i in self.stixel_specific_x_names[name] if not i in \
-                                                        list(sub_X_train.columns[sub_X_train.std(axis=0)==0])]
+            for index,line in func_:
+                ensemble_index = line['ensemble_index']
+                unique_stixel_id = line['unique_stixel_id']
+                name = f'{ensemble_index}_{unique_stixel_id}'
+                checklist_indexes = line['checklist_indexes']
+                model, stixel_specific_x_names = train_one_stixel(stixel_training_size_threshold = self.stixel_training_size_threshold, 
+                                                                  x_names = self.x_names, 
+                                                                  task = self.task,
+                                                                  base_model = self.base_model, 
+                                                                  sample_weights_for_classifier = self.sample_weights_for_classifier,
+                                                                  X_train_copy = X_train_copy, 
+                                                                  checklist_indexeschecklist_indexes = checklist_indexes)
 
-                # continue, if no variable left
-                if len(self.stixel_specific_x_names[name])==0:
+                if model is None:
                     continue
-                
-                # now we are sure to fit a model
-                self.model_dict[f'{name}_model'] = copy.deepcopy(self.base_model)
-                    
-                if (not self.task == 'regression') and self.sample_weights_for_classifier:
-                    sample_weights = \
-                        class_weight.compute_sample_weight(class_weight='balanced',y=np.where(sub_y_train>0,1,0))
-                    
-                    try:
-                        self.model_dict[f'{name}_model'].fit(np.array(sub_X_train[self.stixel_specific_x_names[name]]), 
-                                                            np.array(sub_y_train),
-                                                            sample_weight=sample_weights)
-                    except Exception as e:
-                        warnings.warn(e)
-                        continue
                 else:
-                    try:
-                        self.model_dict[f'{name}_model'].fit(np.array(sub_X_train[self.stixel_specific_x_names[name]]), 
-                                                            np.array(sub_y_train))
-                    except Exception as e:
-                        warnings.warn(e)
-                        continue
+                    self.model_dict[f'{name}_model'] = model
                     
+                if len(stixel_specific_x_names)==0:
+                    continue
+                else:
+                    self.stixel_specific_x_names[name] = stixel_specific_x_names
+                    
+        else:
+            # multi-processing
+            ensemble_index_list = self.ensemble_df['ensemble_index'].values
+            unique_stixel_id_list = self.ensemble_df['unique_stixel_id'].values
+            name_list = [f'{ensemble_index}_{unique_stixel_id}' for ensemble_index, unique_stixel_id in zip(
+                ensemble_index_list, unique_stixel_id_list
+            )]
+            checklist_indexes = self.ensemble_df['checklist_indexes']
+            
+            with Pool(self.njobs) as p:
+                plain_args_iterator = zip(
+                        repeat(self.stixel_training_size_threshold), 
+                        repeat(self.x_names), 
+                        repeat(self.task), 
+                        repeat(self.base_model),
+                        repeat(self.sample_weights_for_classifier), 
+                        repeat(X_train_copy),
+                        checklist_indexes
+                    )
+                if verbosity>0:
+                    args_iterator = tqdm(plain_args_iterator, total=len(checklist_indexes))
+                else:
+                    args_iterator = plain_args_iterator
+                    
+                tmp_res = p.starmap(train_one_stixel, args_iterator)
+                
+                # Store model and stixel specific x_names
+                for res, name in zip(tmp_res, name_list):
+                    model_ = res[0]
+                    stixel_specific_x_names_ = res[1]
+                    
+                    if model_ is None:
+                        continue
+                    else:
+                        self.model_dict[f'{name}_model'] = model_
+                        
+                    if len(stixel_specific_x_names_) == 0:
+                        continue
+                    else:
+                        self.stixel_specific_x_names[name] = stixel_specific_x_names_
+                          
         # Finally, calculate feature importance
         self.calculate_feature_importances()
-            
-            
+        
+        
     def predict_proba(self,
                       X_test: pd.core.frame.DataFrame,
                       verbosity: int=0, 
                       return_std: bool=False,
+                      njobs: Union[None, int]=1,
                       aggregation: str='mean') -> Union[np.ndarray, tuple[np.ndarray]]:
         """Predict probability
 
@@ -409,6 +444,12 @@ class AdaSTEM(BaseEstimator):
                 show progress bar or not. Yes for 0, and No for other. Defaults to 0.
             return_std (bool, optional): 
                 Whether return the standard deviation among ensembles. Defaults to False.
+            njobs (Union[int, None], optional):
+                Number of processes used in this task. If None, use the self.njobs. Default to 1.
+                I do not recommend setting value larger than 1. 
+                In practice, multi-processing seems to slow down the process instead of speeding up.
+                Could be more practical with large amount of data.
+                Still in experiment.
             aggregation (str, optional):
                 'mean' or 'median' for aggregation method across ensembles.
 
@@ -447,61 +488,75 @@ class AdaSTEM(BaseEstimator):
             this_ensemble['stixel_calibration_point_transformed_upper_bound'] = \
                         this_ensemble['stixel_calibration_point_transformed_lower_bound'] + this_ensemble['stixel_height']
 
-            X_test_copy = self.transform_pred_set_to_STEM_quad(X_test_copy,this_ensemble)
+            X_test_copy = transform_pred_set_to_STEM_quad(self.Spatio1, self.Spatio2, X_test_copy, this_ensemble)
             
             ##### pred each stixel
-            res_list = []
-                
-            iter_func = this_ensemble.iterrows() if verbosity==0 else tqdm(this_ensemble.iterrows(), 
-                                                                     total=len(this_ensemble), 
-                                                                     desc=f'predicting ensemble {ensemble} ')
-            for index,line in iter_func:
-                grid_index = line['unique_stixel_id']
-                sub_X_test = X_test_copy[
-                    (X_test_copy[self.Temporal1]>=line[f'{self.Temporal1}_start']) & (X_test_copy[self.Temporal1]<=line[f'{self.Temporal1}_end']) & \
-                    (X_test_copy[f'{self.Spatio1}_new']>=line['stixel_calibration_point_transformed_left_bound']) &\
-                    (X_test_copy[f'{self.Spatio1}_new']<=line['stixel_calibration_point_transformed_right_bound']) &\
-                    (X_test_copy[f'{self.Spatio2}_new']>=line['stixel_calibration_point_transformed_lower_bound']) &\
-                    (X_test_copy[f'{self.Spatio2}_new']<=line['stixel_calibration_point_transformed_upper_bound'])
-                ]
-                
-                if len(sub_X_test)==0:
-                    continue
+            if not njobs > 1:
+                # single process
+                res_list = []
+                iter_func = this_ensemble.iterrows() if verbosity==0 else tqdm(this_ensemble.iterrows(), 
+                                                            total=len(this_ensemble), 
+                                                            desc=f'predicting ensemble {ensemble} ')
+                for index,stixel in iter_func:
+                    model_x_names_tuple = get_model_and_stixel_specific_x_names(
+                                                                                self.model_dict, 
+                                                                                ensemble, 
+                                                                                stixel['unique_stixel_id'], 
+                                                                                self.stixel_specific_x_names, 
+                                                                                self.x_names
+                                                                                )
                     
-                ##### get training data
-                for i in [self.Spatio1,self.Spatio2,'sampling_event_identifier','y_true']:
-                    if i in list(self.x_names):
-                        del self.x_names[self.x_names.index(i)]
+                    if model_x_names_tuple[0] is None:
+                        continue
 
-                sub_X_test = sub_X_test[self.x_names]
-
-                try:
-                    model = self.model_dict[f'{ensemble}_{grid_index}_model']
-                    if isinstance(model, dummy_model1):
-                        stixel_specific_x_names = self.x_names
+                    res = predict_one_stixel(
+                                    X_test_copy, 
+                                    self.Temporal1,
+                                    self.Spatio1,
+                                    self.Spatio2,
+                                    stixel[f'{self.Temporal1}_start'],
+                                    stixel[f'{self.Temporal1}_end'],
+                                    stixel['stixel_calibration_point_transformed_left_bound'],
+                                    stixel['stixel_calibration_point_transformed_right_bound'],
+                                    stixel['stixel_calibration_point_transformed_lower_bound'],
+                                    stixel['stixel_calibration_point_transformed_upper_bound'],
+                                    self.x_names,
+                                    self.task,
+                                    model_x_names_tuple
+                                )
+                    res_list.append(res)
+            else:
+                # multi-processing
+                with Pool(njobs) as p:
+                    plain_args_iterator = zip(
+                                    repeat(X_test_copy), 
+                                    repeat(self.Temporal1),
+                                    repeat(self.Spatio1),
+                                    repeat(self.Spatio2),
+                                    this_ensemble[f'{self.Temporal1}_start'],
+                                    this_ensemble[f'{self.Temporal1}_end'],
+                                    this_ensemble['stixel_calibration_point_transformed_left_bound'],
+                                    this_ensemble['stixel_calibration_point_transformed_right_bound'],
+                                    this_ensemble['stixel_calibration_point_transformed_lower_bound'],
+                                    this_ensemble['stixel_calibration_point_transformed_upper_bound'],
+                                    repeat(self.x_names),
+                                    repeat(self.task),
+                                    [get_model_and_stixel_specific_x_names(
+                                          self.model_dict, 
+                                          ensemble, 
+                                          grid_index, 
+                                          self.stixel_specific_x_names, 
+                                          self.x_names) for grid_index in this_ensemble['unique_stixel_id']]
+                        )
+                    if verbosity>0:
+                        args_iterator = tqdm(plain_args_iterator, total=len(this_ensemble), desc=f'predicting ensemble {ensemble} ')
                     else:
-                        stixel_specific_x_names = self.stixel_specific_x_names[f'{ensemble}_{grid_index}']
+                        args_iterator = plain_args_iterator
+                        
+                    res_list = p.starmap(predict_one_stixel, args_iterator)
                     
-                    if self.task=='regression':
-                        pred = model.predict(np.array(sub_X_test[stixel_specific_x_names]))
-                    else:
-                        pred = model.predict_proba(np.array(sub_X_test[stixel_specific_x_names]))[:,1]
-                    
-                    res = pd.DataFrame({'index':list(sub_X_test.index),
-                                        'pred':pred}).set_index('index')
-                    
-
-                except Exception as e:
-                    # print(e)
-                    res = pd.DataFrame({'index':list(sub_X_test.index),
-                                        'pred':[np.nan]*len(list(sub_X_test.index))
-                                        }).set_index('index')
-                    
-                res_list.append(res)
-                
             res_list = pd.concat(res_list, axis=0)
             res_list = res_list.reset_index(drop=False).groupby('index').mean()
-            
             round_res_list.append(res_list)
         
         ####### only sites that meet the minimum ensemble requirement are kept
@@ -539,7 +594,6 @@ class AdaSTEM(BaseEstimator):
         nan_count = np.sum(np.isnan(new_res['pred_mean'].values))
         nan_frac = nan_count / len(new_res['pred_mean'].values)
         warnings.warn(f'There are {nan_frac}% points ({nan_count} points) fell out of predictable range.')
-        # print(f'There are {nan_frac*100:0.5f}% points ({nan_count} points) fell out of predictable range.')
         
         if return_std:
             return new_res['pred_mean'].values, new_res['pred_std'].values
@@ -547,11 +601,14 @@ class AdaSTEM(BaseEstimator):
             return new_res['pred_mean'].values
         
         
+        
     def predict(self,
                 X_test: pd.core.frame.DataFrame,
                 verbosity: int=0, 
                 return_std: bool=False,
+                njobs: Union[None, int]=1,
                 aggregation: str='mean') -> Union[np.ndarray, tuple[np.ndarray]]:
+                      
         """A rewrite of predict_proba
 
         Args:
@@ -561,6 +618,12 @@ class AdaSTEM(BaseEstimator):
                 show progress bar or not. Yes for 0, and No for other. Defaults to 0.
             return_std (bool, optional): 
                 Whether return the standard deviation among ensembles. Defaults to False.
+            njobs (Union[int, None], optional):
+                Number of processes used in this task. If None, use the self.njobs. Default to 1.
+                I do not recommend setting value larger than 1. 
+                In practice, multi-processing seems to slow down the process instead of speeding up.
+                Could be more practical with large amount of data.
+                Still in experiment.
             aggregation (str, optional):
                 'mean' or 'median' for aggregation method across ensembles.
 
@@ -575,47 +638,8 @@ class AdaSTEM(BaseEstimator):
             
         """
         
-        return self.predict_proba(X_test, verbosity=verbosity, return_std=return_std, aggregation=aggregation)
+        return self.predict_proba(X_test, verbosity=verbosity, return_std=return_std, njobs=njobs, aggregation=aggregation)
     
-            
-    def transform_pred_set_to_STEM_quad(self,
-                                        X_train: pd.core.frame.DataFrame,
-                                        ensemble_info: pd.core.frame.DataFrame) -> pd.core.frame.DataFrame:
-        """Project the input data points to the space of quadtree stixels.
-
-        Args:
-            X_train (pd.core.frame.DataFrame): Training/Testing variables
-            ensemble_info (pd.core.frame.DataFrame): the DataFrame with information of the stixel.
-
-        Returns:
-            Projected X_train
-            
-        """
-
-        x_array = X_train[self.Spatio1]
-        y_array = X_train[self.Spatio2]
-        coord = np.array([x_array, y_array]).T
-        angle = float(ensemble_info.iloc[0,:]['rotation'])
-        r = angle/360
-        theta = r * np.pi * 2
-        rotation_matrix = np.array([
-            [np.cos(theta), -np.sin(theta)],
-            [np.sin(theta), np.cos(theta)]
-        ])
-
-        coord = coord @ rotation_matrix
-        calibration_point_x_jitter = \
-                float(ensemble_info.iloc[0,:]['space_jitter(first rotate by zero then add this)'][0])
-        calibration_point_y_jitter = \
-                float(ensemble_info.iloc[0,:]['space_jitter(first rotate by zero then add this)'][1])
-
-        long_new = (coord[:,0] + calibration_point_x_jitter).tolist()
-        lat_new = (coord[:,1] + calibration_point_y_jitter).tolist()
-
-        X_train[f'{self.Spatio1}_new'] = long_new
-        X_train[f'{self.Spatio2}_new'] = lat_new
-
-        return X_train
     
     @classmethod
     def eval_STEM_res(self,
@@ -777,15 +801,16 @@ class AdaSTEM(BaseEstimator):
                 feature_importance_list.append(importance_dict)
                 
             except Exception as e:
-                print(e)
                 continue
         
         self.feature_importances_ = pd.DataFrame(feature_importance_list).set_index('stixel_index').reset_index(drop=False).fillna(0)
         
+        
     def assign_feature_importances_by_points(self,
                                              Sample_ST_df: Union[pd.core.frame.DataFrame, None] = None,
                                              verbosity: int=0,
-                                             aggregation: str='mean'
+                                             aggregation: str='mean',
+                                             njobs: Union[int, None]=1,
                                              ) -> pd.core.frame.DataFrame:
         """Assign feature importance to the input spatio-temporal points
 
@@ -806,6 +831,8 @@ class AdaSTEM(BaseEstimator):
                 Whether to show progressbar during assigning. 0 for No, otherwise Yes. Defaults to 0.
             aggregation (str, optional):
                 One of 'mean' and 'median' to aggregate feature importance across ensembles.
+            njobs (Union[int, None], optional):
+                Number of processes used in this task. If None, use the self.njobs. Default to 1.
         
         Raises:
             NameError: 
@@ -824,6 +851,9 @@ class AdaSTEM(BaseEstimator):
         #
         if not aggregation in ['mean','median']:
             raise ValueError(f'aggregation not one of [\'mean\',\'median\'].')
+        #
+        if njobs is None:
+            njobs = self.njobs
         
         #
         if not (Sample_ST_df is None):
@@ -845,65 +875,43 @@ class AdaSTEM(BaseEstimator):
             })
         
         # assign input spatio-temporal points to stixels
-        round_res_list = []
-        for ensemble in list(self.ensemble_df.ensemble_index.unique()):
-            this_ensemble = self.ensemble_df[self.ensemble_df.ensemble_index==ensemble]
-            this_ensemble['stixel_calibration_point_transformed_left_bound'] = \
-                        [i[0] for i in this_ensemble['stixel_calibration_point(transformed)']]
-
-            this_ensemble['stixel_calibration_point_transformed_lower_bound'] = \
-                        [i[1] for i in this_ensemble['stixel_calibration_point(transformed)']]
-
-            this_ensemble['stixel_calibration_point_transformed_right_bound'] = \
-                        this_ensemble['stixel_calibration_point_transformed_left_bound'] + this_ensemble['stixel_width']
-
-            this_ensemble['stixel_calibration_point_transformed_upper_bound'] = \
-                        this_ensemble['stixel_calibration_point_transformed_lower_bound'] + this_ensemble['stixel_height']
-
-            Sample_ST_df = self.transform_pred_set_to_STEM_quad(Sample_ST_df.reset_index(drop=True),
-                                                                this_ensemble)
+        
+        if not njobs > 1:
+            # Single processing
+            round_res_list = []
+            iter_func_ = tqdm(list(self.ensemble_df.ensemble_index.unique())) if verbosity>0 else list(self.ensemble_df.ensemble_index.unique())
+            for ensemble in iter_func_:
+                res_list = assign_points_to_one_ensemble(
+                                    self.ensemble_df,
+                                    ensemble,
+                                    Sample_ST_df,
+                                    self.Temporal1,
+                                    self.Spatio1,
+                                    self.Spatio2,
+                                    self.feature_importances_
+                                    )
+                round_res_list.append(res_list)
             
-            ##### pred each stixel
-            res_list = []
-            iter_func = this_ensemble.iterrows() if verbosity==0 else tqdm(this_ensemble.iterrows(), 
-                                                                     total=len(this_ensemble), 
-                                                                     desc=f'Processing {ensemble} ')
-            
-            for index,line in iter_func:
-                stixel_index = line['unique_stixel_id']
-                sub_Sample_ST_df = Sample_ST_df[
-                    (Sample_ST_df[self.Temporal1]>=line[f'{self.Temporal1}_start']) & (Sample_ST_df[self.Temporal1]<=line[f'{self.Temporal1}_end']) & \
-                    (Sample_ST_df[f'{self.Spatio1}_new']>=line['stixel_calibration_point_transformed_left_bound']) &\
-                    (Sample_ST_df[f'{self.Spatio1}_new']<=line['stixel_calibration_point_transformed_right_bound']) &\
-                    (Sample_ST_df[f'{self.Spatio2}_new']>=line['stixel_calibration_point_transformed_lower_bound']) &\
-                    (Sample_ST_df[f'{self.Spatio2}_new']<=line['stixel_calibration_point_transformed_upper_bound'])
-                ]
-                
-                if len(sub_Sample_ST_df)==0:
-                    continue
+        else:
+            # multi-processing
+            with Pool(njobs) as p:
+                plain_args_iterator = zip(
+                                    repeat(self.ensemble_df),
+                                    list(self.ensemble_df.ensemble_index.unique()),
+                                    repeat(Sample_ST_df),
+                                    repeat(self.Temporal1),
+                                    repeat(self.Spatio1),
+                                    repeat(self.Spatio2),
+                                    repeat(self.feature_importances_)
+                    )
+                if verbosity>0:
+                    args_iterator = tqdm(plain_args_iterator, total=len(list(self.ensemble_df.ensemble_index.unique())))
+                else:
+                    args_iterator = plain_args_iterator
                     
-                # load feature_importances
-                try:
-                    this_feature_importance = self.feature_importances_[self.feature_importances_['stixel_index']==stixel_index]
-                    if len(this_feature_importance)==0:
-                        continue
-                    this_feature_importance = dict(this_feature_importance.iloc[0,:])
-                    res_list.append({
-                        'sample_index':list(sub_Sample_ST_df.index),
-                        **{a:[b]*len(sub_Sample_ST_df) for a,b in zip(this_feature_importance.keys(),
-                                                                      this_feature_importance.values())}
-                    })
-                    
-                except Exception as e:
-                    print(e)
-                    continue
-
-            res_list = pd.concat([pd.DataFrame(i) for i in res_list], axis=0).drop('stixel_index', axis=1)
-            res_list = res_list.groupby('sample_index').mean().reset_index(drop=False)
-            round_res_list.append(res_list)
-            
+                round_res_list = p.starmap(assign_points_to_one_ensemble, args_iterator)
+        
         round_res_df = pd.concat(round_res_list, axis=0)
-
         ensemble_available_count = round_res_df.groupby('sample_index').count().iloc[:,0]
         
         # Only points with more than self.min_ensemble_required ensembles available are used
@@ -921,11 +929,9 @@ class AdaSTEM(BaseEstimator):
         out_ = pd.concat([Sample_ST_df, mean_feature_importances_across_ensembles], axis=1).dropna()
         return out_
     
-        
-        
+    
 
-    
-    
+
     
 class AdaSTEMClassifier(AdaSTEM):
     """AdaSTEM model Classifier interface"""
@@ -952,6 +958,7 @@ class AdaSTEMClassifier(AdaSTEM):
                 Spatio2 = 'latitude', 
                 Temporal1 = 'DOY',
                 use_temporal_to_train=True,
+                njobs=1,
                 plot_xlims = (-180,180),
                 plot_ylims = (-90,90),
                 ):
@@ -994,6 +1001,7 @@ class AdaSTEMClassifier(AdaSTEM):
                          sample_weights_for_classifier,
                          Spatio1, Spatio2, Temporal1,
                          use_temporal_to_train,
+                         njobs,
                          plot_xlims, plot_ylims
                          )
         
@@ -1003,6 +1011,7 @@ class AdaSTEMClassifier(AdaSTEM):
                 verbosity:int =0, 
                 return_std: bool=False, 
                 cls_threashold: float=0.5, 
+                njobs: Union[int, None]=1,
                 aggregation: str='mean') -> Union[np.ndarray, tuple[np.ndarray]]:
         """A rewrite of predict_proba
 
@@ -1017,6 +1026,12 @@ class AdaSTEMClassifier(AdaSTEM):
                 Cutting threashold for the classification. 
                 Values above cls_threashold will be labeled as 1 and 0 otherwise. 
                 Defaults to 0.5.
+            njobs (Union[int, None], optional):
+                Number of processes used in this task. If None, use the self.njobs. Default to 1.
+                I do not recommend setting value larger than 1. 
+                In practice, multi-processing seems to slow down the process instead of speeding up.
+                Could be more practical with large amount of data.
+                Still in experiment.
             aggregation (str, optional):
                 'mean' or 'median' for aggregation method across ensembles.
 
@@ -1030,14 +1045,14 @@ class AdaSTEMClassifier(AdaSTEM):
             predicted results. (pred_mean, pred_std) if return_std==Ture, and pred_mean if return_std==False.
             
         """
-        
+                    
         if return_std:
-            mean, std = self.predict_proba(X_test, verbosity=verbosity, return_std=True, aggregation=aggregation)
+            mean, std = self.predict_proba(X_test, verbosity=verbosity, return_std=True, njobs=njobs, aggregation=aggregation)
             mean = np.where(mean<cls_threashold, 0, mean)
             mean = np.where(mean>=cls_threashold, 1, mean)
             return mean, std
         else:
-            mean = self.predict_proba(X_test, verbosity=verbosity, return_std=False, aggregation=aggregation)
+            mean = self.predict_proba(X_test, verbosity=verbosity, return_std=False, njobs=njobs, aggregation=aggregation)
             mean = np.where(mean<cls_threashold, 0, mean)
             mean = np.where(mean>=cls_threashold, 1, mean)
             return mean
@@ -1069,6 +1084,7 @@ class AdaSTEMRegressor(AdaSTEM):
                 Spatio2 = 'latitude', 
                 Temporal1 = 'DOY',
                 use_temporal_to_train=True,
+                njobs=1,
                 plot_xlims = (-180,180),
                 plot_ylims = (-90,90)
                 ):
@@ -1111,6 +1127,7 @@ class AdaSTEMRegressor(AdaSTEM):
                          sample_weights_for_classifier,
                          Spatio1, Spatio2, Temporal1,
                          use_temporal_to_train,
+                         njobs,
                          plot_xlims, plot_ylims,
                          )
         

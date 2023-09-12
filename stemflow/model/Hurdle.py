@@ -197,34 +197,40 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
         self.regressor.fit(X_train[X_train['y_train']>0].iloc[:,:-1], np.array(X_train[X_train['y_train']>0].iloc[:,-1]))
         
     def predict(self, 
-                X_test: Union[pd.core.frame.DataFrame,np.ndarray]) -> np.ndarray:
+                X_test: Union[pd.core.frame.DataFrame,np.ndarray],
+                njobs:int = 1) -> np.ndarray:
         """Predict
 
         Args:
             X_test: 
                 Test variables
+            njobs:
+                Multi-processing in prediction.
 
         Returns:
             A prediciton array with shape (-1,1)
         """
         
-        cls_res = self.classifier.predict(X_test)
-        reg_res = self.regressor.predict(X_test)
+        cls_res = self.classifier.predict(X_test, njobs=njobs)
+        reg_res = self.regressor.predict(X_test, njobs=njobs)
         # reg_res = np.where(reg_res>=0, reg_res, 0) ### we constrain the reg value to be positive
         res = np.where(cls_res<0.5, 0, cls_res)
         res = np.where(cls_res>0.5, reg_res, cls_res)
         return res.reshape(-1,1)
     
     def predict_proba(self, 
-                      X_test: Union[pd.core.frame.DataFrame,np.ndarray]) -> np.ndarray:
+                      X_test: Union[pd.core.frame.DataFrame,np.ndarray], 
+                      njobs: int = 1) -> np.ndarray:
         '''Just a rewrite of `predict` method
         
         Args:
             X_test:
                 Testing varibales
+            njobs:
+                Multi-processing in prediction.
         
         Returns:
             A prediciton array with shape (-1,1)
         '''
         
-        return self.predict(self, X_test)
+        return self.predict(self, X_test, njobs=njobs)
