@@ -38,7 +38,7 @@ from itertools import repeat
 #validation check
 from pandas.core.frame import DataFrame
 from numpy import ndarray
-from typing import Union
+from typing import Union, Tuple
 #
 import warnings
 warnings.filterwarnings('ignore')
@@ -73,7 +73,7 @@ def train_one_stixel(stixel_training_size_threshold: int,
                      base_model: BaseEstimator, 
                      sample_weights_for_classifier: bool,
                      X_train_copy: pd.core.frame.DataFrame, 
-                     checklist_indexes: list) -> tuple[Union[None, BaseEstimator], list]:
+                     checklist_indexes: list) -> Tuple[Union[None, BaseEstimator], list]:
     """Train one stixel
 
     Args:
@@ -317,7 +317,7 @@ def get_model_and_stixel_specific_x_names(model_dict: dict,
                                           ensemble: str, 
                                           grid_index: str, 
                                           stixel_specific_x_names_dict: dict, 
-                                          x_names: list) -> tuple[Union[None, BaseEstimator], list]:
+                                          x_names: list) -> Tuple[Union[None, BaseEstimator], list]:
     """get_model_and_stixel_specific_x_names
 
     Args:
@@ -353,7 +353,7 @@ def predict_one_stixel(
     stixel_calibration_point_transformed_upper_bound: Union[float, int],
     x_names: list,
     task: str,
-    model_x_names_tuple: tuple[Union[None, BaseEstimator], list]
+    model_x_names_tuple: Tuple[Union[None, BaseEstimator], list]
     ) -> pd.core.frame.DataFrame:
     """predict_one_stixel
 
