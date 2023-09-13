@@ -14,7 +14,7 @@
 
  <!-- ![Anaconda version](https://anaconda.org/conda-forge/stemflow/badges/version.svg) -->
  
-## Installation :material-shovel:
+## Installation  :wrench:
 
 ```py
 pip install stemflow
@@ -125,7 +125,7 @@ See [AdaSTEM demo](https://chenyangkang.github.io/stemflow/Examples/01.AdaSTEM_d
 
 
 
-## Plot QuadTree ensembles :material-family-tree:
+## Plot QuadTree ensembles :evergreen_tree:
 
 
 ```py
@@ -137,7 +137,7 @@ model.classifier.gridding_plot
 Here, each color shows an ensemble generated during model fitting. In each of the 10 ensembles, regions (in terms of space and time) with more training samples were gridded into finer resolution, while the sparse one remained coarse. Prediction results were aggregated across the ensembles (that is, in this example, data were gone though 10 times).
 
 ---- 
-## Example of visualization :map:
+## Example of visualization :world_map:
 ![GIF visualization](https://chenyangkang.github.io/stemflow/pred_gif.gif)
 
 See section [Prediction and Visualization](https://chenyangkang.github.io/stemflow/Examples/04.Prediction_visualization.html) for how to generate this GIF.
