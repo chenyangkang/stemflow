@@ -1,3 +1,6 @@
+.DS_Store
+stemflow_mini_test/*
+*.cache
 */dataset/test_data/*
 *.csv
 !*/mini_data/*
