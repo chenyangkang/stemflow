@@ -28,7 +28,7 @@ pip install stemflow
 
 ## Mini Test  :test_tube:
 
-To run a auto-mini test, one can simply call:
+To run a auto-mini test, call:
 
 ```py
 
@@ -58,7 +58,7 @@ python mini_test.py # run the test
 See section [Mini Test](https://chenyangkang.github.io/stemflow/Examples/00.Mini_test.html) for further illustration of the mini test.
 
 ## Brief introduction :information_source:
-**Stemflow** is a toolkit for ==Adaptive Spatio-Temporal Exploratory Model (AdaSTEM^1,2^)== in python. A typical usage is daily abundance estimation using eBird citizen science data. It leverages the "adjacency" information of surrounding target values in space and time, to predict the classes/continues values of target spatial-temporal point. In the demo, we use a two-step hurdle model as "base model", with XGBoostClassifier for occurence modeling and XGBoostRegressor for abundance modeling.
+**Stemflow** is a toolkit for ==Adaptive Spatio-Temporal Exploratory Model (AdaSTEM^1,2^)== in python. A typical usage is daily abundance estimation using eBird citizen science data. It leverages the "adjacency" information of surrounding target values in space and time, to predict the classes/continuous values of target spatial-temporal points. In the demo, we use a two-step hurdle model as "base model", with XGBoostClassifier for occurrence modeling and XGBoostRegressor for abundance modeling.
 
 User can define the size of stixel (spatial temporal pixel) in terms of space and time. Larger stixel promotes generalizability but loses precision in fine resolution; Smaller stixel may have better predictability in the exact area but reduced extrapolability for points outside the stixel.
 
