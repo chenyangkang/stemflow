@@ -14,10 +14,13 @@
 
  <!-- ![Anaconda version](https://anaconda.org/conda-forge/stemflow/badges/version.svg) -->
  
+-----
 
 ## Documentation :book:
-^^==[stemflow Documentation](https://chenyangkang.github.io/stemflow/)==^^
+[stemflow Documentation](https://chenyangkang.github.io/stemflow/)
 <!-- stemflow -->
+
+-----
 
 
 ## Installation  :wrench:
@@ -58,7 +61,7 @@ python mini_test.py # run the test
 See section [Mini Test](https://chenyangkang.github.io/stemflow/Examples/00.Mini_test.html) for further illustration of the mini test.
 
 ## Brief introduction :information_source:
-**Stemflow** is a toolkit for ==Adaptive Spatio-Temporal Exploratory Model (AdaSTEM^1,2^)== in python. A typical usage is daily abundance estimation using eBird citizen science data. It leverages the "adjacency" information of surrounding target values in space and time, to predict the classes/continuous values of target spatial-temporal points. In the demo, we use a two-step hurdle model as "base model", with XGBoostClassifier for occurrence modeling and XGBoostRegressor for abundance modeling.
+**Stemflow** is a toolkit for Adaptive Spatio-Temporal Exploratory Model (AdaSTEM [1,2]) in python. A typical usage is daily abundance estimation using eBird citizen science data. It leverages the "adjacency" information of surrounding target values in space and time, to predict the classes/continuous values of target spatial-temporal points. In the demo, we use a two-step hurdle model as "base model", with XGBoostClassifier for occurrence modeling and XGBoostRegressor for abundance modeling.
 
 User can define the size of stixel (spatial temporal pixel) in terms of space and time. Larger stixel promotes generalizability but loses precision in fine resolution; Smaller stixel may have better predictability in the exact area but reduced extrapolability for points outside the stixel.
 
@@ -141,7 +144,7 @@ model.classifier.gridding_plot
 
 ![QuadTree example](https://chenyangkang.github.io/stemflow/QuadTree.png)
 
-Here, each color shows an ensemble generated during model fitting. In each of the 10 ensembles, regions (in terms of space and time) with more training samples were gridded into finer resolution, while the sparse one remained coarse. Prediction results were aggregated across the ensembles (that is, in this example, data were gone though 10 times).
+Here, each color shows an ensemble generated during model fitting. In each of the 10 ensembles, regions (in terms of space and time) with more training samples were gridded into finer resolution, while the sparse one remained coarse. Prediction results were aggregated across the ensembles (that is, in this example, data were gone through 10 times).
 
 ---- 
 ## Example of visualization :world_map:
@@ -154,9 +157,9 @@ See section [Prediction and Visualization](https://chenyangkang.github.io/stemfl
 
 ## Contribute to stemflow :purple_heart:
 
-^^**Pull requests are welcomed!**^^ Open a issue so that we can discuss the detailed implementation.
+**Pull requests are welcomed!** Open a issue so that we can discuss the detailed implementation.
 
-^^**Application level cooperation is also welcomed!**^^ My domain knowledge is in avian ecology and evolution. 
+**Application level cooperation is also welcomed!** My domain knowledge is in avian ecology and evolution. 
 
 You can contact me at **chenyangkang24@outlook.com**
 

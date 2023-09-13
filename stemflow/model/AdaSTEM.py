@@ -433,7 +433,8 @@ class AdaSTEM(BaseEstimator):
                       verbosity: int=0, 
                       return_std: bool=False,
                       njobs: Union[None, int]=1,
-                      aggregation: str='mean') -> Union[np.ndarray, Tuple[np.ndarray]]:
+                      aggregation: str='mean',
+                      return_by_seperate_ensembles: bool=False) -> Union[np.ndarray, Tuple[np.ndarray]]:
         """Predict probability
 
         Args:
@@ -451,7 +452,9 @@ class AdaSTEM(BaseEstimator):
                 Still in experiment.
             aggregation (str, optional):
                 'mean' or 'median' for aggregation method across ensembles.
-
+            return_by_seperate_ensembles (bool, optional):
+                Experimental function. return not by aggregation, but by seperate ensembles.
+                
         Raises:
             TypeError: 
                 X_test is not of type pd.core.frame.DataFrame.
@@ -461,6 +464,9 @@ class AdaSTEM(BaseEstimator):
         Returns:
             predicted results. (pred_mean, pred_std) if return_std==Ture, and pred_mean if return_std==False.
             
+            If return_by_seperate_ensembles == True:
+                Return numpy.ndarray of shape (n_samples, n_ensembles)
+            
         """
         type_X_test = type(X_test)
         if not type_X_test == pd.core.frame.DataFrame:
@@ -469,10 +475,19 @@ class AdaSTEM(BaseEstimator):
         if not aggregation in ['mean','median']:
             raise ValueError(f'aggregation must be one of \'mean\' and \'median\'. Got {aggregation}')
         
+        if not isinstance(return_by_seperate_ensembles, bool):
+            type_return_by_seperate_ensembles = str(type(return_by_seperate_ensembles))
+            raise TypeError(f'return_by_seperate_ensembles must be bool. Got {type_return_by_seperate_ensembles}')
+        else:
+            if return_by_seperate_ensembles and return_std:
+                warnings(f'return_by_seperate_ensembles == True. Autometically setting return_std=False')
+                return_std = False
+                
         ##### predict
         X_test_copy = X_test.copy()
         
         round_res_list = []
+        
         for ensemble in list(self.ensemble_df.ensemble_index.unique()):
             this_ensemble = self.ensemble_df[self.ensemble_df.ensemble_index==ensemble]
             this_ensemble['stixel_calibration_point_transformed_left_bound'] = \
@@ -561,6 +576,14 @@ class AdaSTEM(BaseEstimator):
         ####### only sites that meet the minimum ensemble requirement are kept
         res = pd.concat([df['pred'] for df in round_res_list], axis=1)
 
+        # Experimental Function
+        if return_by_seperate_ensembles:
+            new_res = pd.DataFrame({
+                'index':list(X_test.index)
+            }).set_index('index')
+            new_res = new_res.merge(res, left_on='index', right_on='index', how='left')
+            return new_res.values
+        
         if aggregation=='mean':
             res_mean = res.mean(axis=1, skipna=True)  ##### mean of all grid model that predicts this stixel
         elif aggregation=='median':
@@ -606,7 +629,8 @@ class AdaSTEM(BaseEstimator):
                 verbosity: int=0, 
                 return_std: bool=False,
                 njobs: Union[None, int]=1,
-                aggregation: str='mean') -> Union[np.ndarray, Tuple[np.ndarray]]:
+                aggregation: str='mean',
+                return_by_seperate_ensembles: bool=False) -> Union[np.ndarray, Tuple[np.ndarray]]:
                       
         """A rewrite of predict_proba
 
@@ -625,7 +649,9 @@ class AdaSTEM(BaseEstimator):
                 Still in experiment.
             aggregation (str, optional):
                 'mean' or 'median' for aggregation method across ensembles.
-
+            return_by_seperate_ensembles (bool, optional):
+                Experimental function. return not by aggregation, but by seperate ensembles.
+                
         Raises:
             TypeError: 
                 X_test is not of type pd.core.frame.DataFrame.
@@ -635,9 +661,12 @@ class AdaSTEM(BaseEstimator):
         Returns:
             predicted results. (pred_mean, pred_std) if return_std==Ture, and pred_mean if return_std==False.
             
+            If return_by_seperate_ensembles == True:
+                Return numpy.ndarray of shape (n_samples, n_ensembles)
+                
         """
         
-        return self.predict_proba(X_test, verbosity=verbosity, return_std=return_std, njobs=njobs, aggregation=aggregation)
+        return self.predict_proba(X_test, verbosity=verbosity, return_std=return_std, njobs=njobs, aggregation=aggregation, return_by_seperate_ensembles=return_by_seperate_ensembles)
     
     
     @classmethod
@@ -1011,7 +1040,8 @@ class AdaSTEMClassifier(AdaSTEM):
                 return_std: bool=False, 
                 cls_threashold: float=0.5, 
                 njobs: Union[int, None]=1,
-                aggregation: str='mean') -> Union[np.ndarray, Tuple[np.ndarray]]:
+                aggregation: str='mean',
+                return_by_seperate_ensembles: bool=False) -> Union[np.ndarray, Tuple[np.ndarray]]:
         """A rewrite of predict_proba
 
         Args:
@@ -1033,6 +1063,8 @@ class AdaSTEMClassifier(AdaSTEM):
                 Still in experiment.
             aggregation (str, optional):
                 'mean' or 'median' for aggregation method across ensembles.
+            return_by_seperate_ensembles (bool, optional):
+                Experimental function. return not by aggregation, but by seperate ensembles.
 
         Raises:
             TypeError:
@@ -1046,12 +1078,12 @@ class AdaSTEMClassifier(AdaSTEM):
         """
                     
         if return_std:
-            mean, std = self.predict_proba(X_test, verbosity=verbosity, return_std=True, njobs=njobs, aggregation=aggregation)
+            mean, std = self.predict_proba(X_test, verbosity=verbosity, return_std=True, njobs=njobs, aggregation=aggregation, return_by_seperate_ensembles=return_by_seperate_ensembles)
             mean = np.where(mean<cls_threashold, 0, mean)
             mean = np.where(mean>=cls_threashold, 1, mean)
             return mean, std
         else:
-            mean = self.predict_proba(X_test, verbosity=verbosity, return_std=False, njobs=njobs, aggregation=aggregation)
+            mean = self.predict_proba(X_test, verbosity=verbosity, return_std=False, njobs=njobs, aggregation=aggregation, return_by_seperate_ensembles=return_by_seperate_ensembles)
             mean = np.where(mean<cls_threashold, 0, mean)
             mean = np.where(mean>=cls_threashold, 1, mean)
             return mean

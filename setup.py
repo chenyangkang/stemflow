@@ -23,9 +23,10 @@ setup(
     description=DESCRIPTION,
     long_description_content_type="text/markdown",
     long_description=long_description,
-    packages=find_packages(),
+    packages= find_packages(),
     python_requires= ">=3.8.0",
     install_requires=requirements,
+    platforms= "any",
     keywords=['python', 'spatial-temporal model', 'ebird', 'citizen science', 'spatial temporal exploratory model',
               'STEM','AdaSTEM','abundance','phenology'],
     classifiers=[

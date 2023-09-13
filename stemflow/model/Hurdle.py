@@ -206,7 +206,8 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
     def predict(self, 
                 X_test: Union[pd.core.frame.DataFrame,np.ndarray],
                 njobs:int = 1,
-                verbosity: int=1) -> np.ndarray:
+                verbosity: int=1,
+                return_by_seperate_ensembles: bool=False) -> np.ndarray:
         """Predict
 
         Args:
@@ -216,16 +217,18 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
                 Multi-processing in prediction.
             verbosity:
                 Whehter to show progress bar. 0 for No, and Yes other wise.
+            return_by_seperate_ensembles (bool, optional):
+                Test function. return not by aggregation, but by seperate ensembles.
                 
         Returns:
             A prediciton array with shape (-1,1)
         """
         if verbosity==0:
-            cls_res = self.classifier.predict(X_test, njobs=njobs, verbosity=0)
-            reg_res = self.regressor.predict(X_test, njobs=njobs, verbosity=0)
+            cls_res = self.classifier.predict(X_test, njobs=njobs, verbosity=0, return_by_seperate_ensembles=return_by_seperate_ensembles)
+            reg_res = self.regressor.predict(X_test, njobs=njobs, verbosity=0, return_by_seperate_ensembles=return_by_seperate_ensembles)
         else:
-            cls_res = self.classifier.predict(X_test, njobs=njobs, verbosity=1)
-            reg_res = self.regressor.predict(X_test, njobs=njobs, verbosity=1)
+            cls_res = self.classifier.predict(X_test, njobs=njobs, verbosity=1, return_by_seperate_ensembles=return_by_seperate_ensembles)
+            reg_res = self.regressor.predict(X_test, njobs=njobs, verbosity=1, return_by_seperate_ensembles=return_by_seperate_ensembles)
         # reg_res = np.where(reg_res>=0, reg_res, 0) ### we constrain the reg value to be positive
         res = np.where(cls_res<0.5, 0, cls_res)
         res = np.where(cls_res>0.5, reg_res, cls_res)
@@ -234,7 +237,8 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
     def predict_proba(self, 
                       X_test: Union[pd.core.frame.DataFrame,np.ndarray], 
                       njobs: int = 1,
-                      verbosity: int=0) -> np.ndarray:
+                      verbosity: int=0,
+                      return_by_seperate_ensembles: bool=False) -> np.ndarray:
         '''Just a rewrite of `predict` method
         
         Args:
@@ -244,9 +248,11 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
                 Multi-processing in prediction.
             verbosity:
                 Whehter to show progress bar. 0 for No, and Yes other wise.
+            return_by_seperate_ensembles (bool, optional):
+                Test function. return not by aggregation, but by seperate ensembles.
                 
         Returns:
             A prediciton array with shape (-1,1)
         '''
         
-        return self.predict(self, X_test, njobs=njobs, verbosity=verbosity)
+        return self.predict(self, X_test, njobs=njobs, verbosity=verbosity, return_by_seperate_ensembles=return_by_seperate_ensembles)
