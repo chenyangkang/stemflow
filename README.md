@@ -14,6 +14,11 @@
 
  <!-- ![Anaconda version](https://anaconda.org/conda-forge/stemflow/badges/version.svg) -->
  
+
+## Documentation :book:
+[stemflow Documentation](https://chenyangkang.github.io/stemflow/)
+
+
 ## Installation  :wrench:
 
 ```py
@@ -145,8 +150,6 @@ Here, each color shows an ensemble generated during model fitting. In each of th
 See section [Prediction and Visualization](https://chenyangkang.github.io/stemflow/Examples/04.Prediction_visualization.html) for how to generate this GIF.
 
 ----
-## Documentation :book:
-[stemflow Documentation](https://chenyangkang.github.io/stemflow/)
 
 <!-- stemflow -->
 
