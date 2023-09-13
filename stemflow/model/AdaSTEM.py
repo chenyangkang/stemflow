@@ -35,7 +35,7 @@ from itertools import repeat
 #validation check
 from pandas.core.frame import DataFrame
 from numpy import ndarray
-from typing import Union
+from typing import Union, Tuple
 #
 
 ######
@@ -84,8 +84,8 @@ class AdaSTEM(BaseEstimator):
                 Temporal1: str = 'DOY',
                 use_temporal_to_train: bool=True,
                 njobs: int=1,          
-                plot_xlims: tuple[Union[float, int], Union[float, int]] = (-180,180),
-                plot_ylims: tuple[Union[float, int], Union[float, int]] = (-90,90)                   
+                plot_xlims: Tuple[Union[float, int], Union[float, int]] = (-180,180),
+                plot_ylims: Tuple[Union[float, int], Union[float, int]] = (-90,90)                   
                 ):
         """Make a AdaSTEM object
 
@@ -433,7 +433,7 @@ class AdaSTEM(BaseEstimator):
                       verbosity: int=0, 
                       return_std: bool=False,
                       njobs: Union[None, int]=1,
-                      aggregation: str='mean') -> Union[np.ndarray, tuple[np.ndarray]]:
+                      aggregation: str='mean') -> Union[np.ndarray, Tuple[np.ndarray]]:
         """Predict probability
 
         Args:
@@ -606,7 +606,7 @@ class AdaSTEM(BaseEstimator):
                 verbosity: int=0, 
                 return_std: bool=False,
                 njobs: Union[None, int]=1,
-                aggregation: str='mean') -> Union[np.ndarray, tuple[np.ndarray]]:
+                aggregation: str='mean') -> Union[np.ndarray, Tuple[np.ndarray]]:
                       
         """A rewrite of predict_proba
 
@@ -1011,7 +1011,7 @@ class AdaSTEMClassifier(AdaSTEM):
                 return_std: bool=False, 
                 cls_threashold: float=0.5, 
                 njobs: Union[int, None]=1,
-                aggregation: str='mean') -> Union[np.ndarray, tuple[np.ndarray]]:
+                aggregation: str='mean') -> Union[np.ndarray, Tuple[np.ndarray]]:
         """A rewrite of predict_proba
 
         Args:

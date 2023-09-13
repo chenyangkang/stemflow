@@ -7,7 +7,7 @@ import geopandas as gpd
 import pandas
 import pandas as pd
 import numpy
-from typing import Union
+from typing import Union, Tuple
 from sklearn.preprocessing import LabelEncoder
 
 def make_sample_gif(data: pd.core.frame.DataFrame, 
@@ -16,9 +16,9 @@ def make_sample_gif(data: pd.core.frame.DataFrame,
                     Spatio1: str='longitude',
                     Spatio2: str='latitude', 
                     Temporal1: str='DOY',
-                    figsize: tuple[Union[float, int]]=(18,9), 
-                    xlims: tuple[Union[float, int]]=(-180, 180), 
-                    ylims: tuple[Union[float, int]]=(-90,90), 
+                    figsize: Tuple[Union[float, int]]=(18,9), 
+                    xlims: Tuple[Union[float, int]]=(-180, 180), 
+                    ylims: Tuple[Union[float, int]]=(-90,90), 
                     grid: bool=True,
                     lng_size: int = 360, 
                     lat_size: int = 180, 
@@ -151,9 +151,9 @@ def make_sample_gif_scatter(data: pandas.core.frame.DataFrame,
                             Spatio1: str='longitude',
                             Spatio2: str='latitude', 
                             Temporal1: str='DOY',
-                            figsize: tuple[Union[float, int]]=(18,9), 
-                            xlims: tuple[Union[float, int]]=(-180, 180), 
-                            ylims: tuple[Union[float, int]]=(-90,90), 
+                            figsize: Tuple[Union[float, int]]=(18,9), 
+                            xlims: Tuple[Union[float, int]]=(-180, 180), 
+                            ylims: Tuple[Union[float, int]]=(-90,90), 
                             grid: bool=True,
                             log_scale: bool = False, 
                             s: float = 0.2,

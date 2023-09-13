@@ -8,7 +8,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt # plotting libraries
 import matplotlib.patches as patches
 from collections.abc import Sequence
-from typing import Union
+from typing import Union, Tuple
 import pandas
 import matplotlib
 from multiprocessing import Pool
@@ -423,9 +423,9 @@ def get_ensemble_quadtree(data: pandas.core.frame.DataFrame,
                             save_gridding_plot: bool=True,
                             njobs: int=1,
                             verbosity: int=1,
-                            plot_xlims: tuple[Union[float, int]] = (-180,180),
-                            plot_ylims: tuple[Union[float, int]] = (-90,90),
-                            save_path: str='') -> tuple[pandas.core.frame.DataFrame, 
+                            plot_xlims: Tuple[Union[float, int]] = (-180,180),
+                            plot_ylims: Tuple[Union[float, int]] = (-90,90),
+                            save_path: str='') -> Tuple[pandas.core.frame.DataFrame, 
                                                         Union[matplotlib.figure.Figure, float]]:
     '''Generate QuadTree gridding based on the input dataframe
     
