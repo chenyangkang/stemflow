@@ -27,7 +27,7 @@ pip install stemflow
 
 ## Mini Test  :test_tube:
 
-To run a auto-mini test, one can simply call:
+To run a auto-mini test, call:
 
 ```py
 
