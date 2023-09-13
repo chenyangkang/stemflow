@@ -147,7 +147,7 @@ Here, each color shows an ensemble generated during model fitting. In each of th
 
 ---
 
-![](https://chenyangkang.github.io/stemflow/pred_gif.gif)
+<img src="https://chenyangkang.github.io/stemflow/pred_gif.gif" width=100%>
 
 ---
 
