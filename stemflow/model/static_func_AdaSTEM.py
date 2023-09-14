@@ -393,7 +393,6 @@ def predict_one_stixel(
     sub_X_test = sub_X_test[x_names]
 
     try:
-
         if task=='regression':
             pred = model_x_names_tuple[0].predict(np.array(sub_X_test[model_x_names_tuple[1]]))
         else:

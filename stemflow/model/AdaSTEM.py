@@ -538,6 +538,10 @@ class AdaSTEM(BaseEstimator):
                                     self.task,
                                     model_x_names_tuple
                                 )
+                    
+                    if res is None:
+                        continue
+                    
                     res_list.append(res)
             else:
                 # multi-processing
@@ -568,8 +572,15 @@ class AdaSTEM(BaseEstimator):
                         args_iterator = plain_args_iterator
                         
                     res_list = p.starmap(predict_one_stixel, args_iterator)
-                    
-            res_list = pd.concat(res_list, axis=0)
+            
+            try:        
+                res_list = pd.concat(res_list, axis=0)
+            except:
+                res_list = pd.DataFrame({
+                    'index':list(X_test.index),
+                    'pred':[np.nan] * len(X_test.index)
+                }).set_index('index')
+                
             res_list = res_list.reset_index(drop=False).groupby('index').mean()
             round_res_list.append(res_list)
         
