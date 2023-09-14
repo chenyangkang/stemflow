@@ -31,7 +31,7 @@ pip install stemflow
 
 ## Mini Test  :test_tube:
 
-To run a auto-mini test, call:
+To run an auto-mini test, call:
 
 ```py
 
@@ -41,7 +41,7 @@ run_mini_test(delet_tmp_files=True)
 
 ```
 
-Or, if the package were cloned from the github repo, you can run the python script:
+Or, if the package was cloned from the github repo, you can run the python script:
 
 ```py
 
@@ -58,14 +58,14 @@ python mini_test.py # run the test
 
 ```
 
-See section [Mini Test](https://chenyangkang.github.io/stemflow/Examples/00.Mini_test.html) for further illustration of the mini test.
+See section [Mini Test](https://chenyangkang.github.io/stemflow/Examples/00.Mini_test.html) for further illustrations of the mini test.
 
 ## Brief introduction :information_source:
-**Stemflow** is a toolkit for Adaptive Spatio-Temporal Exploratory Model (AdaSTEM [1,2]) in python. A typical usage is daily abundance estimation using eBird citizen science data. It leverages the "adjacency" information of surrounding target values in space and time, to predict the classes/continuous values of target spatial-temporal points. In the demo, we use a two-step hurdle model as "base model", with XGBoostClassifier for occurrence modeling and XGBoostRegressor for abundance modeling.
+**Stemflow** is a toolkit for Adaptive Spatio-Temporal Exploratory Model (AdaSTEM [1,2]) in python. A typical usage is daily abundance estimation using eBird citizen science data. It leverages the "adjacency" information of surrounding target values in space and time to predict the classes/continuous values of target spatial-temporal points. In the demo, we use a two-step hurdle model as "base model", with XGBoostClassifier for occurrence modeling and XGBoostRegressor for abundance modeling.
 
 User can define the size of stixel (spatial temporal pixel) in terms of space and time. Larger stixel promotes generalizability but loses precision in fine resolution; Smaller stixel may have better predictability in the exact area but reduced extrapolability for points outside the stixel.
 
-In the demo, we first split the training data using temporal sliding windows with size of 50 day of year (DOY) and step of 20 DOY (`temporal_start = 1`, `temporal_end=366`, `temporal_step=20`, `temporal_bin_interval=50`). For each temporal slice, a spatial gridding is applied, where we force the stixel to be split into smaller 1/4 pieces if the edge is larger than 25 units (measured in longitude and latitude, `grid_len_lon_upper_threshold=25`, `grid_len_lat_upper_threshold=25`), and stop splitting to prevent the edge length to shrink below 5 units (`grid_len_lon_lower_threshold=5`, `grid_len_lat_lower_threshold=5`) or containing less than 25 checklists (`points_lower_threshold=50`). Model fitting is run using 4 cores (`njobs=4`).
+In the demo, we first split the training data using temporal sliding windows with size of 50 day of year (DOY) and step of 20 DOY (`temporal_start = 1`, `temporal_end=366`, `temporal_step=20`, `temporal_bin_interval=50`). For each temporal slice, a spatial gridding is applied, where we force the stixel to be split into smaller 1/4 pieces if the edge is larger than 25 units (measured in longitude and latitude, `grid_len_lon_upper_threshold=25`, `grid_len_lat_upper_threshold=25`), and stop splitting to prevent the edge length being chunked below 5 units (`grid_len_lon_lower_threshold=5`, `grid_len_lat_lower_threshold=5`) or containing less than 50 checklists (`points_lower_threshold=50`). Model fitting is run using 4 cores (`njobs=4`).
 
 This process is excecuted 10 times (`ensemble_fold = 10`), each time with random jitter and random rotation of the gridding, generating 10 ensembles. In the prediciton phase, only spatial-temporal points with more than 7 (`min_ensemble_required = 7`) ensembles usable are predicted (otherwise, set as `np.nan`).
 
@@ -157,7 +157,7 @@ See section [Prediction and Visualization](https://chenyangkang.github.io/stemfl
 
 ## Contribute to stemflow :purple_heart:
 
-**Pull requests are welcomed!** Open a issue so that we can discuss the detailed implementation.
+**Pull requests are welcomed!** Open an issue so that we can discuss the detailed implementation.
 
 **Application level cooperation is also welcomed!** My domain knowledge is in avian ecology and evolution. 
 
