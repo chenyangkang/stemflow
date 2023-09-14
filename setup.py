@@ -10,8 +10,8 @@ with codecs.open(os.path.join(here, "README.md"), encoding="utf-8") as fh:
 
 requirements = open(os.path.join(here, "requirements.txt"), "r", encoding="utf-8").read().strip().split()
 
-DESCRIPTION = 'A package for Adaptive Spatio-Temporal Model (AdaSTEM) in python'
-LONG_DESCRIPTION = 'stemflow is a toolkit for Adaptive Spatio-Temporal Model (AdaSTEM) in python. A typical usage is daily abundance estimation using eBird citizen science data. It leverages the "adjacency" information of surrounding target values in space and time, to predict the classes/continuous values of target spatial-temporal points. In the demo, we use a two-step hurdle model as "base model", with XGBoostClassifier for occurrence modeling and XGBoostRegressor for abundance modeling.'
+DESCRIPTION = 'A package for Adaptive Spatio-Temporal Exploratory Model (AdaSTEM) in python'
+LONG_DESCRIPTION = '**Stemflow** is a toolkit for Adaptive Spatio-Temporal Exploratory Model (AdaSTEM [1,2]) in python. A typical usage is daily abundance estimation using eBird citizen science data. It leverages the "adjacency" information of surrounding target values in space and time to predict the classes/continuous values of target spatial-temporal points. In the demo, we use a two-step hurdle model as "base model", with XGBoostClassifier for occurrence modeling and XGBoostRegressor for abundance modeling.'
 
 # Setting up
 setup(
