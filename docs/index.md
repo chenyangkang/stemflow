@@ -151,7 +151,10 @@ Here, each color shows an ensemble generated during model fitting. In each of th
 
 <!-- ![GIF visualization](https://chenyangkang.github.io/stemflow/pred_gif.gif) -->
 
+<!-- <img src="https://chenyangkang.github.io/stemflow/pred_gif.gif?raw=true" width="200px"> -->
+
 <img src="https://chenyangkang.github.io/stemflow/pred_gif.gif?raw=true" width="200px">
+
 
 
 See section [Prediction and Visualization](https://chenyangkang.github.io/stemflow/Examples/04.Prediction_visualization.html) for how to generate this GIF.
