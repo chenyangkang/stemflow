@@ -4,7 +4,7 @@
 </p>
 <!--  -->
 <p align="center">
-  <em>A package for Adaptive Spatio-Temporal Model (AdaSTEM) in python.</em>
+  <em>A package for Adaptive Spatio-Temporal Exploratory Model (AdaSTEM) in python.</em>
 </p>
 
 ![GitHub](https://img.shields.io/github/license/chenyangkang/stemflow)
