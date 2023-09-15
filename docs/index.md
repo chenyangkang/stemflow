@@ -115,7 +115,7 @@ model = Hurdle_for_AdaSTEM(
 ```
 
 
-Fitting and prediction methods follow the style of sklearn `estimator` class:
+Fitting and prediction methods follow the style of sklearn `BaseEstimator` class:
 
 ```py
 ## fit
