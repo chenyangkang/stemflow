@@ -9,6 +9,7 @@
 
 ![GitHub](https://img.shields.io/github/license/chenyangkang/stemflow)
 ![Anaconda version](https://anaconda.org/conda-forge/stemflow/badges/version.svg)
+![Anaconda downloads](https://anaconda.org/conda-forge/stemflow/badges/downloads.svg)
 ![PyPI version](https://img.shields.io/pypi/v/stemflow)
 ![PyPI downloads](https://img.shields.io/pypi/dm/stemflow)
 ![GitHub last commit](https://img.shields.io/github/last-commit/chenyangkang/stemflow)
