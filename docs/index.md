@@ -8,11 +8,12 @@
 </p>
 
 ![GitHub](https://img.shields.io/github/license/chenyangkang/stemflow)
+![Anaconda version](https://anaconda.org/conda-forge/stemflow/badges/version.svg)
 ![PyPI version](https://img.shields.io/pypi/v/stemflow)
 ![PyPI downloads](https://img.shields.io/pypi/dm/stemflow)
 ![GitHub last commit](https://img.shields.io/github/last-commit/chenyangkang/stemflow)
 
- <!-- ![Anaconda version](https://anaconda.org/conda-forge/stemflow/badges/version.svg) -->
+ <!--  -->
  
 -----
 
@@ -27,6 +28,12 @@
 
 ```py
 pip install stemflow
+```
+
+Or using conda:
+
+```py
+conda install -c conda-forge stemflow
 ```
 
 ## Mini Test  :test_tube:
