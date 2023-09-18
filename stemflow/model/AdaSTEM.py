@@ -738,8 +738,13 @@ class AdaSTEM(BaseEstimator):
 
         if not task=='regression':
             
-            y_test_b = np.where(y_test>cls_threashold, 1, 0)
-            y_pred_b = np.where(y_pred>cls_threashold, 1, 0)
+            a = pd.DataFrame({
+                'y_ture':y_test,
+                'pred':y_pred
+            }).dropna()
+            
+            y_test_b = np.where(a.y_ture>cls_threashold, 1, 0)
+            y_pred_b = np.where(a.pred>cls_threashold, 1, 0)
             
             if len(np.unique(y_test_b))==1 and len(np.unique(y_pred_b))==1:
                 auc, kappa, f1, precision, recall, average_precision = [np.nan] * 6
