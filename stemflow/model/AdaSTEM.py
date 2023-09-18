@@ -739,8 +739,8 @@ class AdaSTEM(BaseEstimator):
         if not task=='regression':
             
             a = pd.DataFrame({
-                'y_ture':y_test,
-                'pred':y_pred
+                'y_ture':np.array(y_test).flatten(),
+                'pred':np.array(y_pred).flatten()
             }).dropna()
             
             y_test_b = np.where(a.y_ture>cls_threashold, 1, 0)
