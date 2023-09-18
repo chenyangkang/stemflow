@@ -392,20 +392,14 @@ def predict_one_stixel(
     ##### get test data
     sub_X_test = sub_X_test[x_names]
 
-    try:
-        if task=='regression':
-            pred = model_x_names_tuple[0].predict(np.array(sub_X_test[model_x_names_tuple[1]]))
-        else:
-            pred = model_x_names_tuple[0].predict_proba(np.array(sub_X_test[model_x_names_tuple[1]]))[:,1]
-        
-        res = pd.DataFrame({'index':list(sub_X_test.index),
-                            'pred':pred}).set_index('index')
-        
 
-    except Exception as e:
-        # print(e)
-        res = pd.DataFrame({'index':list(sub_X_test.index),
-                            'pred':[np.nan]*len(list(sub_X_test.index))
-                            }).set_index('index')
+    if task=='regression':
+        pred = model_x_names_tuple[0].predict(np.array(sub_X_test[model_x_names_tuple[1]]))
+    else:
+        pred = model_x_names_tuple[0].predict_proba(np.array(sub_X_test[model_x_names_tuple[1]]))[:,1]
     
+    res = pd.DataFrame({'index':list(sub_X_test.index),
+                    'pred':np.array(pred).flatten()}).set_index('index')
+    
+
     return res

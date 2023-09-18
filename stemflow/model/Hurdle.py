@@ -63,6 +63,12 @@ class Hurdle(BaseEstimator):
             self.classifier.fit(new_dat[:,:-1], np.where(new_dat[:,-1]>0, 1, 0))
         self.regressor.fit(new_dat[new_dat[:,-1]>0,:][:,:-1], np.array(new_dat[new_dat[:,-1]>0,:][:,-1]))
         
+        try:
+            self.feature_importances_ = (np.array(self.classifier.feature_importances_) + np.array(self.regressor.feature_importances_))/2
+        except Exception as e:
+            pass
+        
+        
     def predict(self, 
                 X_test: Union[pd.core.frame.DataFrame, np.ndarray]
                 ) -> np.ndarray:
@@ -77,7 +83,7 @@ class Hurdle(BaseEstimator):
         cls_res = self.classifier.predict(X_test)
         reg_res = self.regressor.predict(X_test)
         # reg_res = np.where(reg_res>=0, reg_res, 0) ### we constrain the reg value to be positive
-        res = np.where(cls_res>0, reg_res, 0)
+        res = np.where(cls_res>0, reg_res, cls_res)
         return res.reshape(-1,1)
     
     def predict_proba(self, 
