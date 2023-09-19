@@ -169,6 +169,9 @@ model = Hurdle_for_AdaSTEM(
 )
 ```
 
+In the documentation, we mainly show examples of Hurdle model as the base model of AdaSTEMRegressor.
+
+<br>
 
 Fitting and prediction methods follow the style of sklearn `BaseEstimator` class:
 
@@ -193,8 +196,7 @@ See [AdaSTEM demo](https://chenyangkang.github.io/stemflow/Examples/01.AdaSTEM_d
 
 
 ```py
-model.classifier.gridding_plot
-# or model.regressor.gridding_plot
+model.gridding_plot
 ```
 
 ![QuadTree example](https://chenyangkang.github.io/stemflow/QuadTree.png)

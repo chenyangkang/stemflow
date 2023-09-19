@@ -378,7 +378,7 @@ def predict_one_stixel(
     if model_x_names_tuple[0] is None:
         return None
     
-    sub_X_test = X_test_copy[
+    X_test_copy = X_test_copy[
         (X_test_copy[Temporal1]>=Temporal1_start) & (X_test_copy[Temporal1]<=Temporal1_end) & \
         (X_test_copy[f'{Spatio1}_new']>=stixel_calibration_point_transformed_left_bound) &\
         (X_test_copy[f'{Spatio1}_new']<=stixel_calibration_point_transformed_right_bound) &\
@@ -386,19 +386,18 @@ def predict_one_stixel(
         (X_test_copy[f'{Spatio2}_new']<=stixel_calibration_point_transformed_upper_bound)
     ]
     
-    if len(sub_X_test)==0:
+    if len(X_test_copy)==0:
         return None
         
     ##### get test data
-    sub_X_test = sub_X_test[x_names]
-
+    X_test_copy = X_test_copy[x_names]
 
     if task=='regression':
-        pred = model_x_names_tuple[0].predict(np.array(sub_X_test[model_x_names_tuple[1]]))
+        pred = model_x_names_tuple[0].predict(np.array(X_test_copy[model_x_names_tuple[1]]))
     else:
-        pred = model_x_names_tuple[0].predict_proba(np.array(sub_X_test[model_x_names_tuple[1]]))[:,1]
+        pred = model_x_names_tuple[0].predict_proba(np.array(X_test_copy[model_x_names_tuple[1]]))[:,1]
     
-    res = pd.DataFrame({'index':list(sub_X_test.index),
+    res = pd.DataFrame({'index':list(X_test_copy.index),
                     'pred':np.array(pred).flatten()}).set_index('index')
     
 
