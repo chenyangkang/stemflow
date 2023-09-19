@@ -17,7 +17,9 @@ import os
 import h3pandas
 
 # warnings.filterwarnings('ignore')
+from memory_profiler import profile
 
+@profile
 def run_mini_test(delet_tmp_files: bool=True, show: bool = False):
     """Run a mini test
     
