@@ -78,6 +78,7 @@ nav:
     - Examples/02.AdaSTEM_learning_curve_analysis.ipynb
     - Examples/03.Binding_with_Maxent.ipynb
     - Examples/04.Prediction_visualization.ipynb
+    - Examples/05.Hurdle_in_ada_or_ada_in_hurdle.ipynb
   - API:
     - stemflow.model:
       - 'AdaSTEM': API/stemflow.model.AdaSTEM.md
