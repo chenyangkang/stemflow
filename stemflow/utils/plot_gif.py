@@ -53,15 +53,15 @@ def make_sample_gif(data: pd.core.frame.DataFrame,
         grid: 
             Whether to add grids.
         lng_size: 
-            pixel count to aggregate at longitudinal direction. Larger means finner resolution.
+            pixel count to aggregate at longitudinal direction. Larger means finer resolution.
         lat_size: 
-            pixel count to aggregate at latitudinal direction. Larger means finner resolution.
+            pixel count to aggregate at latitudinal direction. Larger means finer resolution.
         xtick_interval: 
             the size of x tick interval.
         ytick_interval: 
             the size of y tick interval.
         log_scale: 
-            log transfrom the target value or not.
+            log transform the target value or not.
         dpi: 
             dpi of the GIF.
         fps: 
@@ -185,7 +185,7 @@ def make_sample_gif_scatter(data: pandas.core.frame.DataFrame,
         grid: 
             Whether to add grids.
         log_scale: 
-            log transfrom the target value or not.
+            log transform the target value or not.
         s: 
             size of the scatter. 
         dpi: 

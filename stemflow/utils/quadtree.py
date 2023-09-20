@@ -63,7 +63,7 @@ def recursive_subdivide(node: Node,
                         grid_len_lat_upper_threshold: Union[float, int],
                         grid_len_lat_lower_threshold: Union[float, int],
                         points_lower_threshold: Union[float, int]):
-    """recursively subdevide the grids
+    """recursively subdivide the grids
     
     Args:
         node: 
@@ -126,7 +126,7 @@ def contains(x, y, w, h, points):
 
 
 def find_children(node):
-    """return children nodeds of this node"""
+    """return children nodes of this node"""
     if not node.children:
         return [node]
     else:
@@ -161,15 +161,15 @@ class QTree():
             grid_len_lat_lower_threshold: 
                 stop divide if grid latitude **will** be below than the threshold
             points_lower_threshold: 
-                stop devide if points count is less than this threshold.
+                stop divide if points count is less than this threshold.
             lon_lat_equal_grid: 
-                whether to split the longtiude and latitude equally.
+                whether to split the longitude and latitude equally.
             rotation_angle: 
-                rangles to rotate the gridding.
+                angles to rotate the gridding.
             calibration_point_x_jitter: 
-                jitting the gridding on longitude.
+                jittering the gridding on longitude.
             calibration_point_y_jitter: 
-                jitting the gridding on latitude.
+                jittering the gridding on latitude.
             
         Example:
             ```py
@@ -183,7 +183,7 @@ class QTree():
                             calibration_point_x_jitter = 10,
                             calibration_point_y_jitter = 10)
             >> QT_obj.add_lon_lat_data(sub_data.index, sub_data['longitude'].values, sub_data['latitude'].values)
-            >> QT_obj.generate_griding_params()
+            >> QT_obj.generate_gridding_params()
             >> QT_obj.subdivide() ## Call subdivide to process
             >> gridding_info = QT_obj.get_final_result()  # gridding_info is a dataframe
             ```
@@ -216,7 +216,7 @@ class QTree():
             
         """
         if not len(x_array) == len(y_array) or not len(x_array) == len(indexes):
-            raise ValueError("input longitude and latitute and indexes not in same length!")
+            raise ValueError("input longitude and latitude and indexes not in same length!")
         
         data = np.array([x_array, y_array]).T
         angle = self.rotation_angle
@@ -235,8 +235,8 @@ class QTree():
 
 
     
-    def generate_griding_params(self):
-        """generate the griding params after data are added
+    def generate_gridding_params(self):
+        """generate the gridding params after data are added
 
         Raises:
             ValueError: self.lon_lat_equal_grid is not a bool
@@ -268,7 +268,7 @@ class QTree():
         return self.points
     
     def subdivide(self):
-        """start recursively subdevide"""
+        """start recursively subdivide"""
         recursive_subdivide(self.root, self.grid_len_lon_upper_threshold, self.grid_len_lon_lower_threshold,
                             self.grid_len_lat_upper_threshold, self.grid_len_lat_lower_threshold,
                             self.points_lower_threshold)
@@ -419,7 +419,7 @@ def get_ensemble_quadtree(data: pandas.core.frame.DataFrame,
                             temporal_start: Union[float, int] = 1, temporal_end: Union[float, int]=366, 
                             temporal_step: Union[float, int]=20, temporal_bin_interval: Union[float, int]=50,
                             temporal_bin_start_jitter: Union[float, int, str]= 'random',
-                            spatio_bin_jitter_maginitude: Union[float, int] = 10,
+                            spatio_bin_jitter_magnitude: Union[float, int] = 10,
                             save_gridding_plot: bool=True,
                             njobs: int=1,
                             verbosity: int=1,
@@ -463,16 +463,16 @@ def get_ensemble_quadtree(data: pandas.core.frame.DataFrame,
             jitter of the start of the sliding window. 
             If 'random', a random jitter of range (-bin_interval, 0) will be generated
             for the start.
-        spatio_bin_jitter_maginitude:
+        spatio_bin_jitter_magnitude:
             jitter of the spatial gridding.
         save_gridding_plot:
             Whether ot save gridding plots
         njobs:
             Multi-processes count.
         plot_xlims:
-            If save_gridding_plot=Ture, what is the xlims of the plot
+            If save_gridding_plot=True, what is the xlims of the plot
         plot_ylims:
-            If save_gridding_plot=Ture, what is the ylims of the plot
+            If save_gridding_plot=True, what is the ylims of the plot
         save_path:
             If not '', save the ensemble dataframe to this path
             
@@ -495,10 +495,10 @@ def get_ensemble_quadtree(data: pandas.core.frame.DataFrame,
     
     for ensemble_count in iter_func_:
         rotation_angle = np.random.uniform(0,360)
-        calibration_point_x_jitter = np.random.uniform(-spatio_bin_jitter_maginitude, spatio_bin_jitter_maginitude)
-        calibration_point_y_jitter = np.random.uniform(-spatio_bin_jitter_maginitude, spatio_bin_jitter_maginitude)
+        calibration_point_x_jitter = np.random.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
+        calibration_point_y_jitter = np.random.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
 
-        # print(f'ensembel_count: {ensemble_count}')
+        # print(f'ensemble_count: {ensemble_count}')
         
         temporal_bins = generate_temporal_bins(start = temporal_start, 
                                                 end=temporal_end, 
@@ -528,7 +528,7 @@ def get_ensemble_quadtree(data: pandas.core.frame.DataFrame,
             ## You need to generate the splitting parameters once giving the data. Like the calibration point and min,max.
             
             QT_obj.add_lon_lat_data(sub_data.index, sub_data[Spatio1].values, sub_data[Spatio2].values)
-            QT_obj.generate_griding_params()
+            QT_obj.generate_gridding_params()
             
             ## Call subdivide to precess
             QT_obj.subdivide()
