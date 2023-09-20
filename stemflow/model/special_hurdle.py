@@ -114,7 +114,7 @@ class LightGBM_Hurdle(BaseEstimator):
             X_test: Test variables
 
         Returns:
-            A prediciton array with shape (-1,1)
+            A prediction array with shape (-1,1)
         """
         cls_res = self.classifier.predict(X_test)
         cls_res = np.where(cls_res>0.5, 1, cls_res)
@@ -135,7 +135,7 @@ class LightGBM_Hurdle(BaseEstimator):
         
         Args:
             X_test:
-                Testing varibales
+                Testing variables
         
         Returns:
             Prediction results with shape (n_samples, 2)
@@ -252,7 +252,7 @@ class XGBoost_Hurdle(BaseEstimator):
             X_test: Test variables
 
         Returns:
-            A prediciton array with shape (-1,1)
+            A prediction array with shape (-1,1)
         """
         if isinstance(self.classifier, dummy_model1):
             res = np.array([self.classifier.the_value] * X_test.shape[0])
@@ -277,7 +277,7 @@ class XGBoost_Hurdle(BaseEstimator):
         
         Args:
             X_test:
-                Testing varibales
+                Testing variables
         
         Returns:
             Prediction results with shape (n_samples, 2)

@@ -140,7 +140,7 @@ def ST_CV(X: DataFrame,
         type_y = str(type(y))
         raise TypeError(f'y input should be pandas.core.frame.DataFrame or numpy.ndarray, Got {type_y}')
     if not (isinstance(CV, int) and CV>0):
-        raise ValueError('CV should be a positive interger')
+        raise ValueError('CV should be a positive integer')
     
     # check shape match
     y_size = np.array(y).flatten().shape[0]
