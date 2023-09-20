@@ -79,12 +79,14 @@ nav:
     - Examples/03.Binding_with_Maxent.ipynb
     - Examples/04.Prediction_visualization.ipynb
     - Examples/05.Hurdle_in_ada_or_ada_in_hurdle.ipynb
+    - Examples/06.Base_model_choices.ipynb
   - API:
     - stemflow.model:
       - 'AdaSTEM': API/stemflow.model.AdaSTEM.md
       - 'static_func_AdaSTEM': API/stemflow.model.static_func_AdaSTEM.md
       - 'Hurdle': API/stemflow.model.Hurdle.md
       - 'dummy_model': API/stemflow.model.dummy_model.md
+      - 'special_hurdle': API/stemflow.model.special_hurdle.md
     - stemflow.utils:
       - 'quadtree': API/stemflow.utils.quadtree.md
       - 'plot_gif': API/stemflow.utils.plot_gif.md
