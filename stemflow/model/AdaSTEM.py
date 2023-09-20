@@ -174,8 +174,8 @@ class AdaSTEM(BaseEstimator):
                 Dictionary of {stixel_index: trained_model}.
             grid_dict (dict):
                 An array of stixels assigned to each ensemble.
-            Feature_importances_ (pd.core.frame.DataFrame):
-                Feature importance dataframe for each stixel.
+            feature_importances_ (pd.core.frame.DataFrame):
+                feature importance dataframe for each stixel.
             
         """
         # save base model
@@ -838,20 +838,20 @@ class AdaSTEM(BaseEstimator):
         self.score_dict = score_dict
         return self.score_dict
         
-    def calculate_Feature_importances(self):
-        """A method to generate Feature importance values for each stixel.
+    def calculate_feature_importances(self):
+        """A method to generate feature importance values for each stixel.
         
-        Feature importances are saved in self.Feature_importances_.
+        feature importances are saved in self.feature_importances_.
         
         Attribute dependence:
             1. self.ensemble_df
             2. self.model_dict
             3. self.stixel_specific_x_names
-            4. The input base model should have attribute `Feature_importances_`
+            4. The input base model should have attribute `feature_importances_`
             
         """
-        # generate Feature importance dict
-        Feature_importance_list = []
+        # generate feature importance dict
+        feature_importance_list = []
         
         for index,ensemble_row in self.ensemble_df.drop('checklist_indexes', axis=1).iterrows():
             if ensemble_row['stixel_checklist_count']<self.stixel_training_size_threshold:
@@ -865,25 +865,25 @@ class AdaSTEM(BaseEstimator):
                 if isinstance(the_model, dummy_model1):
                     importance_dict = dict(zip(self.x_names, [1/len(self.x_names)] * len(self.x_names)))
                 else:
-                    Feature_imp = the_model.Feature_importances_
-                    importance_dict = dict(zip(x_names, Feature_imp))
+                    feature_imp = the_model.feature_importances_
+                    importance_dict = dict(zip(x_names, feature_imp))
                     
                 importance_dict['stixel_index'] = stixel_index
-                Feature_importance_list.append(importance_dict)
+                feature_importance_list.append(importance_dict)
                 
             except Exception as e:
                 continue
         
-        self.Feature_importances_ = pd.DataFrame(Feature_importance_list).set_index('stixel_index').reset_index(drop=False).fillna(0)
+        self.feature_importances_ = pd.DataFrame(feature_importance_list).set_index('stixel_index').reset_index(drop=False).fillna(0)
         
         
-    def assign_Feature_importances_by_points(self,
+    def assign_feature_importances_by_points(self,
                                              Sample_ST_df: Union[pd.core.frame.DataFrame, None] = None,
                                              verbosity: Union[None, int]=None,
                                              aggregation: str='mean',
                                              njobs: Union[int, None]=1,
                                              ) -> pd.core.frame.DataFrame:
-        """Assign Feature importance to the input spatio-temporal points
+        """Assign feature importance to the input spatio-temporal points
 
         Args:
             Sample_ST_df (Union[pd.core.frame.DataFrame, None], optional): 
@@ -901,20 +901,20 @@ class AdaSTEM(BaseEstimator):
             verbosity (Union[None, int], optional):
                 0 to output nothing, everything other wise. Default None set it to the verbosity of AdaSTEM model class.
             aggregation (str, optional):
-                One of 'mean' and 'median' to aggregate Feature importance across ensembles.
+                One of 'mean' and 'median' to aggregate feature importance across ensembles.
             njobs (Union[int, None], optional):
                 Number of processes used in this task. If None, use the self.njobs. Default to 1.
         
         Raises:
             NameError: 
-                Feature_importances_ attribute is not calculated. Try model.calculate_Feature_importances() first.
+                feature_importances_ attribute is not calculated. Try model.calculate_feature_importances() first.
             ValueError:
                 f'aggregation not one of [\'mean\',\'median\'].'
             KeyError: 
                 One of [`self.Spatio1`, `self.Spatio2`, `self.Temporal1`] not found in `Sample_ST_df.columns`
 
         Returns:
-            DataFrame with Feature importance assigned.
+            DataFrame with feature importance assigned.
         """
         #
         if verbosity is None:
@@ -925,8 +925,8 @@ class AdaSTEM(BaseEstimator):
             verbosity = 1
             
         #
-        if not 'Feature_importances_' in dir(self):
-            raise NameError(f'Feature_importances_ attribute is not calculated. Try model.calculate_Feature_importances() first.')
+        if not 'feature_importances_' in dir(self):
+            raise NameError(f'feature_importances_ attribute is not calculated. Try model.calculate_feature_importances() first.')
         #
         if not aggregation in ['mean','median']:
             raise ValueError(f'aggregation not one of [\'mean\',\'median\'].')
@@ -967,7 +967,7 @@ class AdaSTEM(BaseEstimator):
                                     self.Temporal1,
                                     self.Spatio1,
                                     self.Spatio2,
-                                    self.Feature_importances_
+                                    self.feature_importances_
                                     )
                 round_res_list.append(res_list)
             
@@ -981,7 +981,7 @@ class AdaSTEM(BaseEstimator):
                                     repeat(self.Temporal1),
                                     repeat(self.Spatio1),
                                     repeat(self.Spatio2),
-                                    repeat(self.Feature_importances_)
+                                    repeat(self.feature_importances_)
                     )
                 if verbosity>0:
                     args_iterator = tqdm(plain_args_iterator, total=len(list(self.ensemble_df.ensemble_index.unique())))
@@ -999,13 +999,13 @@ class AdaSTEM(BaseEstimator):
         
         # aggregate across ensembles
         if aggregation=='mean':
-            mean_Feature_importances_across_ensembles = round_res_df.groupby('sample_index').mean()
+            mean_feature_importances_across_ensembles = round_res_df.groupby('sample_index').mean()
         elif aggregation=='median':
-            mean_Feature_importances_across_ensembles = round_res_df.groupby('sample_index').median()
+            mean_feature_importances_across_ensembles = round_res_df.groupby('sample_index').median()
             
         if self.use_temporal_to_train:
-            mean_Feature_importances_across_ensembles = mean_Feature_importances_across_ensembles.rename(columns={self.Temporal1:f'{self.Temporal1}_predictor'})
-        out_ = pd.concat([Sample_ST_df, mean_Feature_importances_across_ensembles], axis=1).dropna()
+            mean_feature_importances_across_ensembles = mean_feature_importances_across_ensembles.rename(columns={self.Temporal1:f'{self.Temporal1}_predictor'})
+        out_ = pd.concat([Sample_ST_df, mean_feature_importances_across_ensembles], axis=1).dropna()
         return out_
     
     
