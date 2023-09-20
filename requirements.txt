@@ -10,7 +10,7 @@ tqdm>=4.65.0
 watermark>=2.3.1
 xgboost>=1.7.6
 memory_profiler>=0.61.0
-scipy >=1.10.1
+scipy>=1.10.1
 
 
 
