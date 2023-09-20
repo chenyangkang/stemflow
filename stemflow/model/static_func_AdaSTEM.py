@@ -390,8 +390,6 @@ def predict_one_stixel(
         return None
         
     ##### get test data
-    X_test_copy = X_test_copy[x_names]
-
     if task=='regression':
         pred = model_x_names_tuple[0].predict(np.array(X_test_copy[model_x_names_tuple[1]]))
     else:
