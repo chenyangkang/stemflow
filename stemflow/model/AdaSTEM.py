@@ -85,7 +85,8 @@ class AdaSTEM(BaseEstimator):
                 use_temporal_to_train: bool=True,
                 njobs: int=1,          
                 plot_xlims: Tuple[Union[float, int], Union[float, int]] = (-180,180),
-                plot_ylims: Tuple[Union[float, int], Union[float, int]] = (-90,90)                   
+                plot_ylims: Tuple[Union[float, int], Union[float, int]] = (-90,90),
+                verbosity: int=0,               
                 ):
         """Make a AdaSTEM object
 
@@ -148,6 +149,8 @@ class AdaSTEM(BaseEstimator):
                 If save_gridding_plot=Ture, what is the xlims of the plot. Defaults to (-180,180).
             plot_ylims:
                 If save_gridding_plot=Ture, what is the ylims of the plot. Defaults to (-90,90).
+            verbosity:
+                0 to ouput notthing and everything otherwise.
 
 
         Raises:
@@ -236,17 +239,25 @@ class AdaSTEM(BaseEstimator):
         #
         self.sample_weights_for_classifier = sample_weights_for_classifier
         
-
+        if not verbosity is 0:
+            self.verbosity=1
+        else:
+            self.verbosity=0
+        
     def split(self, 
-              X_train: pd.core.frame.DataFrame, verbosity: int=1) -> dict:
+              X_train: pd.core.frame.DataFrame, verbosity: Union[None, int]=None) -> dict:
         """QuadTree indexing the input data
 
         Args:
             X_train: Input training data
+            verbosity: 0 to ouput nothing, everything other wise. Default None set it to the verbosity of AdaSTEM model class.
         
         Returns:
             self.grid_dict, a dictionary of one DataFrame for each grid, containing the gridding information
         """
+        if verbosity is None:
+            verbosity = self.verbosity
+            
         fold = self.ensemble_fold
         save_path = os.path.join(self.save_dir, 'ensemble_quadtree_df.csv')  if self.save_tmp else ''
         self.ensemble_df, self.gridding_plot = get_ensemble_quadtree(X_train,\
@@ -315,7 +326,7 @@ class AdaSTEM(BaseEstimator):
     def fit(self, 
             X_train: pd.core.frame.DataFrame, 
             y_train: Union[pd.core.frame.DataFrame, np.ndarray],
-            verbosity: int=1):
+            verbosity: Union[None, int]=None):
         """Fitting method
 
         Args:
@@ -326,6 +337,14 @@ class AdaSTEM(BaseEstimator):
             TypeError: X_train is not a type of pd.core.frame.DataFrame
             TypeError: y_train is not a type of np.ndarray or pd.core.frame.DataFrame
         """
+        #
+        if verbosity is None:
+            verbosity = self.verbosity
+        elif verbosity is 0:
+            verbosity = 0
+        else:
+            verbosity = 1
+            
         # check type
         type_X_train = type(X_train)
     
@@ -430,7 +449,7 @@ class AdaSTEM(BaseEstimator):
         
     def predict_proba(self,
                       X_test: pd.core.frame.DataFrame,
-                      verbosity: int=0, 
+                      verbosity: Union[int, None]=None, 
                       return_std: bool=False,
                       njobs: Union[None, int]=1,
                       aggregation: str='mean',
@@ -440,8 +459,8 @@ class AdaSTEM(BaseEstimator):
         Args:
             X_test (pd.core.frame.DataFrame): 
                 Testing variables.
-            verbosity (int, optional): 
-                show progress bar or not. Yes for 0, and No for other. Defaults to 0.
+            verbosity (Union[None, int], optional): 
+                0 to ouput nothing, everything other wise. Default None set it to the verbosity of AdaSTEM model class.
             return_std (bool, optional): 
                 Whether return the standard deviation among ensembles. Defaults to False.
             njobs (Union[int, None], optional):
@@ -468,6 +487,13 @@ class AdaSTEM(BaseEstimator):
                 Return numpy.ndarray of shape (n_samples, n_ensembles)
             
         """
+        if verbosity is None:
+            verbosity = self.verbosity
+        elif verbosity is 0:
+            verbosity = 0
+        else:
+            verbosity = 1
+            
         type_X_test = type(X_test)
         if not type_X_test == pd.core.frame.DataFrame:
             raise TypeError(f'Input X_test should be type \'pd.core.frame.DataFrame\'. Got {type_X_test}')
@@ -637,7 +663,7 @@ class AdaSTEM(BaseEstimator):
         
     def predict(self,
                 X_test: pd.core.frame.DataFrame,
-                verbosity: int=0, 
+                verbosity: Union[None, int]=None, 
                 return_std: bool=False,
                 njobs: Union[None, int]=1,
                 aggregation: str='mean',
@@ -648,8 +674,8 @@ class AdaSTEM(BaseEstimator):
         Args:
             X_test (pd.core.frame.DataFrame): 
                 Testing variables.
-            verbosity (int, optional): 
-                show progress bar or not. Yes for 0, and No for other. Defaults to 0.
+            verbosity (Union[None, int], optional): 
+                0 to ouput nothing, everything other wise. Default None set it to the verbosity of AdaSTEM model class.
             return_std (bool, optional): 
                 Whether return the standard deviation among ensembles. Defaults to False.
             njobs (Union[int, None], optional):
@@ -852,7 +878,7 @@ class AdaSTEM(BaseEstimator):
         
     def assign_feature_importances_by_points(self,
                                              Sample_ST_df: Union[pd.core.frame.DataFrame, None] = None,
-                                             verbosity: int=0,
+                                             verbosity: Union[None, int]=None,
                                              aggregation: str='mean',
                                              njobs: Union[int, None]=1,
                                              ) -> pd.core.frame.DataFrame:
@@ -871,8 +897,8 @@ class AdaSTEM(BaseEstimator):
                 |Temporal_var1|np.arange(1,366,7)|
 
                 Defaults to None.
-            verbosity (int, optional):
-                Whether to show progressbar during assigning. 0 for No, otherwise Yes. Defaults to 0.
+            verbosity (Union[None, int], optional):
+                0 to ouput nothing, everything other wise. Default None set it to the verbosity of AdaSTEM model class.
             aggregation (str, optional):
                 One of 'mean' and 'median' to aggregate feature importance across ensembles.
             njobs (Union[int, None], optional):
@@ -889,6 +915,14 @@ class AdaSTEM(BaseEstimator):
         Returns:
             DataFrame with feature importance assigned.
         """
+        #
+        if verbosity is None:
+            verbosity = self.verbosity
+        elif verbosity is 0:
+            verbosity = 0
+        else:
+            verbosity = 1
+            
         #
         if not 'feature_importances_' in dir(self):
             raise NameError(f'feature_importances_ attribute is not calculated. Try model.calculate_feature_importances() first.')
@@ -1005,6 +1039,7 @@ class AdaSTEMClassifier(AdaSTEM):
                 njobs=1,
                 plot_xlims = (-180,180),
                 plot_ylims = (-90,90),
+                verbosity =0,
                 ):
         """
         
@@ -1046,13 +1081,14 @@ class AdaSTEMClassifier(AdaSTEM):
                          Spatio1, Spatio2, Temporal1,
                          use_temporal_to_train,
                          njobs,
-                         plot_xlims, plot_ylims
+                         plot_xlims, plot_ylims,
+                         verbosity
                          )
         
         
     def predict(self, 
                 X_test: pd.core.frame.DataFrame, 
-                verbosity:int =0, 
+                verbosity: Union[None, int] = None, 
                 return_std: bool=False, 
                 cls_threashold: float=0.5, 
                 njobs: Union[int, None]=1,
@@ -1064,7 +1100,7 @@ class AdaSTEMClassifier(AdaSTEM):
             X_test (pd.core.frame.DataFrame): 
                 Testing variables.
             verbosity (int, optional): 
-                show progress bar or not. Yes for 0, and No for other. Defaults to 0.
+                0 to ouput nothing, everything other wise. Default None set it to the verbosity of AdaSTEM model class.
             return_std (bool, optional): 
                 Whether return the standard deviation among ensembles. Defaults to False.
             cls_threashold (float, optional): 
@@ -1133,7 +1169,8 @@ class AdaSTEMRegressor(AdaSTEM):
                 use_temporal_to_train=True,
                 njobs=1,
                 plot_xlims = (-180,180),
-                plot_ylims = (-90,90)
+                plot_ylims = (-90,90),
+                verbosity =0
                 ):
         """
         
@@ -1176,6 +1213,7 @@ class AdaSTEMRegressor(AdaSTEM):
                          use_temporal_to_train,
                          njobs,
                          plot_xlims, plot_ylims,
+                         verbosity
                          )
         
        
