@@ -128,7 +128,7 @@ def train_one_stixel(stixel_training_size_threshold: int,
                                                     sample_weight=sample_weights)
                 
             except Exception as e:
-                warnings.warn(e)
+                print(e)
                 return (None, [])
         else:
             try:
@@ -136,7 +136,7 @@ def train_one_stixel(stixel_training_size_threshold: int,
                                                     np.array(sub_y_train))
                 
             except Exception as e:
-                warnings.warn(e)
+                print(e)
                 return (None, [])
             
     return (trained_model, stixel_specific_x_names)
