@@ -74,7 +74,7 @@ class AdaSTEM(BaseEstimator):
                 temporal_step: Union[float, int]=20,
                 temporal_bin_interval: Union[float, int] = 50,
                 temporal_bin_start_jitter: Union[float, int, str] = 'random',
-                spatio_bin_jitter_maginitude: Union[float, int] = 10,
+                spatio_bin_jitter_magnitude: Union[float, int] = 10,
                 save_gridding_plot: bool=True,
                 save_tmp: bool = False,
                 save_dir: str='./',
@@ -113,27 +113,27 @@ class AdaSTEM(BaseEstimator):
                 Do not train the model if the available data records for this stixel is less than this threshold,
                 and directly set the value to np.nan. Defaults to 25.
             temporal_start: 
-                start of the temporal sequence. Defualts to 1.
+                start of the temporal sequence. Defaults to 1.
             temporal_end: 
-                end of the temporal sequence. Defualts to 366.
+                end of the temporal sequence. Defaults to 366.
             temporal_step: 
-                step of the sliding window. Defualts to 20.
+                step of the sliding window. Defaults to 20.
             temporal_bin_interval: 
-                size of the sliding window. Defualts to 50.
+                size of the sliding window. Defaults to 50.
             temporal_bin_start_jitter: 
                 jitter of the start of the sliding window. 
                 If 'random', a random jitter of range (-bin_interval, 0) will be generated
-                for the start. Defualts to 'random'.
-            spatio_bin_jitter_maginitude:
-                jitter of the spatial gridding. Defualts to 10.
+                for the start. Defaults to 'random'.
+            spatio_bin_jitter_magnitude:
+                jitter of the spatial gridding. Defaults to 10.
             save_gridding_plot:
-                Whether ot save gridding plots. Defualts to True.
+                Whether ot save gridding plots. Defaults to True.
             save_tmp: 
-                Whether to save the ensemble dataframe. Defualts to False.
+                Whether to save the ensemble dataframe. Defaults to False.
             save_dir:
-                If save_tmp==True, save the ensemble dataframe to this path. Defualts to './'.
+                If save_tmp==True, save the ensemble dataframe to this path. Defaults to './'.
             sample_weights_for_classifier:
-                Whether to balance the sample weights of classifier for impalanced datasets. Defaults to True.
+                Whether to balance the sample weights of classifier for imbalanced datasets. Defaults to True.
             Spatio1:
                 Spatial column name 1 in data. Defaults to 'longitude'.
             Spatio2:
@@ -141,16 +141,16 @@ class AdaSTEM(BaseEstimator):
             Temporal1:
                 Temporal column name 1 in data.  Defaults to 'DOY'.
             use_temporal_to_train:
-                Whether to use temporal varibale to train. For example in modeling the daily aboundance of bird populaiton,
+                Whether to use temporal variable to train. For example in modeling the daily abundance of bird population,
                 whether use 'day of year (DOY)' as a training variable. Defaults to True.
             njobs:
                 Number of multiprocessing in fitting the model. Defaults to 1.
             plot_xlims:
-                If save_gridding_plot=Ture, what is the xlims of the plot. Defaults to (-180,180).
+                If save_gridding_plot=true, what is the xlims of the plot. Defaults to (-180,180).
             plot_ylims:
-                If save_gridding_plot=Ture, what is the ylims of the plot. Defaults to (-90,90).
+                If save_gridding_plot=true, what is the ylims of the plot. Defaults to (-90,90).
             verbosity:
-                0 to ouput notthing and everything otherwise.
+                0 to output nothing and everything otherwise.
 
 
         Raises:
@@ -164,7 +164,7 @@ class AdaSTEM(BaseEstimator):
                 All training variables used.
             stixel_specific_x_names (dict):
                 stixel specific x_names (predictor variable names) for each stixel. 
-                We remove the varibales that have no variation for each stixel.
+                We remove the variables that have no variation for each stixel.
                 Therefore, the x_names are different for each stixel.
             ensemble_df (pd.core.frame.DataFrame):
                 A dataframe storing the stixel gridding information.
@@ -173,8 +173,8 @@ class AdaSTEM(BaseEstimator):
             model_dict (dict):
                 Dictionary of {stixel_index: trained_model}.
             grid_dict (dict):
-                An array of stixels assigned to each emsemble.
-            feature_importances_ (pd.core.frame.DataFrame):
+                An array of stixels assigned to each ensemble.
+            Feature_importances_ (pd.core.frame.DataFrame):
                 Feature importance dataframe for each stixel.
             
         """
@@ -208,7 +208,7 @@ class AdaSTEM(BaseEstimator):
         self.temporal_end = temporal_end
         self.temporal_step = temporal_step
         self.temporal_bin_interval = temporal_bin_interval
-        self.spatio_bin_jitter_maginitude = spatio_bin_jitter_maginitude
+        self.spatio_bin_jitter_magnitude = spatio_bin_jitter_magnitude
         self.plot_xlims = plot_xlims
         self.plot_ylims = plot_ylims
                       
@@ -228,11 +228,11 @@ class AdaSTEM(BaseEstimator):
         
         # validate njobs setting
         if not isinstance(njobs, int):
-            raise TypeError(f'njobs is not a interger. Got {njobs}.')
+            raise TypeError(f'njobs is not a integer. Got {njobs}.')
         
         my_cpu_count = cpu_count()
         if njobs > my_cpu_count:
-            raise ValueError(f'Setting of njobs ({njobs}) exceed the maxmimum ({my_cpu_count}).')
+            raise ValueError(f'Setting of njobs ({njobs}) exceed the maximum ({my_cpu_count}).')
         
         self.njobs = njobs
         
@@ -250,7 +250,7 @@ class AdaSTEM(BaseEstimator):
 
         Args:
             X_train: Input training data
-            verbosity: 0 to ouput nothing, everything other wise. Default None set it to the verbosity of AdaSTEM model class.
+            verbosity: 0 to output nothing, everything other wise. Default None set it to the verbosity of AdaSTEM model class.
         
         Returns:
             self.grid_dict, a dictionary of one DataFrame for each grid, containing the gridding information
@@ -275,7 +275,7 @@ class AdaSTEM(BaseEstimator):
                                             temporal_step=self.temporal_step, 
                                             temporal_bin_interval = self.temporal_bin_interval,
                                             temporal_bin_start_jitter = self.temporal_bin_start_jitter,
-                                            spatio_bin_jitter_maginitude = self.spatio_bin_jitter_maginitude,
+                                            spatio_bin_jitter_magnitude = self.spatio_bin_jitter_magnitude,
                                             save_gridding_plot=self.save_gridding_plot,
                                             njobs=self.njobs,
                                             verbosity=verbosity,
@@ -449,18 +449,18 @@ class AdaSTEM(BaseEstimator):
         
     def predict_proba(self,
                       X_test: pd.core.frame.DataFrame,
-                      verbosity: Union[int, None]=None, 
+                      verbosity: int=0, 
                       return_std: bool=False,
                       njobs: Union[None, int]=1,
                       aggregation: str='mean',
-                      return_by_seperate_ensembles: bool=False) -> Union[np.ndarray, Tuple[np.ndarray]]:
+                      return_by_separate_ensembles: bool=False) -> Union[np.ndarray, Tuple[np.ndarray]]:
         """Predict probability
 
         Args:
             X_test (pd.core.frame.DataFrame): 
                 Testing variables.
-            verbosity (Union[None, int], optional): 
-                0 to ouput nothing, everything other wise. Default None set it to the verbosity of AdaSTEM model class.
+            verbosity (int, optional): 
+                show progress bar or not. Yes for 0, and No for other. Defaults to 0.
             return_std (bool, optional): 
                 Whether return the standard deviation among ensembles. Defaults to False.
             njobs (Union[int, None], optional):
@@ -471,8 +471,8 @@ class AdaSTEM(BaseEstimator):
                 Still in experiment.
             aggregation (str, optional):
                 'mean' or 'median' for aggregation method across ensembles.
-            return_by_seperate_ensembles (bool, optional):
-                Experimental function. return not by aggregation, but by seperate ensembles.
+            return_by_separate_ensembles (bool, optional):
+                Experimental function. return not by aggregation, but by separate ensembles.
                 
         Raises:
             TypeError: 
@@ -481,19 +481,12 @@ class AdaSTEM(BaseEstimator):
                 aggregation is not in ['mean','median'].
             
         Returns:
-            predicted results. (pred_mean, pred_std) if return_std==Ture, and pred_mean if return_std==False.
+            predicted results. (pred_mean, pred_std) if return_std==true, and pred_mean if return_std==False.
             
-            If return_by_seperate_ensembles == True:
+            If return_by_separate_ensembles == True:
                 Return numpy.ndarray of shape (n_samples, n_ensembles)
             
         """
-        if verbosity is None:
-            verbosity = self.verbosity
-        elif verbosity is 0:
-            verbosity = 0
-        else:
-            verbosity = 1
-            
         type_X_test = type(X_test)
         if not type_X_test == pd.core.frame.DataFrame:
             raise TypeError(f'Input X_test should be type \'pd.core.frame.DataFrame\'. Got {type_X_test}')
@@ -501,12 +494,12 @@ class AdaSTEM(BaseEstimator):
         if not aggregation in ['mean','median']:
             raise ValueError(f'aggregation must be one of \'mean\' and \'median\'. Got {aggregation}')
         
-        if not isinstance(return_by_seperate_ensembles, bool):
-            type_return_by_seperate_ensembles = str(type(return_by_seperate_ensembles))
-            raise TypeError(f'return_by_seperate_ensembles must be bool. Got {type_return_by_seperate_ensembles}')
+        if not isinstance(return_by_separate_ensembles, bool):
+            type_return_by_separate_ensembles = str(type(return_by_separate_ensembles))
+            raise TypeError(f'return_by_separate_ensembles must be bool. Got {type_return_by_separate_ensembles}')
         else:
-            if return_by_seperate_ensembles and return_std:
-                warnings(f'return_by_seperate_ensembles == True. Autometically setting return_std=False')
+            if return_by_separate_ensembles and return_std:
+                warnings(f'return_by_separate_ensembles == True. Automatically setting return_std=False')
                 return_std = False
                 
         ##### predict
@@ -534,41 +527,50 @@ class AdaSTEM(BaseEstimator):
             if not njobs > 1:
                 # single process
                 res_list = []
-                iter_func = this_ensemble.iterrows() if verbosity==0 else tqdm(this_ensemble.iterrows(), 
-                                                            total=len(this_ensemble), 
+                
+                temp_bin_start_list = np.unique(this_ensemble[f'{self.Temporal1}_start'])
+                iter_func = temp_bin_start_list if verbosity is 0 else tqdm(temp_bin_start_list, 
+                                                            total=len(temp_bin_start_list), 
                                                             desc=f'predicting ensemble {ensemble} ')
-                for index,stixel in iter_func:
-                    model_x_names_tuple = get_model_and_stixel_specific_x_names(
-                                                                                self.model_dict, 
-                                                                                ensemble, 
-                                                                                stixel['unique_stixel_id'], 
-                                                                                self.stixel_specific_x_names, 
-                                                                                self.x_names
-                                                                                )
+                
+                for temp_bin_start in iter_func:
+                    ## query the ensemble and sub_X_test for this temporal bin
+                    sub_temp_ensemble = this_ensemble[this_ensemble[f'{self.Temporal1}_start']==temp_bin_start]
+                    sub_temp_X_test_copy = X_test_copy[(X_test_copy[self.Temporal1]>=sub_temp_ensemble[f'{self.Temporal1}_start'].values[0]) & \
+                                                       (X_test_copy[self.Temporal1]<=sub_temp_ensemble[f'{self.Temporal1}_end'].values[0])]
                     
-                    if model_x_names_tuple[0] is None:
-                        continue
+                    for index,stixel in sub_temp_ensemble.iterrows():
+                        model_x_names_tuple = get_model_and_stixel_specific_x_names(
+                                                                                    self.model_dict, 
+                                                                                    ensemble, 
+                                                                                    stixel['unique_stixel_id'], 
+                                                                                    self.stixel_specific_x_names, 
+                                                                                    self.x_names
+                                                                                    )
+                        
+                        if model_x_names_tuple[0] is None:
+                            continue
 
-                    res = predict_one_stixel(
-                                    X_test_copy, 
-                                    self.Temporal1,
-                                    self.Spatio1,
-                                    self.Spatio2,
-                                    stixel[f'{self.Temporal1}_start'],
-                                    stixel[f'{self.Temporal1}_end'],
-                                    stixel['stixel_calibration_point_transformed_left_bound'],
-                                    stixel['stixel_calibration_point_transformed_right_bound'],
-                                    stixel['stixel_calibration_point_transformed_lower_bound'],
-                                    stixel['stixel_calibration_point_transformed_upper_bound'],
-                                    self.x_names,
-                                    self.task,
-                                    model_x_names_tuple
-                                )
-                    
-                    if res is None:
-                        continue
-                    
-                    res_list.append(res)
+                        res = predict_one_stixel(
+                                        sub_temp_X_test_copy, 
+                                        self.Temporal1,
+                                        self.Spatio1,
+                                        self.Spatio2,
+                                        stixel[f'{self.Temporal1}_start'],
+                                        stixel[f'{self.Temporal1}_end'],
+                                        stixel['stixel_calibration_point_transformed_left_bound'],
+                                        stixel['stixel_calibration_point_transformed_right_bound'],
+                                        stixel['stixel_calibration_point_transformed_lower_bound'],
+                                        stixel['stixel_calibration_point_transformed_upper_bound'],
+                                        self.x_names,
+                                        self.task,
+                                        model_x_names_tuple
+                                    )
+                        
+                        if res is None:
+                            continue
+                        
+                        res_list.append(res)
             else:
                 # multi-processing
                 with Pool(njobs) as p:
@@ -614,7 +616,7 @@ class AdaSTEM(BaseEstimator):
         res = pd.concat([df['pred'] for df in round_res_list], axis=1)
 
         # Experimental Function
-        if return_by_seperate_ensembles:
+        if return_by_separate_ensembles:
             new_res = pd.DataFrame({
                 'index':list(X_test.index)
             }).set_index('index')
@@ -660,14 +662,13 @@ class AdaSTEM(BaseEstimator):
             return new_res['pred_mean'].values
         
         
-        
     def predict(self,
                 X_test: pd.core.frame.DataFrame,
                 verbosity: Union[None, int]=None, 
                 return_std: bool=False,
                 njobs: Union[None, int]=1,
                 aggregation: str='mean',
-                return_by_seperate_ensembles: bool=False) -> Union[np.ndarray, Tuple[np.ndarray]]:
+                return_by_separate_ensembles: bool=False) -> Union[np.ndarray, Tuple[np.ndarray]]:
                       
         """A rewrite of predict_proba
 
@@ -675,7 +676,7 @@ class AdaSTEM(BaseEstimator):
             X_test (pd.core.frame.DataFrame): 
                 Testing variables.
             verbosity (Union[None, int], optional): 
-                0 to ouput nothing, everything other wise. Default None set it to the verbosity of AdaSTEM model class.
+                0 to output nothing, everything other wise. Default None set it to the verbosity of AdaSTEM model class.
             return_std (bool, optional): 
                 Whether return the standard deviation among ensembles. Defaults to False.
             njobs (Union[int, None], optional):
@@ -686,8 +687,8 @@ class AdaSTEM(BaseEstimator):
                 Still in experiment.
             aggregation (str, optional):
                 'mean' or 'median' for aggregation method across ensembles.
-            return_by_seperate_ensembles (bool, optional):
-                Experimental function. return not by aggregation, but by seperate ensembles.
+            return_by_separate_ensembles (bool, optional):
+                Experimental function. return not by aggregation, but by separate ensembles.
                 
         Raises:
             TypeError: 
@@ -696,14 +697,14 @@ class AdaSTEM(BaseEstimator):
                 aggregation is not in ['mean','median'].
             
         Returns:
-            predicted results. (pred_mean, pred_std) if return_std==Ture, and pred_mean if return_std==False.
+            predicted results. (pred_mean, pred_std) if return_std==true, and pred_mean if return_std==False.
             
-            If return_by_seperate_ensembles == True:
+            If return_by_separate_ensembles == True:
                 Return numpy.ndarray of shape (n_samples, n_ensembles)
                 
         """
         
-        return self.predict_proba(X_test, verbosity=verbosity, return_std=return_std, njobs=njobs, aggregation=aggregation, return_by_seperate_ensembles=return_by_seperate_ensembles)
+        return self.predict_proba(X_test, verbosity=verbosity, return_std=return_std, njobs=njobs, aggregation=aggregation, return_by_separate_ensembles=return_by_separate_ensembles)
     
     
     @classmethod
@@ -711,7 +712,7 @@ class AdaSTEM(BaseEstimator):
                       task: str,
                       y_test: Union[pd.core.series.Series, np.ndarray], 
                       y_pred: Union[pd.core.series.Series, np.ndarray], 
-                      cls_threashold: Union[float, None]=None) -> dict:
+                      cls_threshold: Union[float, None]=None) -> dict:
         """Evaluation using multiple metrics
         
         Classification metrics used: 
@@ -737,9 +738,9 @@ class AdaSTEM(BaseEstimator):
                 y true
             y_pred (Union[pd.core.series.Series, np.ndarray]): 
                 y predicted
-            cls_threashold (Union[float, None], optional): 
-                Cutting threashold for the classification. 
-                Values above cls_threashold will be labeled as 1 and 0 otherwise. 
+            cls_threshold (Union[float, None], optional): 
+                Cutting threshold for the classification. 
+                Values above cls_threshold will be labeled as 1 and 0 otherwise. 
                 Defaults to None (0.5 for classification and 0 for hurdle).
 
         Raises:
@@ -752,11 +753,11 @@ class AdaSTEM(BaseEstimator):
         if not task in ['regression','classification','hurdle']:
             raise AttributeError(f'task type must be one of \'regression\', \'classification\', or \'hurdle\'! Now it is {task}')
     
-        if cls_threashold==None:
+        if cls_threshold==None:
             if task=='classification':
-                cls_threashold = 0.5
+                cls_threshold = 0.5
             elif task=='hurdle':
-                cls_threashold = 0
+                cls_threshold = 0
         
         from sklearn.metrics import roc_auc_score, cohen_kappa_score, r2_score, d2_tweedie_score, \
             f1_score, precision_score, recall_score, average_precision_score, mean_absolute_error, mean_squared_error
@@ -765,12 +766,12 @@ class AdaSTEM(BaseEstimator):
         if not task=='regression':
             
             a = pd.DataFrame({
-                'y_ture':np.array(y_test).flatten(),
+                'y_true':np.array(y_test).flatten(),
                 'pred':np.array(y_pred).flatten()
             }).dropna()
             
-            y_test_b = np.where(a.y_ture>cls_threashold, 1, 0)
-            y_pred_b = np.where(a.pred>cls_threashold, 1, 0)
+            y_test_b = np.where(a.y_true>cls_threshold, 1, 0)
+            y_pred_b = np.where(a.pred>cls_threshold, 1, 0)
             
             if len(np.unique(y_test_b))==1 and len(np.unique(y_pred_b))==1:
                 auc, kappa, f1, precision, recall, average_precision = [np.nan] * 6
@@ -788,16 +789,16 @@ class AdaSTEM(BaseEstimator):
             
         if not task=='classification':
             a = pd.DataFrame({
-                'y_ture':y_test,
+                'y_true':y_test,
                 'pred':y_pred
             }).dropna()
-            s_r, _ = spearmanr(np.array(a.y_ture), np.array(a.pred))
-            p_r, _ = pearsonr(np.array(a.y_ture), np.array(a.pred))
-            r2 = r2_score(a.y_ture, a.pred)
-            MAE = mean_absolute_error(a.y_ture, a.pred)
-            MSE = mean_squared_error(a.y_ture, a.pred)
+            s_r, _ = spearmanr(np.array(a.y_true), np.array(a.pred))
+            p_r, _ = pearsonr(np.array(a.y_true), np.array(a.pred))
+            r2 = r2_score(a.y_true, a.pred)
+            MAE = mean_absolute_error(a.y_true, a.pred)
+            MSE = mean_squared_error(a.y_true, a.pred)
             try:
-                poisson_deviance_explained = d2_tweedie_score(a[a.pred>0].y_ture, a[a.pred>0].pred, power=1)
+                poisson_deviance_explained = d2_tweedie_score(a[a.pred>0].y_true, a[a.pred>0].pred, power=1)
             except:
                 poisson_deviance_explained = np.nan
         else:
@@ -837,20 +838,20 @@ class AdaSTEM(BaseEstimator):
         self.score_dict = score_dict
         return self.score_dict
         
-    def calculate_feature_importances(self):
-        """A method to generate feature importance values for each stixel.
+    def calculate_Feature_importances(self):
+        """A method to generate Feature importance values for each stixel.
         
-        Feature importances are saved in self.feature_importances_.
+        Feature importances are saved in self.Feature_importances_.
         
         Attribute dependence:
             1. self.ensemble_df
             2. self.model_dict
             3. self.stixel_specific_x_names
-            4. The input base model should have attribute `feature_importances_`
+            4. The input base model should have attribute `Feature_importances_`
             
         """
-        # generate feature importance dict
-        feature_importance_list = []
+        # generate Feature importance dict
+        Feature_importance_list = []
         
         for index,ensemble_row in self.ensemble_df.drop('checklist_indexes', axis=1).iterrows():
             if ensemble_row['stixel_checklist_count']<self.stixel_training_size_threshold:
@@ -864,25 +865,25 @@ class AdaSTEM(BaseEstimator):
                 if isinstance(the_model, dummy_model1):
                     importance_dict = dict(zip(self.x_names, [1/len(self.x_names)] * len(self.x_names)))
                 else:
-                    feature_imp = the_model.feature_importances_
-                    importance_dict = dict(zip(x_names, feature_imp))
+                    Feature_imp = the_model.Feature_importances_
+                    importance_dict = dict(zip(x_names, Feature_imp))
                     
                 importance_dict['stixel_index'] = stixel_index
-                feature_importance_list.append(importance_dict)
+                Feature_importance_list.append(importance_dict)
                 
             except Exception as e:
                 continue
         
-        self.feature_importances_ = pd.DataFrame(feature_importance_list).set_index('stixel_index').reset_index(drop=False).fillna(0)
+        self.Feature_importances_ = pd.DataFrame(Feature_importance_list).set_index('stixel_index').reset_index(drop=False).fillna(0)
         
         
-    def assign_feature_importances_by_points(self,
+    def assign_Feature_importances_by_points(self,
                                              Sample_ST_df: Union[pd.core.frame.DataFrame, None] = None,
                                              verbosity: Union[None, int]=None,
                                              aggregation: str='mean',
                                              njobs: Union[int, None]=1,
                                              ) -> pd.core.frame.DataFrame:
-        """Assign feature importance to the input spatio-temporal points
+        """Assign Feature importance to the input spatio-temporal points
 
         Args:
             Sample_ST_df (Union[pd.core.frame.DataFrame, None], optional): 
@@ -890,7 +891,7 @@ class AdaSTEM(BaseEstimator):
                 Must contain `self.Spatio1`, `self.Spatio2`, and `self.Temporal1` in columns. 
                 If None, the resolution will be:
 
-                | varibale|values|
+                | variable|values|
                 |---------|--------|
                 |Spatio_var1|np.arange(-180,180,1)|
                 |Spatio_var2|np.arange(-90,90,1)|
@@ -898,22 +899,22 @@ class AdaSTEM(BaseEstimator):
 
                 Defaults to None.
             verbosity (Union[None, int], optional):
-                0 to ouput nothing, everything other wise. Default None set it to the verbosity of AdaSTEM model class.
+                0 to output nothing, everything other wise. Default None set it to the verbosity of AdaSTEM model class.
             aggregation (str, optional):
-                One of 'mean' and 'median' to aggregate feature importance across ensembles.
+                One of 'mean' and 'median' to aggregate Feature importance across ensembles.
             njobs (Union[int, None], optional):
                 Number of processes used in this task. If None, use the self.njobs. Default to 1.
         
         Raises:
             NameError: 
-                feature_importances_ attribute is not calculated. Try model.calculate_feature_importances() first.
+                Feature_importances_ attribute is not calculated. Try model.calculate_Feature_importances() first.
             ValueError:
                 f'aggregation not one of [\'mean\',\'median\'].'
             KeyError: 
                 One of [`self.Spatio1`, `self.Spatio2`, `self.Temporal1`] not found in `Sample_ST_df.columns`
 
         Returns:
-            DataFrame with feature importance assigned.
+            DataFrame with Feature importance assigned.
         """
         #
         if verbosity is None:
@@ -924,8 +925,8 @@ class AdaSTEM(BaseEstimator):
             verbosity = 1
             
         #
-        if not 'feature_importances_' in dir(self):
-            raise NameError(f'feature_importances_ attribute is not calculated. Try model.calculate_feature_importances() first.')
+        if not 'Feature_importances_' in dir(self):
+            raise NameError(f'Feature_importances_ attribute is not calculated. Try model.calculate_Feature_importances() first.')
         #
         if not aggregation in ['mean','median']:
             raise ValueError(f'aggregation not one of [\'mean\',\'median\'].')
@@ -966,7 +967,7 @@ class AdaSTEM(BaseEstimator):
                                     self.Temporal1,
                                     self.Spatio1,
                                     self.Spatio2,
-                                    self.feature_importances_
+                                    self.Feature_importances_
                                     )
                 round_res_list.append(res_list)
             
@@ -980,7 +981,7 @@ class AdaSTEM(BaseEstimator):
                                     repeat(self.Temporal1),
                                     repeat(self.Spatio1),
                                     repeat(self.Spatio2),
-                                    repeat(self.feature_importances_)
+                                    repeat(self.Feature_importances_)
                     )
                 if verbosity>0:
                     args_iterator = tqdm(plain_args_iterator, total=len(list(self.ensemble_df.ensemble_index.unique())))
@@ -998,13 +999,13 @@ class AdaSTEM(BaseEstimator):
         
         # aggregate across ensembles
         if aggregation=='mean':
-            mean_feature_importances_across_ensembles = round_res_df.groupby('sample_index').mean()
+            mean_Feature_importances_across_ensembles = round_res_df.groupby('sample_index').mean()
         elif aggregation=='median':
-            mean_feature_importances_across_ensembles = round_res_df.groupby('sample_index').median()
+            mean_Feature_importances_across_ensembles = round_res_df.groupby('sample_index').median()
             
         if self.use_temporal_to_train:
-            mean_feature_importances_across_ensembles = mean_feature_importances_across_ensembles.rename(columns={self.Temporal1:f'{self.Temporal1}_predictor'})
-        out_ = pd.concat([Sample_ST_df, mean_feature_importances_across_ensembles], axis=1).dropna()
+            mean_Feature_importances_across_ensembles = mean_Feature_importances_across_ensembles.rename(columns={self.Temporal1:f'{self.Temporal1}_predictor'})
+        out_ = pd.concat([Sample_ST_df, mean_Feature_importances_across_ensembles], axis=1).dropna()
         return out_
     
     
@@ -1027,7 +1028,7 @@ class AdaSTEMClassifier(AdaSTEM):
                 temporal_step=20, 
                 temporal_bin_interval = 50,
                 temporal_bin_start_jitter = 'random',
-                spatio_bin_jitter_maginitude = 10,
+                spatio_bin_jitter_magnitude = 10,
                 save_gridding_plot=False,
                 save_tmp = False,
                 save_dir='./',
@@ -1075,7 +1076,7 @@ class AdaSTEMClassifier(AdaSTEM):
                          points_lower_threshold, temporal_start, 
                          temporal_end, temporal_step, temporal_bin_interval, 
                          temporal_bin_start_jitter,
-                         spatio_bin_jitter_maginitude,
+                         spatio_bin_jitter_magnitude,
                          save_gridding_plot, save_tmp, save_dir, 
                          sample_weights_for_classifier,
                          Spatio1, Spatio2, Temporal1,
@@ -1090,22 +1091,22 @@ class AdaSTEMClassifier(AdaSTEM):
                 X_test: pd.core.frame.DataFrame, 
                 verbosity: Union[None, int] = None, 
                 return_std: bool=False, 
-                cls_threashold: float=0.5, 
+                cls_threshold: float=0.5, 
                 njobs: Union[int, None]=1,
                 aggregation: str='mean',
-                return_by_seperate_ensembles: bool=False) -> Union[np.ndarray, Tuple[np.ndarray]]:
+                return_by_separate_ensembles: bool=False) -> Union[np.ndarray, Tuple[np.ndarray]]:
         """A rewrite of predict_proba
 
         Args:
             X_test (pd.core.frame.DataFrame): 
                 Testing variables.
             verbosity (int, optional): 
-                0 to ouput nothing, everything other wise. Default None set it to the verbosity of AdaSTEM model class.
+                0 to output nothing, everything other wise. Default None set it to the verbosity of AdaSTEM model class.
             return_std (bool, optional): 
                 Whether return the standard deviation among ensembles. Defaults to False.
-            cls_threashold (float, optional): 
-                Cutting threashold for the classification. 
-                Values above cls_threashold will be labeled as 1 and 0 otherwise. 
+            cls_threshold (float, optional): 
+                Cutting threshold for the classification. 
+                Values above cls_threshold will be labeled as 1 and 0 otherwise. 
                 Defaults to 0.5.
             njobs (Union[int, None], optional):
                 Number of processes used in this task. If None, use the self.njobs. Default to 1.
@@ -1115,8 +1116,8 @@ class AdaSTEMClassifier(AdaSTEM):
                 Still in experiment.
             aggregation (str, optional):
                 'mean' or 'median' for aggregation method across ensembles.
-            return_by_seperate_ensembles (bool, optional):
-                Experimental function. return not by aggregation, but by seperate ensembles.
+            return_by_separate_ensembles (bool, optional):
+                Experimental function. return not by aggregation, but by separate ensembles.
 
         Raises:
             TypeError:
@@ -1125,19 +1126,19 @@ class AdaSTEMClassifier(AdaSTEM):
                 aggregation is not in ['mean','median'].
             
         Returns:
-            predicted results. (pred_mean, pred_std) if return_std==Ture, and pred_mean if return_std==False.
+            predicted results. (pred_mean, pred_std) if return_std==true, and pred_mean if return_std==False.
             
         """
                     
         if return_std:
-            mean, std = self.predict_proba(X_test, verbosity=verbosity, return_std=True, njobs=njobs, aggregation=aggregation, return_by_seperate_ensembles=return_by_seperate_ensembles)
-            mean = np.where(mean<cls_threashold, 0, mean)
-            mean = np.where(mean>=cls_threashold, 1, mean)
+            mean, std = self.predict_proba(X_test, verbosity=verbosity, return_std=True, njobs=njobs, aggregation=aggregation, return_by_separate_ensembles=return_by_separate_ensembles)
+            mean = np.where(mean<cls_threshold, 0, mean)
+            mean = np.where(mean>=cls_threshold, 1, mean)
             return mean, std
         else:
-            mean = self.predict_proba(X_test, verbosity=verbosity, return_std=False, njobs=njobs, aggregation=aggregation, return_by_seperate_ensembles=return_by_seperate_ensembles)
-            mean = np.where(mean<cls_threashold, 0, mean)
-            mean = np.where(mean>=cls_threashold, 1, mean)
+            mean = self.predict_proba(X_test, verbosity=verbosity, return_std=False, njobs=njobs, aggregation=aggregation, return_by_separate_ensembles=return_by_separate_ensembles)
+            mean = np.where(mean<cls_threshold, 0, mean)
+            mean = np.where(mean>=cls_threshold, 1, mean)
             return mean
             
         
@@ -1158,7 +1159,7 @@ class AdaSTEMRegressor(AdaSTEM):
                 temporal_step=20, 
                 temporal_bin_interval = 50,
                 temporal_bin_start_jitter = 'random',
-                spatio_bin_jitter_maginitude = 10,
+                spatio_bin_jitter_magnitude = 10,
                 save_gridding_plot=False,
                 save_tmp = False,
                 save_dir='./',
@@ -1206,7 +1207,7 @@ class AdaSTEMRegressor(AdaSTEM):
                          points_lower_threshold, temporal_start, 
                          temporal_end, temporal_step, temporal_bin_interval, 
                          temporal_bin_start_jitter,
-                         spatio_bin_jitter_maginitude,
+                         spatio_bin_jitter_magnitude,
                          save_gridding_plot, save_tmp, save_dir,
                          sample_weights_for_classifier,
                          Spatio1, Spatio2, Temporal1,

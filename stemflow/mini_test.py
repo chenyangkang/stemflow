@@ -31,8 +31,8 @@ def run_mini_test(delet_tmp_files: bool=True, show: bool = False):
         5. Fitting model
         6. Calculating feature importances
         7. Assigning importance to points
-        8. Ploting top 2 important variables
-        9. Caclulating the fitting errors
+        8. Plotting top 2 important variables
+        9. Calculate the fitting errors
         10. Predicting on test set
         11. Evaluation
         12. Watermark
@@ -40,7 +40,7 @@ def run_mini_test(delet_tmp_files: bool=True, show: bool = False):
         
     """
     #
-    print('Start Runing Mini-test...')
+    print('Start Running Mini-test...')
     print(f'Temporary files will be stored at: ./stemflow_mini_test/')
     if delet_tmp_files:
         print('Temporary files will be deleted.')
@@ -183,15 +183,15 @@ def run_mini_test(delet_tmp_files: bool=True, show: bool = False):
 
 
     # %% [markdown]
-    # ## Ploting the feature importances by vairable names
+    # ## Ploting the feature importances by variable names
 
     # %%
     from stemflow.utils.plot_gif import make_sample_gif
 
     # make spatio-temporal GIF for top 3 variables
-    print('Ploting top 2 important variables...')
+    print('Plotting top 2 important variables...')
     for var_ in top_10_important_vars.index[:2]:
-        print(f'Ploting {var_}...')
+        print(f'Plotting {var_}...')
         make_sample_gif(importances_by_points, f'./stemflow_mini_test/FTR_IPT_{var_}.gif',
                                     col=var_, log_scale = False,
                                     Spatio1='longitude', Spatio2='latitude', Temporal1='DOY',
@@ -205,14 +205,14 @@ def run_mini_test(delet_tmp_files: bool=True, show: bool = False):
     print('Done.')
 
     # %% [markdown]
-    # ![GIF of feature importance for vairable `slope_mean`](../FTR_IPT_slope_mean.gif)
+    # ![GIF of feature importance for variable `slope_mean`](../FTR_IPT_slope_mean.gif)
 
     # %% [markdown]
     # ## Plot uncertainty (error) in training 
 
     # %%
-    # calculate mean and standard deviation in occurence estiamtion (classifier)
-    print('Caclulating the fitting errors...')
+    # calculate mean and standard deviation in occurrence estimation (classifier)
+    print('Calculating the fitting errors...')
     pred_mean, pred_std = model.classifier.predict(X_train.reset_index(drop=True), 
                                                 return_std=True, verbosity=1, njobs=1)
 
@@ -235,7 +235,7 @@ def run_mini_test(delet_tmp_files: bool=True, show: bool = False):
     # plot mean error in hexagon
     error_df.plot('pred_std', legend=True, legend_kwds={'shrink':0.7})
     plt.grid(alpha=0.3)
-    plt.title('Standard deviation in estimated mean occurence')
+    plt.title('Standard deviation in estimated mean occurrence')
     plt.savefig('./stemflow_mini_test/error_plot.pdf')
     
     if show:

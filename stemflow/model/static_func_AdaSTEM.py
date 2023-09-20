@@ -77,7 +77,7 @@ def train_one_stixel(stixel_training_size_threshold: int,
     """Train one stixel
 
     Args:
-        stixel_training_size_threshold (int): Only stixels with data points above this theathold are trained.
+        stixel_training_size_threshold (int): Only stixels with data points above this threshold are trained.
         x_names (Union[list, np.ndarray]): Total x_names. Predictor variable.s
         task (str): One of 'regression', 'classification' and 'hurdle'
         base_model (BaseEstimator): Base model estimator.
@@ -107,7 +107,7 @@ def train_one_stixel(stixel_training_size_threshold: int,
         trained_model = dummy_model1(float(unique_sub_y_train_binary[0]))
         return (trained_model, [])
     else:
-        # Remove the varibales that have no variation
+        # Remove the variables that have no variation
         stixel_specific_x_names = x_names.copy()
         stixel_specific_x_names = [i for i in stixel_specific_x_names if not i in \
                                                 list(sub_X_train.columns[sub_X_train.std(axis=0)==0])]
@@ -296,7 +296,7 @@ def get_stixel_specific_name_by_model(model: Union[None, BaseEstimator],
     Args:
         model (Union[None, BaseEstimator]): model of this stixel
         stixel_specific_x_names_dict (dict): the stixel_specific_x_names dictionary. Generated after training.
-        x_names (list): total x_names. All varibales.
+        x_names (list): total x_names. All variables.
         ensemble (str): ensemble name.
         grid_index (str): grid index.
 
@@ -325,7 +325,7 @@ def get_model_and_stixel_specific_x_names(model_dict: dict,
         ensemble (str): ensemble name.
         grid_index (str): grid index.
         stixel_specific_x_names_dict (dict): the stixel_specific_x_names dictionary. Generated after training.
-        x_names (list): Total x_names. All varibales.
+        x_names (list): Total x_names. All variables.
 
     Returns:
        A tuple of (model, stixel_specific_x_names) for this stixel
@@ -358,17 +358,17 @@ def predict_one_stixel(
     """predict_one_stixel
 
     Args:
-        X_test_copy (pd.core.frame.DataFrame): Input testing varibales
-        Temporal1 (str): Temporal varibale name 1
-        Spatio1 (str): Spatio varibale name 1
-        Spatio2 (str): Spatio varibale name 2
+        X_test_copy (pd.core.frame.DataFrame): Input testing variables
+        Temporal1 (str): Temporal variable name 1
+        Spatio1 (str): Spatio variable name 1
+        Spatio2 (str): Spatio variable name 2
         Temporal1_start (Union[float, int]): Starting point of Temporal variable for the sliding window.
         Temporal1_end (Union[float, int]): Ending point of Temporal variable for the sliding window.
         stixel_calibration_point_transformed_left_bound (Union[float, int]): The left bound of the stixel after transformation.
         stixel_calibration_point_transformed_right_bound (Union[float, int]): The right bound of the stixel after transformation.
         stixel_calibration_point_transformed_lower_bound (Union[float, int]): The lower bound of the stixel after transformation.
         stixel_calibration_point_transformed_upper_bound (Union[float, int]): The upper bound of the stixel after transformation.
-        x_names (list): Total x_names. All varibales.
+        x_names (list): Total x_names. All variables.
         task (str): One of 'regression', 'classification' and 'hurdle'
         model_x_names_tuple (tuple[Union[None, BaseEstimator], list]): A tuple of (model, stixel_specific_x_names)
 

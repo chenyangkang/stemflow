@@ -78,7 +78,7 @@ class Hurdle(BaseEstimator):
             X_test: Test variables
 
         Returns:
-            A prediciton array with shape (-1,1)
+            A prediction array with shape (-1,1)
         """
         cls_res = self.classifier.predict(X_test)
         reg_res = self.regressor.predict(X_test)
@@ -97,7 +97,7 @@ class Hurdle(BaseEstimator):
         
         Args:
             X_test:
-                Testing varibales
+                Testing variables
         
         Returns:
             Prediction results with shape (n_samples, 2)
@@ -190,7 +190,7 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
             y_train:
                 Training target
             verbosity:
-                Whehter to show progress bar. 0 for No, and Yes other wise.
+                Whether to show progress bar. 0 for No, and Yes other wise.
                 
         '''
         binary_ =np.unique(np.where(y_train>0, 1, 0))
@@ -213,7 +213,7 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
                 X_test: Union[pd.core.frame.DataFrame,np.ndarray],
                 njobs:int = 1,
                 verbosity: int=1,
-                return_by_seperate_ensembles: bool=False) -> np.ndarray:
+                return_by_separate_ensembles: bool=False) -> np.ndarray:
         """Predict
 
         Args:
@@ -222,19 +222,19 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
             njobs:
                 Multi-processing in prediction.
             verbosity:
-                Whehter to show progress bar. 0 for No, and Yes other wise.
-            return_by_seperate_ensembles (bool, optional):
-                Test function. return not by aggregation, but by seperate ensembles.
+                Whether to show progress bar. 0 for No, and Yes other wise.
+            return_by_separate_ensembles (bool, optional):
+                Test function. return not by aggregation, but by separate ensembles.
                 
         Returns:
-            A prediciton array with shape (-1,1)
+            A prediction array with shape (-1,1)
         """
         if verbosity==0:
-            cls_res = self.classifier.predict(X_test, njobs=njobs, verbosity=0, return_by_seperate_ensembles=return_by_seperate_ensembles)
-            reg_res = self.regressor.predict(X_test, njobs=njobs, verbosity=0, return_by_seperate_ensembles=return_by_seperate_ensembles)
+            cls_res = self.classifier.predict(X_test, njobs=njobs, verbosity=0, return_by_separate_ensembles=return_by_separate_ensembles)
+            reg_res = self.regressor.predict(X_test, njobs=njobs, verbosity=0, return_by_separate_ensembles=return_by_separate_ensembles)
         else:
-            cls_res = self.classifier.predict(X_test, njobs=njobs, verbosity=1, return_by_seperate_ensembles=return_by_seperate_ensembles)
-            reg_res = self.regressor.predict(X_test, njobs=njobs, verbosity=1, return_by_seperate_ensembles=return_by_seperate_ensembles)
+            cls_res = self.classifier.predict(X_test, njobs=njobs, verbosity=1, return_by_separate_ensembles=return_by_separate_ensembles)
+            reg_res = self.regressor.predict(X_test, njobs=njobs, verbosity=1, return_by_separate_ensembles=return_by_separate_ensembles)
         # reg_res = np.where(reg_res>=0, reg_res, 0) ### we constrain the reg value to be positive
         res = np.where(cls_res<0.5, 0, cls_res)
         res = np.where(cls_res>0.5, reg_res, cls_res)
@@ -244,21 +244,21 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
                       X_test: Union[pd.core.frame.DataFrame,np.ndarray], 
                       njobs: int = 1,
                       verbosity: int=0,
-                      return_by_seperate_ensembles: bool=False) -> np.ndarray:
+                      return_by_separate_ensembles: bool=False) -> np.ndarray:
         '''Just a rewrite of `predict` method
         
         Args:
             X_test:
-                Testing varibales
+                Testing variables
             njobs:
                 Multi-processing in prediction.
             verbosity:
-                Whehter to show progress bar. 0 for No, and Yes other wise.
-            return_by_seperate_ensembles (bool, optional):
-                Test function. return not by aggregation, but by seperate ensembles.
+                Whether to show progress bar. 0 for No, and Yes other wise.
+            return_by_separate_ensembles (bool, optional):
+                Test function. return not by aggregation, but by separate ensembles.
                 
         Returns:
-            A prediciton array with shape (-1,1)
+            A prediction array with shape (-1,1)
         '''
         
-        return self.predict(self, X_test, njobs=njobs, verbosity=verbosity, return_by_seperate_ensembles=return_by_seperate_ensembles)
+        return self.predict(self, X_test, njobs=njobs, verbosity=verbosity, return_by_separate_ensembles=return_by_separate_ensembles)
