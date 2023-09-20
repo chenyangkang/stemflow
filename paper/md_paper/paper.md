@@ -16,7 +16,6 @@ authors:
    surname: Gu
    orchid: 
    affiliation: "1, 3"
-   
  - given-names: Xiangjiang
    surname: Zhan
    corresponding: true
@@ -26,10 +25,13 @@ authors:
 affiliations:
  - name: Key Laboratory of Animal Ecology and Conservation Biology, Institute of Zoology, Chinese Academy of Sciences, Beijing, China
    index: 1
+
  - name: University of Chinese Academy of Sciences, Beijing, China
    index: 2
+
  - name: Cardiff University-Institute of Zoology Joint Laboratory for Biocomplexity Research, Chinese Academy of Sciences, Beijing, China
    index: 3
+   
  - name: Center for Excellence in Animal Evolution and Genetics, Chinese Academy of Sciences, Kunming, China
    index: 4
 

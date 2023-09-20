@@ -14,4 +14,4 @@ stemflow/*/__pycache__/*
 stemflow/__pycache__/*
 *.DS_Store
 *.docx
-./paper/references
+*/references/*
