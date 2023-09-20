@@ -1,2 +1,4 @@
 *.ipynb linguist-vendored
+*.md linguist-vendored
+*.bib linguist-vendored
 
