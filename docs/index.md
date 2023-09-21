@@ -198,6 +198,7 @@ See [AdaSTEM demo](https://chenyangkang.github.io/stemflow/Examples/01.AdaSTEM_d
 
 ```py
 model.gridding_plot
+# Here, the model is a AdaSTEM class, not a hurdle class
 ```
 
 ![QuadTree example](https://chenyangkang.github.io/stemflow/QuadTree.png)
