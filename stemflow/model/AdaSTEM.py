@@ -449,7 +449,7 @@ class AdaSTEM(BaseEstimator):
         
     def predict_proba(self,
                       X_test: pd.core.frame.DataFrame,
-                      verbosity: int=0, 
+                      verbosity: Union[int, None]=None, 
                       return_std: bool=False,
                       njobs: Union[None, int]=1,
                       aggregation: str='mean',
@@ -460,7 +460,7 @@ class AdaSTEM(BaseEstimator):
             X_test (pd.core.frame.DataFrame): 
                 Testing variables.
             verbosity (int, optional): 
-                show progress bar or not. Yes for 0, and No for other. Defaults to 0.
+                show progress bar or not. Yes for 0, and No for other. Defaults to None, which set it as the verbosity of the main model class.
             return_std (bool, optional): 
                 Whether return the standard deviation among ensembles. Defaults to False.
             njobs (Union[int, None], optional):
@@ -502,6 +502,9 @@ class AdaSTEM(BaseEstimator):
                 warnings(f'return_by_separate_ensembles == True. Automatically setting return_std=False')
                 return_std = False
                 
+        if verbosity is None:
+            verbosity = self.verbosity
+            
         ##### predict
         X_test_copy = X_test.copy()
         
@@ -703,7 +706,7 @@ class AdaSTEM(BaseEstimator):
                 Return numpy.ndarray of shape (n_samples, n_ensembles)
                 
         """
-        
+
         return self.predict_proba(X_test, verbosity=verbosity, return_std=return_std, njobs=njobs, aggregation=aggregation, return_by_separate_ensembles=return_by_separate_ensembles)
     
     
