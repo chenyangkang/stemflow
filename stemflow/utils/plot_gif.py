@@ -121,7 +121,7 @@ def make_sample_gif(data: pd.core.frame.DataFrame,
     if log_scale:
         norm = matplotlib.colors.Normalize(vmin=np.log(data[col].min()+1), vmax=np.log(data[col].max()+1))
     else:
-        norm = matplotlib.colors.Normalize(vmin=data[col].min(), vmax=data[col].max())
+        norm = matplotlib.colors.Normalize(vmin=data[col].min(), vmax=np.quantile([i for i in data[col].values if i>0], 0.9))
 
     ### for getting the color bar
     scat1 = animate(0)
