@@ -25,6 +25,7 @@ def make_sample_gif(data: pd.core.frame.DataFrame,
                     xtick_interval: Union[float, int]=30, 
                     ytick_interval: Union[float, int]=30,
                     log_scale: bool = False, 
+                    quantile: float = 0.9,
                     dpi: Union[float, int]=300, 
                     fps: int=30):
     '''make GIF with plt.imshow function
@@ -62,6 +63,8 @@ def make_sample_gif(data: pd.core.frame.DataFrame,
             the size of y tick interval.
         log_scale: 
             log transform the target value or not.
+        quantile:
+            The quantile of positive values of the target, which will be set as the maximum value in the color scaling.
         dpi: 
             dpi of the GIF.
         fps: 
@@ -121,7 +124,7 @@ def make_sample_gif(data: pd.core.frame.DataFrame,
     if log_scale:
         norm = matplotlib.colors.Normalize(vmin=np.log(data[col].min()+1), vmax=np.log(data[col].max()+1))
     else:
-        norm = matplotlib.colors.Normalize(vmin=data[col].min(), vmax=np.quantile([i for i in data[col].values if i>0], 0.9))
+        norm = matplotlib.colors.Normalize(vmin=data[col].min(), vmax=np.quantile([i for i in data[col].values if i>0], quantile))
 
     ### for getting the color bar
     scat1 = animate(0)
