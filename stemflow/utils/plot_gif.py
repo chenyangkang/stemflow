@@ -86,6 +86,8 @@ def make_sample_gif(data: pd.core.frame.DataFrame,
         
         sub[f'{Spatio1}_grid'] = np.digitize(sub[Spatio1], lng_gird, right=True)
         sub[f'{Spatio2}_grid'] = np.digitize(sub[Spatio2], lat_gird, right=False)
+        sub = sub[(sub[f'{Spatio1}_grid']<=lng_size-1) & (sub[f'{Spatio2}_grid']<=lat_size-1)]
+        
         sub = sub.groupby([f'{Spatio1}_grid', f'{Spatio2}_grid'])[[col]].mean().reset_index(drop=False)
 
         im = np.array([np.nan] * lat_size * lng_size).reshape(lat_size, lng_size)
