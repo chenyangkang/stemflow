@@ -28,7 +28,7 @@ def make_sample_gif(data: pd.core.frame.DataFrame,
                     quantile: float = 0.9,
                     dpi: Union[float, int]=300, 
                     fps: int=30,
-                    cmap: str='cmap'):
+                    cmap: str='plasma'):
     '''make GIF with plt.imshow function
     
     A function to generate GIF file of spatio-temporal pattern.
