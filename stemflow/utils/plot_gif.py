@@ -27,7 +27,8 @@ def make_sample_gif(data: pd.core.frame.DataFrame,
                     log_scale: bool = False, 
                     quantile: float = 0.9,
                     dpi: Union[float, int]=300, 
-                    fps: int=30):
+                    fps: int=30,
+                    cmap: str='cmap'):
     '''make GIF with plt.imshow function
     
     A function to generate GIF file of spatio-temporal pattern.
@@ -100,7 +101,7 @@ def make_sample_gif(data: pd.core.frame.DataFrame,
         else:
             im[sub[f'{Spatio2}_grid'].values, sub[f'{Spatio1}_grid'].values] = sub[col]
             
-        scat1 = ax.imshow(im, norm=norm)
+        scat1 = ax.imshow(im, norm=norm, cmap=cmap)
         
         ax.set_title(f'{Temporal1}: {temporal_value}', fontsize=30)
         
