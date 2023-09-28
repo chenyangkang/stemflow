@@ -9,6 +9,7 @@ import pandas as pd
 import numpy
 from typing import Union, Tuple
 from sklearn.preprocessing import LabelEncoder
+from functools import partial
 
 def make_sample_gif(data: pd.core.frame.DataFrame, 
                     file_path: str, 
@@ -82,7 +83,7 @@ def make_sample_gif(data: pd.core.frame.DataFrame,
         
     fig,ax = plt.subplots(figsize=figsize)
 
-    def animate(i, log_scale=log_scale):
+    def animate(i, norm, log_scale=log_scale):
         print(i,end='.')
         ax.clear()
         sub = data[data['Temporal_indexer']==i]
@@ -130,7 +131,7 @@ def make_sample_gif(data: pd.core.frame.DataFrame,
         norm = matplotlib.colors.Normalize(vmin=0.0001, vmax=np.quantile([i for i in data[col].values if i>0], quantile))
 
     ### for getting the color bar
-    scat1 = animate(0)
+    scat1 = partial(animate, norm=norm, log_scale=log_scale)(0)
 
     cbar = fig.colorbar(scat1[0], norm=norm, shrink=0.5)
     cbar.ax.get_yaxis().labelpad = 15
@@ -144,7 +145,7 @@ def make_sample_gif(data: pd.core.frame.DataFrame,
     plt.tight_layout()
         
     ### animate!
-    ani = FuncAnimation(fig, animate, interval=40, blit=True, repeat=True, frames=len(data['Temporal_indexer'].unique()))
+    ani = FuncAnimation(fig, partial(animate, norm=norm, log_scale=log_scale), interval=40, blit=True, repeat=True, frames=len(data['Temporal_indexer'].unique()))
     ani.save(file_path, dpi=dpi, writer=PillowWriter(fps=fps))
     plt.close()
     print()
