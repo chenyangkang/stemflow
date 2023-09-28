@@ -101,7 +101,9 @@ def make_sample_gif(data: pd.core.frame.DataFrame,
         else:
             im[sub[f'{Spatio2}_grid'].values, sub[f'{Spatio1}_grid'].values] = sub[col]
             
-        scat1 = ax.imshow(im, norm=norm, cmap=cmap)
+        my_cmap = matplotlib.cm.get_cmap(cmap)
+        my_cmap.set_under('lightgrey')
+        scat1 = ax.imshow(im, norm=norm, cmap=my_cmap)
         
         ax.set_title(f'{Temporal1}: {temporal_value}', fontsize=30)
         
@@ -123,9 +125,9 @@ def make_sample_gif(data: pd.core.frame.DataFrame,
         
     ### scale the color norm
     if log_scale:
-        norm = matplotlib.colors.Normalize(vmin=np.log(data[col].min()+1), vmax=np.log(data[col].max()+1))
+        norm = matplotlib.colors.Normalize(vmin=0.0001, vmax=np.log(data[col].max()+1))
     else:
-        norm = matplotlib.colors.Normalize(vmin=data[col].min(), vmax=np.quantile([i for i in data[col].values if i>0], quantile))
+        norm = matplotlib.colors.Normalize(vmin=0.0001, vmax=np.quantile([i for i in data[col].values if i>0], quantile))
 
     ### for getting the color bar
     scat1 = animate(0)
