@@ -13,7 +13,7 @@
 ![PyPI version](https://img.shields.io/pypi/v/stemflow)
 ![PyPI downloads](https://img.shields.io/pypi/dm/stemflow)
 ![GitHub last commit](https://img.shields.io/github/last-commit/chenyangkang/stemflow)
-
+[![status](https://joss.theoj.org/papers/50a385b3283faf346fc16484f50f6add/status.svg)](https://joss.theoj.org/papers/50a385b3283faf346fc16484f50f6add)
  <!--  -->
  
 -----
