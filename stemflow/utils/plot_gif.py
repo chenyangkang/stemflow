@@ -25,8 +25,11 @@ def make_sample_gif(data: pd.core.frame.DataFrame,
                     lat_size: int = 180, 
                     xtick_interval: Union[float, int]=30, 
                     ytick_interval: Union[float, int]=30,
-                    log_scale: bool = False, 
-                    quantile: float = 0.9,
+                    log_scale: bool = False,
+                    vmin: Union[float, int]= 0.0001,
+                    vmax: Union[float, int]= None,
+                    lightgrey_under: bool=True,
+                    adder: Union[int, float] = 1,
                     dpi: Union[float, int]=300, 
                     fps: int=30,
                     cmap: str='plasma'):
@@ -65,8 +68,14 @@ def make_sample_gif(data: pd.core.frame.DataFrame,
             the size of y tick interval.
         log_scale: 
             log transform the target value or not.
-        quantile:
-            The quantile of positive values of the target, which will be set as the maximum value in the color scaling.
+        vmin:
+            vmin of color map.
+        vmax:
+            vmax of color map. If None, set to the 0.9 quantile of the upper bound.
+        lightgrey_under:
+            Whether to set color as ligthgrey where values are below vmin.
+        adder:
+            If log_scale==True, value = np.log(value + adder)
         dpi: 
             dpi of the GIF.
         fps: 
@@ -98,12 +107,15 @@ def make_sample_gif(data: pd.core.frame.DataFrame,
         im = np.array([np.nan] * lat_size * lng_size).reshape(lat_size, lng_size)
 
         if log_scale:
-            im[sub[f'{Spatio2}_grid'].values, sub[f'{Spatio1}_grid'].values] = np.log(sub[col]+1)
+            im[sub[f'{Spatio2}_grid'].values, sub[f'{Spatio1}_grid'].values] = np.log(sub[col]+adder)
         else:
             im[sub[f'{Spatio2}_grid'].values, sub[f'{Spatio1}_grid'].values] = sub[col]
             
         my_cmap = matplotlib.cm.get_cmap(cmap)
-        my_cmap.set_under('lightgrey')
+        
+        if lightgrey_under:
+            my_cmap.set_under('lightgrey')
+            
         scat1 = ax.imshow(im, norm=norm, cmap=my_cmap)
         
         ax.set_title(f'{Temporal1}: {temporal_value}', fontsize=30)
@@ -125,10 +137,14 @@ def make_sample_gif(data: pd.core.frame.DataFrame,
         return scat1,
         
     ### scale the color norm
-    if log_scale:
-        norm = matplotlib.colors.Normalize(vmin=0.0001, vmax=np.log(data[col].max()+1))
-    else:
-        norm = matplotlib.colors.Normalize(vmin=0.0001, vmax=np.quantile([i for i in data[col].values if i>0], quantile))
+    #
+    if vmax is None:
+        if log_scale:
+            vmax = np.quantile(np.log(data[col].values+adder), 0.9)
+        else:
+            vmax = np.quantile(data[col].values, 0.9)
+            
+    norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
 
     ### for getting the color bar
     scat1 = partial(animate, norm=norm, log_scale=log_scale)(0)
@@ -136,7 +152,7 @@ def make_sample_gif(data: pd.core.frame.DataFrame,
     cbar = fig.colorbar(scat1[0], norm=norm, shrink=0.5)
     cbar.ax.get_yaxis().labelpad = 15
     if log_scale:
-        cbar.ax.set_ylabel(f'log {col}', rotation=270)
+        cbar.ax.set_ylabel(f'log({col})', rotation=270)
     else:
         cbar.ax.set_ylabel(f'{col}', rotation=270)
     
