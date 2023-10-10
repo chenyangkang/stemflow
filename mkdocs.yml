@@ -83,17 +83,21 @@ nav:
     - Examples/07.Optimizing_Stixel_Size.ipynb
   - API:
     - stemflow.model:
-      - 'AdaSTEM': API/stemflow.model.AdaSTEM.md
-      - 'static_func_AdaSTEM': API/stemflow.model.static_func_AdaSTEM.md
-      - 'Hurdle': API/stemflow.model.Hurdle.md
-      - 'dummy_model': API/stemflow.model.dummy_model.md
-      - 'special_hurdle': API/stemflow.model.special_hurdle.md
+      - 'AdaSTEM': API_Documentation/stemflow.model.AdaSTEM.md
+      - 'static_func_AdaSTEM': API_Documentation/stemflow.model.static_func_AdaSTEM.md
+      - 'Hurdle': API_Documentation/stemflow.model.Hurdle.md
+      - 'dummy_model': API_Documentation/stemflow.model.dummy_model.md
+      - 'special_hurdle': API_Documentation/stemflow.model.special_hurdle.md
     - stemflow.utils:
-      - 'quadtree': API/stemflow.utils.quadtree.md
-      - 'plot_gif': API/stemflow.utils.plot_gif.md
-      - 'generate_soft_colors': API/stemflow.utils.generate_soft_colors.md
-    - stemflow.model_selection: API/stemflow.model_selection.md
-    - stemflow.mini_test: API/stemflow.mini_test.md
+      - 'quadtree': API_Documentation/stemflow.utils.quadtree.md
+      - 'plot_gif': API_Documentation/stemflow.utils.plot_gif.md
+      - 'generate_soft_colors': API_Documentation/stemflow.utils.generate_soft_colors.md
+    - stemflow.model_selection: API_Documentation/stemflow.model_selection.md
+    - stemflow.mini_test: API_Documentation/stemflow.mini_test.md
+  - Fun Visualization:
+    - 'Global Bird Diversity': Fun_Visualization/Global_Bird_Shannon_H_Index.md
+    - 'Global NDVI': Fun_Visualization/Global_NDVI.md
+
   # - Download mini data: mini_data/mini_data.csv
 
 markdown_extensions:
