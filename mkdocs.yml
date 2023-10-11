@@ -81,7 +81,7 @@ nav:
     - Examples/05.Hurdle_in_ada_or_ada_in_hurdle.ipynb
     - Examples/06.Base_model_choices.ipynb
     - Examples/07.Optimizing_Stixel_Size.ipynb
-  - API:
+  - API Documentation:
     - stemflow.model:
       - 'AdaSTEM': API_Documentation/stemflow.model.AdaSTEM.md
       - 'static_func_AdaSTEM': API_Documentation/stemflow.model.static_func_AdaSTEM.md
@@ -97,6 +97,7 @@ nav:
   - Fun Visualization:
     - 'Global Bird Diversity': Fun_Visualization/Global_Bird_Shannon_H_Index.md
     - 'Global NDVI': Fun_Visualization/Global_NDVI.md
+    - 'Ruby-crowned_Kinglet': Fun_Visualization/Ruby-crowned_Kinglet_2020.md
 
   # - Download mini data: mini_data/mini_data.csv
 
