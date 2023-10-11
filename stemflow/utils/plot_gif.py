@@ -126,7 +126,7 @@ def make_sample_gif(data: pd.core.frame.DataFrame,
                       new_x_ticks)
         
         old_y_ticks = np.arange(0,ylims[1] - ylims[0],ytick_interval)
-        new_y_ticks = np.arange(ylims[0], ylims[1],ytick_interval)[:len(old_y_ticks)]
+        new_y_ticks = np.arange(ylims[0], ylims[1], ytick_interval)[::-1][:len(old_y_ticks)]
         ax.set_yticks(old_y_ticks,
                       new_y_ticks)
         
