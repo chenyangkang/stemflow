@@ -365,10 +365,9 @@ class AdaSTEM(BaseEstimator):
                 del self.x_names[self.x_names.index(self.Temporal1)]
             
         # quadtree
-        X_train_copy = X_train.copy().reset_index(drop=True) ### I reset index here!! caution!
-        del X_train
-        X_train_copy['true_y'] = np.array(y_train).flatten()
-        grid_dict = self.split(X_train_copy, verbosity=verbosity)
+        X_train = X_train.reset_index(drop=True) ### I reset index here!! caution!
+        X_train['true_y'] = np.array(y_train).flatten()
+        grid_dict = self.split(X_train, verbosity=verbosity)
 
         # define model dict
         self.model_dict = {}
@@ -391,7 +390,7 @@ class AdaSTEM(BaseEstimator):
                                                                   task = self.task,
                                                                   base_model = self.base_model, 
                                                                   sample_weights_for_classifier = self.sample_weights_for_classifier,
-                                                                  X_train_copy = X_train_copy, 
+                                                                  X_train_copy = X_train, 
                                                                   checklist_indexes = checklist_indexes)
 
                 if model is None:
@@ -420,7 +419,7 @@ class AdaSTEM(BaseEstimator):
                         repeat(self.task), 
                         repeat(self.base_model),
                         repeat(self.sample_weights_for_classifier), 
-                        repeat(X_train_copy),
+                        repeat(X_train),
                         checklist_indexes
                     )
                 if verbosity>0:
