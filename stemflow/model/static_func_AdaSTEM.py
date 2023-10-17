@@ -88,7 +88,7 @@ def train_one_stixel(stixel_training_size_threshold: int,
     Returns:
         tuple[Union[None, BaseEstimator], list]: trained_model, stixel_specific_x_names
     """
-    sub_X_train = X_train_copy[X_train_copy.index.isin(checklist_indexes)]
+    sub_X_train = X_train_copy.iloc[checklist_indexes,:]
     
     if len(sub_X_train)<stixel_training_size_threshold: ####### threshold
         return (None, [])
