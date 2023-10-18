@@ -13,6 +13,7 @@ import pandas
 import matplotlib
 from multiprocessing import Pool
 from itertools import repeat
+from tqdm.contrib.concurrent import process_map
 
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
@@ -491,64 +492,131 @@ def get_ensemble_quadtree(data: pandas.core.frame.DataFrame,
         plt.ylim([plot_ylims[0],plot_ylims[1]])
         plt.title("Quadtree", fontsize=20)
         
-    iter_func_ = tqdm(range(size), total=size, desc='Generating Ensemble: ') if verbosity>0 else range(size)
     
-    for ensemble_count in iter_func_:
-        rotation_angle = np.random.uniform(0,360)
-        calibration_point_x_jitter = np.random.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
-        calibration_point_y_jitter = np.random.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
-
-        # print(f'ensemble_count: {ensemble_count}')
+    
+    if njobs>1 and isinstance(njobs, int):
         
-        temporal_bins = generate_temporal_bins(start = temporal_start, 
-                                                end=temporal_end, 
-                                                step=temporal_step, 
-                                                bin_interval = temporal_bin_interval,
-                                                temporal_bin_start_jitter = temporal_bin_start_jitter)
+        def generate_one_ensemble(ensemble_count):
+            this_ensemble = []
+            rotation_angle = np.random.uniform(0,360)
+            calibration_point_x_jitter = np.random.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
+            calibration_point_y_jitter = np.random.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
 
-        for time_block_index,bin_ in enumerate(temporal_bins):
-            time_start = bin_[0]
-            time_end = bin_[1]
-            sub_data=data[(data[Temporal1]>=time_start) & (data[Temporal1]<time_end)]
+            # print(f'ensemble_count: {ensemble_count}')
             
-            if len(sub_data)==0:
-                continue
+            temporal_bins = generate_temporal_bins(start = temporal_start,
+                                                    end=temporal_end, 
+                                                    step=temporal_step, 
+                                                    bin_interval = temporal_bin_interval,
+                                                    temporal_bin_start_jitter = temporal_bin_start_jitter)
 
-            QT_obj = QTree(grid_len_lon_upper_threshold=grid_len_lon_upper_threshold,
-                            grid_len_lon_lower_threshold=grid_len_lon_lower_threshold,
-                            grid_len_lat_upper_threshold=grid_len_lat_upper_threshold,
-                            grid_len_lat_lower_threshold=grid_len_lat_lower_threshold,
-                            points_lower_threshold=points_lower_threshold,
-                            lon_lat_equal_grid = True, 
-                            rotation_angle = rotation_angle,
-                            calibration_point_x_jitter = calibration_point_x_jitter,
-                            calibration_point_y_jitter = calibration_point_y_jitter)
-
-            ## Give the data and indexes. The indexes should be used to assign points data so that base model can run on those points,
-            ## You need to generate the splitting parameters once giving the data. Like the calibration point and min,max.
-            
-            QT_obj.add_lon_lat_data(sub_data.index, sub_data[Spatio1].values, sub_data[Spatio2].values)
-            QT_obj.generate_gridding_params()
-            
-            ## Call subdivide to precess
-            QT_obj.subdivide()
-            this_slice = QT_obj.get_final_result()
-            
-            if save_gridding_plot:
-                if time_block_index == int(len(temporal_bins)/2):
-                    QT_obj.graph(scatter=False)
+            for time_block_index,bin_ in enumerate(temporal_bins):
+                time_start = bin_[0]
+                time_end = bin_[1]
+                sub_data=data[(data[Temporal1]>=time_start) & (data[Temporal1]<time_end)]
                 
-            this_slice['ensemble_index'] = ensemble_count
-            this_slice[f'{Temporal1}_start'] = time_start
-            this_slice[f'{Temporal1}_end'] = time_end
-            this_slice[f'{Temporal1}_start']=round(this_slice[f'{Temporal1}_start'],1)
-            this_slice[f'{Temporal1}_end']=round(this_slice[f'{Temporal1}_end'],1)
-            this_slice['unique_stixel_id'] = [str(time_block_index)+"_"+str(i)+"_"+str(k) for i,k in zip (this_slice['ensemble_index'].values, 
-                                                                                                            this_slice['stixel_indexes'].values)]
-            ensemble_all_df_list.append(this_slice)
+                if len(sub_data)==0:
+                    continue
+
+                QT_obj = QTree(grid_len_lon_upper_threshold=grid_len_lon_upper_threshold,
+                                grid_len_lon_lower_threshold=grid_len_lon_lower_threshold,
+                                grid_len_lat_upper_threshold=grid_len_lat_upper_threshold,
+                                grid_len_lat_lower_threshold=grid_len_lat_lower_threshold,
+                                points_lower_threshold=points_lower_threshold,
+                                lon_lat_equal_grid = True, 
+                                rotation_angle = rotation_angle,
+                                calibration_point_x_jitter = calibration_point_x_jitter,
+                                calibration_point_y_jitter = calibration_point_y_jitter)
+
+                ## Give the data and indexes. The indexes should be used to assign points data so that base model can run on those points,
+                ## You need to generate the splitting parameters once giving the data. Like the calibration point and min,max.
+                
+                QT_obj.add_lon_lat_data(sub_data.index, sub_data[Spatio1].values, sub_data[Spatio2].values)
+                QT_obj.generate_gridding_params()
+                
+                ## Call subdivide to precess
+                QT_obj.subdivide()
+                this_slice = QT_obj.get_final_result()
+                
+                if save_gridding_plot:
+                    if time_block_index == int(len(temporal_bins)/2):
+                        QT_obj.graph(scatter=False)
+                    
+                this_slice['ensemble_index'] = ensemble_count
+                this_slice[f'{Temporal1}_start'] = time_start
+                this_slice[f'{Temporal1}_end'] = time_end
+                this_slice[f'{Temporal1}_start']=round(this_slice[f'{Temporal1}_start'],1)
+                this_slice[f'{Temporal1}_end']=round(this_slice[f'{Temporal1}_end'],1)
+                this_slice['unique_stixel_id'] = [str(time_block_index)+"_"+str(i)+"_"+str(k) for i,k in zip (this_slice['ensemble_index'].values, 
+                                                                                                                this_slice['stixel_indexes'].values)]
+                this_ensemble.append(this_slice)
+                
+            return pd.concat(this_ensemble, axis=0)
+
+        ensemble_all_df_list = process_map(generate_one_ensemble, list(range(size)), max_workers=njobs)
+
+    else:
+    
+        iter_func_ = tqdm(range(size), total=size, desc='Generating Ensemble: ') if verbosity>0 else range(size)
+        
+        for ensemble_count in iter_func_:
+            rotation_angle = np.random.uniform(0,360)
+            calibration_point_x_jitter = np.random.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
+            calibration_point_y_jitter = np.random.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
+
+            # print(f'ensemble_count: {ensemble_count}')
             
+            temporal_bins = generate_temporal_bins(start = temporal_start, 
+                                                    end=temporal_end, 
+                                                    step=temporal_step, 
+                                                    bin_interval = temporal_bin_interval,
+                                                    temporal_bin_start_jitter = temporal_bin_start_jitter)
+
+            for time_block_index,bin_ in enumerate(temporal_bins):
+                time_start = bin_[0]
+                time_end = bin_[1]
+                sub_data=data[(data[Temporal1]>=time_start) & (data[Temporal1]<time_end)]
+                
+                if len(sub_data)==0:
+                    continue
+
+                QT_obj = QTree(grid_len_lon_upper_threshold=grid_len_lon_upper_threshold,
+                                grid_len_lon_lower_threshold=grid_len_lon_lower_threshold,
+                                grid_len_lat_upper_threshold=grid_len_lat_upper_threshold,
+                                grid_len_lat_lower_threshold=grid_len_lat_lower_threshold,
+                                points_lower_threshold=points_lower_threshold,
+                                lon_lat_equal_grid = True, 
+                                rotation_angle = rotation_angle,
+                                calibration_point_x_jitter = calibration_point_x_jitter,
+                                calibration_point_y_jitter = calibration_point_y_jitter)
+
+                ## Give the data and indexes. The indexes should be used to assign points data so that base model can run on those points,
+                ## You need to generate the splitting parameters once giving the data. Like the calibration point and min,max.
+                
+                QT_obj.add_lon_lat_data(sub_data.index, sub_data[Spatio1].values, sub_data[Spatio2].values)
+                QT_obj.generate_gridding_params()
+                
+                ## Call subdivide to precess
+                QT_obj.subdivide()
+                this_slice = QT_obj.get_final_result()
+                
+                if save_gridding_plot:
+                    if time_block_index == int(len(temporal_bins)/2):
+                        QT_obj.graph(scatter=False)
+                    
+                this_slice['ensemble_index'] = ensemble_count
+                this_slice[f'{Temporal1}_start'] = time_start
+                this_slice[f'{Temporal1}_end'] = time_end
+                this_slice[f'{Temporal1}_start']=round(this_slice[f'{Temporal1}_start'],1)
+                this_slice[f'{Temporal1}_end']=round(this_slice[f'{Temporal1}_end'],1)
+                this_slice['unique_stixel_id'] = [str(time_block_index)+"_"+str(i)+"_"+str(k) for i,k in zip (this_slice['ensemble_index'].values, 
+                                                                                                                this_slice['stixel_indexes'].values)]
+                ensemble_all_df_list.append(this_slice)
+                
 
     ensemble_df = pd.concat(ensemble_all_df_list).reset_index(drop=True)
+    del ensemble_all_df_list
+    
     if not save_path=='':
         ensemble_df.to_csv(save_path,index=False)
         print(f'Saved! {save_path}')

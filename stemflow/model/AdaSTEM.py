@@ -83,7 +83,8 @@ class AdaSTEM(BaseEstimator):
                 Spatio2: str = 'latitude', 
                 Temporal1: str = 'DOY',
                 use_temporal_to_train: bool=True,
-                njobs: int=1,          
+                njobs: int=1,
+                subset_x_names: bool = False,          
                 plot_xlims: Tuple[Union[float, int], Union[float, int]] = (-180,180),
                 plot_ylims: Tuple[Union[float, int], Union[float, int]] = (-90,90),
                 verbosity: int=0,               
@@ -145,6 +146,8 @@ class AdaSTEM(BaseEstimator):
                 whether use 'day of year (DOY)' as a training variable. Defaults to True.
             njobs:
                 Number of multiprocessing in fitting the model. Defaults to 1.
+            subset_x_names:
+                Whether to only store variables with std > 0 for each stixel. Set to False will significantly increase the training speed.
             plot_xlims:
                 If save_gridding_plot=true, what is the xlims of the plot. Defaults to (-180,180).
             plot_ylims:
@@ -184,6 +187,7 @@ class AdaSTEM(BaseEstimator):
         self.Spatio2 = Spatio2
         self.Temporal1 = Temporal1
         self.use_temporal_to_train = use_temporal_to_train
+        self.subset_x_names = subset_x_names
         
         for func in ['fit','predict']:
             if not func in dir(self.base_model):
@@ -260,7 +264,7 @@ class AdaSTEM(BaseEstimator):
             
         fold = self.ensemble_fold
         save_path = os.path.join(self.save_dir, 'ensemble_quadtree_df.csv')  if self.save_tmp else ''
-        self.ensemble_df, self.gridding_plot = get_ensemble_quadtree(X_train,\
+        self.ensemble_df, self.gridding_plot = get_ensemble_quadtree(X_train[['Spatio1','Spatio2','Temporal1']],\
                                             Spatio1 = self.Spatio1,
                                             Spatio2 = self.Spatio2,
                                             Temporal1 = self.Temporal1,
@@ -390,6 +394,7 @@ class AdaSTEM(BaseEstimator):
                                                                   task = self.task,
                                                                   base_model = self.base_model, 
                                                                   sample_weights_for_classifier = self.sample_weights_for_classifier,
+                                                                  subset_x_names = self.subset_x_names,
                                                                   X_train_copy = X_train, 
                                                                   checklist_indexes = checklist_indexes)
 
@@ -1040,6 +1045,7 @@ class AdaSTEMClassifier(AdaSTEM):
                 Temporal1 = 'DOY',
                 use_temporal_to_train=True,
                 njobs=1,
+                subset_x_names = False,
                 plot_xlims = (-180,180),
                 plot_ylims = (-90,90),
                 verbosity =0,
@@ -1084,6 +1090,7 @@ class AdaSTEMClassifier(AdaSTEM):
                          Spatio1, Spatio2, Temporal1,
                          use_temporal_to_train,
                          njobs,
+                         subset_x_names,
                          plot_xlims, plot_ylims,
                          verbosity
                          )
@@ -1171,6 +1178,7 @@ class AdaSTEMRegressor(AdaSTEM):
                 Temporal1 = 'DOY',
                 use_temporal_to_train=True,
                 njobs=1,
+                subset_x_names = False,
                 plot_xlims = (-180,180),
                 plot_ylims = (-90,90),
                 verbosity =0
@@ -1215,6 +1223,7 @@ class AdaSTEMRegressor(AdaSTEM):
                          Spatio1, Spatio2, Temporal1,
                          use_temporal_to_train,
                          njobs,
+                         subset_x_names,
                          plot_xlims, plot_ylims,
                          verbosity
                          )

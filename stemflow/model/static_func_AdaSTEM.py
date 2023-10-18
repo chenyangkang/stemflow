@@ -72,6 +72,7 @@ def train_one_stixel(stixel_training_size_threshold: int,
                      task: str,
                      base_model: BaseEstimator, 
                      sample_weights_for_classifier: bool,
+                     subset_x_names: bool,
                      X_train_copy: pd.core.frame.DataFrame, 
                      checklist_indexes: list) -> Tuple[Union[None, BaseEstimator], list]:
     """Train one stixel
@@ -82,6 +83,7 @@ def train_one_stixel(stixel_training_size_threshold: int,
         task (str): One of 'regression', 'classification' and 'hurdle'
         base_model (BaseEstimator): Base model estimator.
         sample_weights_for_classifier (bool): Whether to balance the sample weights in classifier for imbalanced samples.
+        subset_x_names (bool): Whether to only store variables with std > 0 for each stixel.
         X_train_copy (pd.core.frame.DataFrame): Input training dataframe.
         checklist_indexes (list): Each element is a list that contain all checklist indexes for this stixel.
 
@@ -109,8 +111,10 @@ def train_one_stixel(stixel_training_size_threshold: int,
     else:
         # Remove the variables that have no variation
         stixel_specific_x_names = x_names.copy()
-        stixel_specific_x_names = [i for i in stixel_specific_x_names if not i in \
-                                                list(sub_X_train.columns[sub_X_train.std(axis=0)==0])]
+        
+        if subset_x_names:
+            stixel_specific_x_names = [i for i in stixel_specific_x_names if not i in \
+                                                    list(sub_X_train.columns[sub_X_train.std(axis=0)==0])]
 
         # continue, if no variable left
         if len(stixel_specific_x_names)==0:
@@ -123,8 +127,8 @@ def train_one_stixel(stixel_training_size_threshold: int,
             sample_weights = class_weight.compute_sample_weight(class_weight='balanced',y=np.where(sub_y_train>0,1,0))
             
             try:
-                trained_model.fit(np.array(sub_X_train[stixel_specific_x_names]), 
-                                                    np.array(sub_y_train),
+                trained_model.fit(sub_X_train[stixel_specific_x_names], 
+                                                    sub_y_train,
                                                     sample_weight=sample_weights)
                 
             except Exception as e:
@@ -132,8 +136,8 @@ def train_one_stixel(stixel_training_size_threshold: int,
                 return (None, [])
         else:
             try:
-                trained_model.fit(np.array(sub_X_train[stixel_specific_x_names]), 
-                                                    np.array(sub_y_train))
+                trained_model.fit(sub_X_train[stixel_specific_x_names], 
+                                                    sub_y_train)
                 
             except Exception as e:
                 print(e)
