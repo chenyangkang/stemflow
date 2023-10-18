@@ -98,6 +98,8 @@ def train_one_stixel(stixel_training_size_threshold: int,
     sub_y_train = sub_X_train.iloc[:,-1]
     sub_X_train = sub_X_train[x_names]
     unique_sub_y_train_binary = np.unique(np.where(sub_y_train>0, 1, 0))
+    if np.sum(sub_y_train>0) <= 1:
+        return (None, [])
     
     ##### nan check
     nan_count = np.sum(np.isnan(sub_y_train)) + np.sum(np.isnan(sub_y_train))

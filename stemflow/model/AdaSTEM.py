@@ -424,6 +424,7 @@ class AdaSTEM(BaseEstimator):
                         repeat(self.task), 
                         repeat(self.base_model),
                         repeat(self.sample_weights_for_classifier), 
+                        repeat(self.subset_x_names),
                         repeat(X_train),
                         checklist_indexes
                     )
