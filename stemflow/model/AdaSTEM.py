@@ -264,7 +264,7 @@ class AdaSTEM(BaseEstimator):
             
         fold = self.ensemble_fold
         save_path = os.path.join(self.save_dir, 'ensemble_quadtree_df.csv')  if self.save_tmp else ''
-        self.ensemble_df, self.gridding_plot = get_ensemble_quadtree(X_train[['Spatio1','Spatio2','Temporal1']],\
+        self.ensemble_df, self.gridding_plot = get_ensemble_quadtree(X_train[[self.Spatio1,self.Spatio2,self.Temporal1]],\
                                             Spatio1 = self.Spatio1,
                                             Spatio2 = self.Spatio2,
                                             Temporal1 = self.Temporal1,

@@ -55,6 +55,7 @@ class Hurdle(BaseEstimator):
             self.classifier = dummy_model1(binary_[0])
             self.regressor = dummy_model1(binary_[0])
             return
+            
         
         new_dat = np.concatenate([np.array(X_train), np.array(y_train).reshape(-1,1)], axis=1)
         if not type(sample_weight)==type(None):
@@ -62,7 +63,10 @@ class Hurdle(BaseEstimator):
         else:
             self.classifier.fit(new_dat[:,:-1], np.where(new_dat[:,-1]>0, 1, 0))
         
-        self.regressor.fit(new_dat[new_dat[:,-1]>0,:][:,:-1], np.array(new_dat[new_dat[:,-1]>0,:][:,-1]))
+        if new_dat[new_dat[:,-1]>0,:][:,-1].shape[0]<=1:
+            self.regressor = dummy_model1(new_dat[new_dat[:,-1]>0,:][:,-1][0][0])
+        else:
+            self.regressor.fit(new_dat[new_dat[:,-1]>0,:][:,:-1], np.array(new_dat[new_dat[:,-1]>0,:][:,-1]))
 
         
         try:
