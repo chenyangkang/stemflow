@@ -63,7 +63,7 @@ class Hurdle(BaseEstimator):
         else:
             self.classifier.fit(new_dat[:,:-1], np.where(new_dat[:,-1]>0, 1, 0))
         
-        regressor_y = new_dat[new_dat[:,-1]>0,:][:,-1]
+        regressor_y = new_dat[new_dat[:,-1]>0,:][:,-1].reshape(-1,1)
         if regressor_y.shape[0]<=1:
             self.regressor = dummy_model1(regressor_y[0][0])
         else:
