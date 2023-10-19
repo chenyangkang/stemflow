@@ -63,11 +63,11 @@ class Hurdle(BaseEstimator):
         else:
             self.classifier.fit(new_dat[:,:-1], np.where(new_dat[:,-1]>0, 1, 0))
         
-        if new_dat[new_dat[:,-1]>0,:][:,-1].shape[0]<=1:
-            self.regressor = dummy_model1(new_dat[new_dat[:,-1]>0,:][:,-1][0][0])
+        regressor_y = new_dat[new_dat[:,-1]>0,:][:,-1]
+        if regressor_y.shape[0]<=1:
+            self.regressor = dummy_model1(regressor_y[0][0])
         else:
-            self.regressor.fit(new_dat[new_dat[:,-1]>0,:][:,:-1], np.array(new_dat[new_dat[:,-1]>0,:][:,-1]))
-
+            self.regressor.fit(new_dat[new_dat[:,-1]>0,:][:,:-1], np.array(regressor_y))
         
         try:
             self.feature_importances_ = (np.array(self.classifier.feature_importances_) + np.array(self.regressor.feature_importances_))/2
