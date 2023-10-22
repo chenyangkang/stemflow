@@ -84,7 +84,9 @@ class AdaSTEM(BaseEstimator):
                 Temporal1: str = 'DOY',
                 use_temporal_to_train: bool=True,
                 njobs: int=1,
-                subset_x_names: bool = False,          
+                subset_x_names: bool = False,
+                ensemble_models_disk_saver: bool = False,
+                ensemble_models_disk_saving_dir: str = './',   
                 plot_xlims: Tuple[Union[float, int], Union[float, int]] = (-180,180),
                 plot_ylims: Tuple[Union[float, int], Union[float, int]] = (-90,90),
                 verbosity: int=0,               
@@ -133,7 +135,7 @@ class AdaSTEM(BaseEstimator):
                 Whether to save the ensemble dataframe. Defaults to False.
             save_dir:
                 If save_tmp==True, save the ensemble dataframe to this path. Defaults to './'.
-            sample_weights_for_classifier:
+            ensemble_models_disk_saver:
                 Whether to balance the sample weights of classifier for imbalanced datasets. Defaults to True.
             Spatio1:
                 Spatial column name 1 in data. Defaults to 'longitude'.
@@ -148,6 +150,10 @@ class AdaSTEM(BaseEstimator):
                 Number of multiprocessing in fitting the model. Defaults to 1.
             subset_x_names:
                 Whether to only store variables with std > 0 for each stixel. Set to False will significantly increase the training speed.
+            ensemble_disk_saver:
+                Whether to save each ensemble of models to dicts instead of saving them in memory.
+            ensemble_models_disk_saving_dir:
+                Where to save the ensemble models. Only valid if ensemble_disk_saver is True.
             plot_xlims:
                 If save_gridding_plot=true, what is the xlims of the plot. Defaults to (-180,180).
             plot_ylims:
@@ -188,6 +194,10 @@ class AdaSTEM(BaseEstimator):
         self.Temporal1 = Temporal1
         self.use_temporal_to_train = use_temporal_to_train
         self.subset_x_names = subset_x_names
+        self.ensemble_models_disk_saver = ensemble_models_disk_saver
+        self.ensemble_models_disk_saving_dir = ensemble_models_disk_saving_dir
+        if self.ensemble_models_disk_saver:
+            self.saving_code = np.random.randint(1,1e8,1)
         
         for func in ['fit','predict']:
             if not func in dir(self.base_model):
@@ -384,8 +394,22 @@ class AdaSTEM(BaseEstimator):
             func_ = tqdm(self.ensemble_df.iterrows(),total=len(self.ensemble_df),desc='training: ') \
                         if verbosity>0 else self.ensemble_df.iterrows()
             
+            current_ensemble_index = None
+            tmp_model_dict = {}
             for index,line in func_:
                 ensemble_index = line['ensemble_index']
+                if current_ensemble_index is None:
+                    current_ensemble_index = ensemble_index
+                else:
+                    if current_ensemble_index!=ensemble_index:
+                        # All models of the previous ensembles are trained. It's time to save them.
+                        if self.ensemble_models_disk_saver:
+                            with open(os.path.join(f'{self.ensemble_models_disk_saving_dir}', f'trained_model_ensemble_{current_ensemble_index}_{self.saving_code}_.pkl'), 'wb') as f:
+                                pickle.dump(tmp_model_dict, f)
+                        
+                        tmp_model_dict = {}
+                        current_ensemble_index = ensemble_index
+                        
                 unique_stixel_id = line['unique_stixel_id']
                 name = f'{ensemble_index}_{unique_stixel_id}'
                 checklist_indexes = line['checklist_indexes']
@@ -401,7 +425,10 @@ class AdaSTEM(BaseEstimator):
                 if model is None:
                     continue
                 else:
-                    self.model_dict[f'{name}_model'] = model
+                    if self.ensemble_models_disk_saver:
+                        tmp_model_dict[f'{name}_model'] = model
+                    else:
+                        self.model_dict[f'{name}_model'] = model
                     
                 if len(stixel_specific_x_names)==0:
                     continue
@@ -530,6 +557,7 @@ class AdaSTEM(BaseEstimator):
                         this_ensemble['stixel_calibration_point_transformed_lower_bound'] + this_ensemble['stixel_height']
 
             X_test_copy = transform_pred_set_to_STEM_quad(self.Spatio1, self.Spatio2, X_test_copy, this_ensemble)
+            this_ensemble_index = list(this_ensemble['ensemble_index'].values)[0]
             
             ##### pred each stixel
             if not njobs > 1:
@@ -540,6 +568,12 @@ class AdaSTEM(BaseEstimator):
                 iter_func = temp_bin_start_list if verbosity is 0 else tqdm(temp_bin_start_list, 
                                                             total=len(temp_bin_start_list), 
                                                             desc=f'predicting ensemble {ensemble} ')
+                this_ensemble_model_dict = None
+                if self.ensemble_models_disk_saver:
+                    with open(os.path.join(f'{self.ensemble_models_disk_saving_dir}', f'trained_model_ensemble_{this_ensemble_index}_{self.saving_code}.pkl'), 'rb') as f:
+                        this_ensemble_model_dict = pickle.load(f)
+                else:
+                    pass
                 
                 for temp_bin_start in iter_func:
                     ## query the ensemble and sub_X_test for this temporal bin
@@ -549,7 +583,7 @@ class AdaSTEM(BaseEstimator):
                     
                     for index,stixel in sub_temp_ensemble.iterrows():
                         model_x_names_tuple = get_model_and_stixel_specific_x_names(
-                                                                                    self.model_dict, 
+                                                                                    this_ensemble_model_dict if self.ensemble_models_disk_saver else self.model_dict, 
                                                                                     ensemble, 
                                                                                     stixel['unique_stixel_id'], 
                                                                                     self.stixel_specific_x_names, 
@@ -1047,6 +1081,8 @@ class AdaSTEMClassifier(AdaSTEM):
                 use_temporal_to_train=True,
                 njobs=1,
                 subset_x_names = False,
+                ensemble_models_disk_saver = False,
+                ensemble_models_disk_saving_dir = './',
                 plot_xlims = (-180,180),
                 plot_ylims = (-90,90),
                 verbosity =0,
@@ -1092,6 +1128,8 @@ class AdaSTEMClassifier(AdaSTEM):
                          use_temporal_to_train,
                          njobs,
                          subset_x_names,
+                         ensemble_models_disk_saver,
+                         ensemble_models_disk_saving_dir,
                          plot_xlims, plot_ylims,
                          verbosity
                          )
@@ -1180,6 +1218,8 @@ class AdaSTEMRegressor(AdaSTEM):
                 use_temporal_to_train=True,
                 njobs=1,
                 subset_x_names = False,
+                ensemble_models_disk_saver = False,
+                ensemble_models_disk_saving_dir = './',
                 plot_xlims = (-180,180),
                 plot_ylims = (-90,90),
                 verbosity =0
@@ -1225,6 +1265,8 @@ class AdaSTEMRegressor(AdaSTEM):
                          use_temporal_to_train,
                          njobs,
                          subset_x_names,
+                         ensemble_models_disk_saver,
+                         ensemble_models_disk_saving_dir,
                          plot_xlims, plot_ylims,
                          verbosity
                          )
