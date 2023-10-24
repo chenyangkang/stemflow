@@ -18,7 +18,7 @@ import h3pandas
 
 # warnings.filterwarnings('ignore')
 
-def run_mini_test(delet_tmp_files: bool=True, show: bool = False):
+def run_mini_test(delet_tmp_files: bool=True, show: bool = False, ensemble_models_disk_saver=False, ensemble_models_disk_saving_dir='./'):
     """Run a mini test
     
     Processes:
@@ -89,6 +89,11 @@ def run_mini_test(delet_tmp_files: bool=True, show: bool = False):
     # # First thing first: Spatio-temporal train test split
 
     # %%
+    import stemflow
+    isl_path = stemflow.__path__[0]
+    print(f'Installation path: {isl_path}')
+    
+    #
     print('ST_train_test_split ...')
     from stemflow.model_selection import ST_train_test_split
     X_train, X_test, y_train, y_test = ST_train_test_split(X, y, 
@@ -108,42 +113,33 @@ def run_mini_test(delet_tmp_files: bool=True, show: bool = False):
 
     # %%
     print('Declaring model instance...')
-    model = Hurdle_for_AdaSTEM(
-        classifier=AdaSTEMClassifier(base_model=XGBClassifier(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1),
-                                    save_gridding_plot = True,
-                                    ensemble_fold=5, 
-                                    min_ensemble_required=3,
-                                    grid_len_lon_upper_threshold=10,
-                                    grid_len_lon_lower_threshold=2,
-                                    grid_len_lat_upper_threshold=10,
-                                    grid_len_lat_lower_threshold=2,
-                                    points_lower_threshold=50,
-                                    Spatio1='longitude',
-                                    Spatio2 = 'latitude', 
-                                    Temporal1 = 'DOY',
-                                    use_temporal_to_train=True,
-                                    njobs=1,
-                                    plot_xlims=(data.longitude.min(), data.longitude.max()), 
-                                    plot_ylims=(data.latitude.min(),data.latitude.max())
-                                    ),
-        regressor=AdaSTEMRegressor(base_model=XGBRegressor(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1),
-                                    save_gridding_plot = True,
-                                    ensemble_fold=5, 
-                                    min_ensemble_required=3,
-                                    grid_len_lon_upper_threshold=10,
-                                    grid_len_lon_lower_threshold=2,
-                                    grid_len_lat_upper_threshold=10,
-                                    grid_len_lat_lower_threshold=2,
-                                    points_lower_threshold=20,
-                                    Spatio1='longitude',
-                                    Spatio2 = 'latitude', 
-                                    Temporal1 = 'DOY',
-                                    use_temporal_to_train=True,
-                                    njobs=1,
-                                    plot_xlims=(data.longitude.min(), data.longitude.max()), 
-                                    plot_ylims=(data.latitude.min(),data.latitude.max())
-                                    )
+    
+    model = AdaSTEMRegressor(
+        base_model=Hurdle(
+            classifier=XGBClassifier(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1),
+            regressor=XGBRegressor(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1)
+        ),
+        save_gridding_plot = True,
+        ensemble_fold=5, 
+        min_ensemble_required=3,
+        grid_len_lon_upper_threshold=10,
+        grid_len_lon_lower_threshold=2,
+        grid_len_lat_upper_threshold=10,
+        grid_len_lat_lower_threshold=2,
+        temporal_start = 1, 
+        temporal_end =366,
+        temporal_step=20,
+        temporal_bin_interval = 50,
+        points_lower_threshold=50,
+        Spatio1='longitude',
+        Spatio2 = 'latitude', 
+        Temporal1 = 'DOY',
+        use_temporal_to_train=True,
+        ensemble_models_disk_saver = ensemble_models_disk_saver,
+        ensemble_models_disk_saving_dir = ensemble_models_disk_saving_dir,
+        njobs=1                  
     )
+
     print('Done.')
 
 
@@ -158,14 +154,14 @@ def run_mini_test(delet_tmp_files: bool=True, show: bool = False):
     # Calcualte feature importance. This method is automatically called when fitting the model.
     # However, to show the process, we call it again.
     print('Calculating feature importances...')
-    model.classifier.calculate_feature_importances()
-    # stixel-specific feature importance is saved in model.classifier.feature_importances_
+    model.calculate_feature_importances()
+    # stixel-specific feature importance is saved in model.feature_importances_
     print('Done.')
 
     # %%
     # Assign the feature importance to spatio-temporal points of interest
     print('Assigning importance to points...')
-    importances_by_points = model.classifier.assign_feature_importances_by_points(verbosity=1, njobs=1)
+    importances_by_points = model.assign_feature_importances_by_points(verbosity=1, njobs=1)
     print('Done.')
 
     # %%
@@ -209,9 +205,9 @@ def run_mini_test(delet_tmp_files: bool=True, show: bool = False):
     # ## Plot uncertainty (error) in training 
 
     # %%
-    # calculate mean and standard deviation in occurrence estimation (classifier)
+    # calculate mean and standard deviation in occurrence estimation
     print('Calculating the fitting errors...')
-    pred_mean, pred_std = model.classifier.predict(X_train.reset_index(drop=True), 
+    pred_mean, pred_std = model.predict(X_train.reset_index(drop=True), 
                                                 return_std=True, verbosity=1, njobs=1)
 
     print('Done.')
@@ -271,11 +267,8 @@ def run_mini_test(delet_tmp_files: bool=True, show: bool = False):
     # %%
     
     if show:
-        model.classifier.gridding_plot.show()
+        model.gridding_plot.show()
 
-    # %%
-    if show:
-        model.regressor.gridding_plot.show()
 
     # %%
     from watermark import watermark
@@ -292,7 +285,7 @@ def run_mini_test(delet_tmp_files: bool=True, show: bool = False):
     
     print('Finish!')
     if show:
-        return model.classifier.gridding_plot
+        return model.gridding_plot
 
 
 

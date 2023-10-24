@@ -24,6 +24,7 @@ setup(
     long_description_content_type="text/markdown",
     long_description=long_description,
     packages= find_packages(),
+    package_dir={'stemflow': 'stemflow'},
     python_requires= ">=3.8.0",
     install_requires=requirements,
     platforms= "any",

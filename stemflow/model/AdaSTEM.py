@@ -573,7 +573,7 @@ class AdaSTEM(BaseEstimator):
                     with open(os.path.join(f'{self.ensemble_models_disk_saving_dir}', f'trained_model_ensemble_{this_ensemble_index}_{self.saving_code}.pkl'), 'rb') as f:
                         this_ensemble_model_dict = pickle.load(f)
                 else:
-                    pass
+                    this_ensemble_model_dict = self.model_dict
                 
                 for temp_bin_start in iter_func:
                     ## query the ensemble and sub_X_test for this temporal bin
@@ -583,7 +583,7 @@ class AdaSTEM(BaseEstimator):
                     
                     for index,stixel in sub_temp_ensemble.iterrows():
                         model_x_names_tuple = get_model_and_stixel_specific_x_names(
-                                                                                    this_ensemble_model_dict if self.ensemble_models_disk_saver else self.model_dict, 
+                                                                                    this_ensemble_model_dict, 
                                                                                     ensemble, 
                                                                                     stixel['unique_stixel_id'], 
                                                                                     self.stixel_specific_x_names, 
