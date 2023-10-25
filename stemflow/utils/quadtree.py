@@ -80,10 +80,6 @@ def recursive_subdivide(node: Node,
         
     """
     
-    if len(node.points)/2 <= points_lower_threshold:
-        if not ((node.width > grid_len_lon_upper_threshold) or (node.height > grid_len_lat_upper_threshold)):
-            return
-    
     if (node.width/2 < grid_len_lon_lower_threshold) or (node.height/2 < grid_len_lat_lower_threshold):
         return
    
@@ -114,6 +110,11 @@ def recursive_subdivide(node: Node,
                             grid_len_lat_upper_threshold, grid_len_lat_lower_threshold,
                             points_lower_threshold)
 
+    for ch_node in [x1, x2, x3, x4]:
+        if len(ch_node.points) <= points_lower_threshold:
+            if not ((node.width > grid_len_lon_upper_threshold) or (node.height > grid_len_lat_upper_threshold)):
+                return
+        
     node.children = [x1, x2, x3, x4]
     
     
