@@ -1070,7 +1070,7 @@ class AdaSTEMClassifier(AdaSTEM):
                 temporal_step=20, 
                 temporal_bin_interval = 50,
                 temporal_bin_start_jitter = 'random',
-                spatio_bin_jitter_magnitude = 10,
+                spatio_bin_jitter_magnitude = 100,
                 save_gridding_plot=False,
                 save_tmp = False,
                 save_dir='./',
