@@ -476,7 +476,8 @@ class AdaSTEM(BaseEstimator):
                         continue
                     else:
                         self.stixel_specific_x_names[name] = stixel_specific_x_names_
-                          
+        
+        return self
         
         
     def predict_proba(self,
