@@ -14,6 +14,7 @@ import matplotlib
 from multiprocessing import Pool
 from itertools import repeat
 from tqdm.contrib.concurrent import process_map
+from functools import partial
 
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
@@ -408,7 +409,77 @@ def generate_temporal_bins(start: Union[float, int],
 
 
 
+def generate_one_ensemble(ensemble_count,
+                          spatio_bin_jitter_magnitude,
+                          temporal_start,
+                          temporal_end,
+                          temporal_step,
+                          temporal_bin_interval,
+                          temporal_bin_start_jitter,
+                          data,
+                          Temporal1,
+                          grid_len_lon_upper_threshold,
+                          grid_len_lon_lower_threshold,
+                          grid_len_lat_upper_threshold,
+                          grid_len_lat_lower_threshold,
+                          points_lower_threshold,
+                          Spatio1, Spatio2, save_gridding_plot):
+    this_ensemble = []
+    rotation_angle = np.random.uniform(0,360)
+    calibration_point_x_jitter = np.random.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
+    calibration_point_y_jitter = np.random.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
 
+    # print(f'ensemble_count: {ensemble_count}')
+    
+    temporal_bins = generate_temporal_bins(start = temporal_start,
+                                            end=temporal_end, 
+                                            step=temporal_step, 
+                                            bin_interval = temporal_bin_interval,
+                                            temporal_bin_start_jitter = temporal_bin_start_jitter)
+
+    for time_block_index,bin_ in enumerate(temporal_bins):
+        time_start = bin_[0]
+        time_end = bin_[1]
+        sub_data=data[(data[Temporal1]>=time_start) & (data[Temporal1]<time_end)]
+        
+        if len(sub_data)==0:
+            continue
+
+        QT_obj = QTree(grid_len_lon_upper_threshold=grid_len_lon_upper_threshold,
+                        grid_len_lon_lower_threshold=grid_len_lon_lower_threshold,
+                        grid_len_lat_upper_threshold=grid_len_lat_upper_threshold,
+                        grid_len_lat_lower_threshold=grid_len_lat_lower_threshold,
+                        points_lower_threshold=points_lower_threshold,
+                        lon_lat_equal_grid = True, 
+                        rotation_angle = rotation_angle,
+                        calibration_point_x_jitter = calibration_point_x_jitter,
+                        calibration_point_y_jitter = calibration_point_y_jitter)
+
+        ## Give the data and indexes. The indexes should be used to assign points data so that base model can run on those points,
+        ## You need to generate the splitting parameters once giving the data. Like the calibration point and min,max.
+        
+        QT_obj.add_lon_lat_data(sub_data.index, sub_data[Spatio1].values, sub_data[Spatio2].values)
+        QT_obj.generate_gridding_params()
+        
+        ## Call subdivide to precess
+        QT_obj.subdivide()
+        this_slice = QT_obj.get_final_result()
+        
+        if save_gridding_plot:
+            if time_block_index == int(len(temporal_bins)/2):
+                QT_obj.graph(scatter=False)
+            
+        this_slice['ensemble_index'] = ensemble_count
+        this_slice[f'{Temporal1}_start'] = time_start
+        this_slice[f'{Temporal1}_end'] = time_end
+        this_slice[f'{Temporal1}_start']=round(this_slice[f'{Temporal1}_start'],1)
+        this_slice[f'{Temporal1}_end']=round(this_slice[f'{Temporal1}_end'],1)
+        this_slice['unique_stixel_id'] = [str(time_block_index)+"_"+str(i)+"_"+str(k) for i,k in zip (this_slice['ensemble_index'].values, 
+                                                                                                        this_slice['stixel_indexes'].values)]
+        this_ensemble.append(this_slice)
+        
+    return pd.concat(this_ensemble, axis=0)
+        
 
 def get_ensemble_quadtree(data: pandas.core.frame.DataFrame,
                             Spatio1: str='longitude',
@@ -497,64 +568,23 @@ def get_ensemble_quadtree(data: pandas.core.frame.DataFrame,
     
     if njobs>1 and isinstance(njobs, int):
         
-        def generate_one_ensemble(ensemble_count):
-            this_ensemble = []
-            rotation_angle = np.random.uniform(0,360)
-            calibration_point_x_jitter = np.random.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
-            calibration_point_y_jitter = np.random.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
-
-            # print(f'ensemble_count: {ensemble_count}')
-            
-            temporal_bins = generate_temporal_bins(start = temporal_start,
-                                                    end=temporal_end, 
-                                                    step=temporal_step, 
-                                                    bin_interval = temporal_bin_interval,
-                                                    temporal_bin_start_jitter = temporal_bin_start_jitter)
-
-            for time_block_index,bin_ in enumerate(temporal_bins):
-                time_start = bin_[0]
-                time_end = bin_[1]
-                sub_data=data[(data[Temporal1]>=time_start) & (data[Temporal1]<time_end)]
-                
-                if len(sub_data)==0:
-                    continue
-
-                QT_obj = QTree(grid_len_lon_upper_threshold=grid_len_lon_upper_threshold,
+        partial_generate_one_ensemble = partial(generate_one_ensemble,
+                                spatio_bin_jitter_magnitude=spatio_bin_jitter_magnitude,
+                                temporal_start=temporal_start,
+                                temporal_end=temporal_end,
+                                temporal_step=temporal_step,
+                                temporal_bin_interval=temporal_bin_interval,
+                                temporal_bin_start_jitter=temporal_bin_start_jitter,
+                                data=data,
+                                Temporal1=Temporal1,
+                                grid_len_lon_upper_threshold=grid_len_lon_upper_threshold,
                                 grid_len_lon_lower_threshold=grid_len_lon_lower_threshold,
                                 grid_len_lat_upper_threshold=grid_len_lat_upper_threshold,
                                 grid_len_lat_lower_threshold=grid_len_lat_lower_threshold,
                                 points_lower_threshold=points_lower_threshold,
-                                lon_lat_equal_grid = True, 
-                                rotation_angle = rotation_angle,
-                                calibration_point_x_jitter = calibration_point_x_jitter,
-                                calibration_point_y_jitter = calibration_point_y_jitter)
-
-                ## Give the data and indexes. The indexes should be used to assign points data so that base model can run on those points,
-                ## You need to generate the splitting parameters once giving the data. Like the calibration point and min,max.
-                
-                QT_obj.add_lon_lat_data(sub_data.index, sub_data[Spatio1].values, sub_data[Spatio2].values)
-                QT_obj.generate_gridding_params()
-                
-                ## Call subdivide to precess
-                QT_obj.subdivide()
-                this_slice = QT_obj.get_final_result()
-                
-                if save_gridding_plot:
-                    if time_block_index == int(len(temporal_bins)/2):
-                        QT_obj.graph(scatter=False)
-                    
-                this_slice['ensemble_index'] = ensemble_count
-                this_slice[f'{Temporal1}_start'] = time_start
-                this_slice[f'{Temporal1}_end'] = time_end
-                this_slice[f'{Temporal1}_start']=round(this_slice[f'{Temporal1}_start'],1)
-                this_slice[f'{Temporal1}_end']=round(this_slice[f'{Temporal1}_end'],1)
-                this_slice['unique_stixel_id'] = [str(time_block_index)+"_"+str(i)+"_"+str(k) for i,k in zip (this_slice['ensemble_index'].values, 
-                                                                                                                this_slice['stixel_indexes'].values)]
-                this_ensemble.append(this_slice)
-                
-            return pd.concat(this_ensemble, axis=0)
-
-        ensemble_all_df_list = process_map(generate_one_ensemble, list(range(size)), max_workers=njobs)
+                                Spatio1=Spatio1, Spatio2=Spatio2, save_gridding_plot=save_gridding_plot)
+        
+        ensemble_all_df_list = process_map(partial_generate_one_ensemble, list(range(size)), max_workers=njobs)
 
     else:
     
