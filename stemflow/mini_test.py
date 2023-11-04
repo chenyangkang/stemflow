@@ -15,6 +15,7 @@ import warnings
 import pickle
 import os
 import h3pandas
+from urllib.request import urlopen
 
 # warnings.filterwarnings('ignore')
 
@@ -48,9 +49,10 @@ def run_mini_test(delet_tmp_files: bool=True, show: bool = False, ensemble_model
     if not os.path.exists('./stemflow_mini_test'):
         os.makedirs('./stemflow_mini_test')
     if not 'mini_data.csv' in os.listdir('./stemflow_mini_test'):
-        url = "https://chenyangkang.github.io/stemflow/mini_data/mini_data.csv"
+        url = "https://chenyangkang.github.io/stemflow/mini_data/mini_data.pkl"
         print(f'Requesting data from {url} ...')
-        data = pd.read_csv(url)
+        data = pickle.load(urlopen(url))
+        # data = pd.read_csv(url)
         data.to_csv('./stemflow_mini_test/mini_data.csv', index=False)
         print('Done.')
     else:
@@ -60,7 +62,6 @@ def run_mini_test(delet_tmp_files: bool=True, show: bool = False, ensemble_model
     # %%
     # load data
     data = pd.read_csv('./stemflow_mini_test/mini_data.csv')
-
 
     # %%
     # data.head()

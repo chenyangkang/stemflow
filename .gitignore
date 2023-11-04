@@ -5,7 +5,6 @@ stemflow_mini_test/*
 *.csv
 !*/mini_data/*
 *.txt
-*.pkl
 */__pycache__/*
 __pycache__/*
 stemflow/model/__pycache__/*
