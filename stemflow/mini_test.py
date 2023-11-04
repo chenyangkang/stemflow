@@ -18,7 +18,7 @@ import h3pandas
 
 # warnings.filterwarnings('ignore')
 
-def run_mini_test(delet_tmp_files: bool=True, show: bool = False, ensemble_models_disk_saver=False, ensemble_models_disk_saving_dir='./'):
+def run_mini_test(delet_tmp_files: bool=True, show: bool = False, ensemble_models_disk_saver=False, ensemble_models_disk_saving_dir='./', speed_up_times=1):
     """Run a mini test
     
     Processes:
@@ -59,7 +59,7 @@ def run_mini_test(delet_tmp_files: bool=True, show: bool = False, ensemble_model
 
     # %%
     # load data
-    data = pd.read_csv('./stemflow_mini_test/mini_data.csv').sample(frac=0.3, replace=False)
+    data = pd.read_csv('./stemflow_mini_test/mini_data.csv')
 
 
     # %%
@@ -81,7 +81,53 @@ def run_mini_test(delet_tmp_files: bool=True, show: bool = False, ensemble_model
     # # Get X and y
 
     # %%
-    X = data.drop('count', axis=1)
+    
+    x_names = [ 'duration_minutes',
+                'Traveling',
+                'DOY',
+                'time_observation_started_minute_of_day',
+                'elevation_mean',
+                'slope_mean',
+                'eastness_mean',
+                'northness_mean',
+                'bio1',
+                'bio2',
+                'bio3',
+                'bio4',
+                'bio5',
+                'bio6',
+                'bio7',
+                'bio8',
+                'bio9',
+                'bio10',
+                'bio11',
+                'bio12',
+                'bio13',
+                'bio14',
+                'bio15',
+                'bio16',
+                'bio17',
+                'bio18',
+                'bio19',
+                'closed_shrublands',
+                'cropland_or_natural_vegetation_mosaics',
+                'croplands',
+                'deciduous_broadleaf_forests',
+                'deciduous_needleleaf_forests',
+                'evergreen_broadleaf_forests',
+                'evergreen_needleleaf_forests',
+                'grasslands',
+                'mixed_forests',
+                'non_vegetated_lands',
+                'open_shrublands',
+                'permanent_wetlands',
+                'savannas',
+                'urban_and_built_up_lands',
+                'water_bodies',
+                'woody_savannas',
+                'entropy']   
+     
+    X = data.drop('count', axis=1)[x_names + ['longitude','latitude']]
     y = data['count'].values
 
 
@@ -97,7 +143,7 @@ def run_mini_test(delet_tmp_files: bool=True, show: bool = False, ensemble_model
     print('ST_train_test_split ...')
     from stemflow.model_selection import ST_train_test_split
     X_train, X_test, y_train, y_test = ST_train_test_split(X, y, 
-                                                        Spatio_blocks_count = 10, Temporal_blocks_count=10,
+                                                        Spatio_blocks_count = 100, Temporal_blocks_count=100,
                                                         random_state=42, test_size=0.3)
     print('Done.')
 
@@ -114,22 +160,25 @@ def run_mini_test(delet_tmp_files: bool=True, show: bool = False, ensemble_model
     # %%
     print('Declaring model instance...')
     
+    fold_ = int(5 * (1/speed_up_times))
+    min_req = min([1, int(fold_*0.7)])
+    
     model = AdaSTEMRegressor(
         base_model=Hurdle(
             classifier=XGBClassifier(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1),
             regressor=XGBRegressor(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1)
         ),
         save_gridding_plot = True,
-        ensemble_fold=5, 
-        min_ensemble_required=3,
-        grid_len_lon_upper_threshold=10,
-        grid_len_lon_lower_threshold=2,
+        ensemble_fold=fold_, 
+        min_ensemble_required=min_req,
+        grid_len_lon_upper_threshold=40,
+        grid_len_lon_lower_threshold=10,
         grid_len_lat_upper_threshold=10,
-        grid_len_lat_lower_threshold=2,
-        temporal_start = 1, 
-        temporal_end =366,
-        temporal_step=20,
-        temporal_bin_interval = 50,
+        grid_len_lat_lower_threshold=40,
+        temporal_start=1, 
+        temporal_end=366,
+        temporal_step=30,
+        temporal_bin_interval=50,
         points_lower_threshold=50,
         Spatio1='longitude',
         Spatio2 = 'latitude', 
@@ -145,7 +194,7 @@ def run_mini_test(delet_tmp_files: bool=True, show: bool = False, ensemble_model
 
     # %%
     print('Fitting model...')
-    model.fit(X_train.reset_index(drop=True), y_train)
+    model.fit(X_train.reset_index(drop=True), y_train, verbosity=1)
     print('Done.')
     # %% [markdown]
     # # Feature importances

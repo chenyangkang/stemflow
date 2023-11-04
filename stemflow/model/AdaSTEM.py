@@ -253,7 +253,7 @@ class AdaSTEM(BaseEstimator):
         #
         self.sample_weights_for_classifier = sample_weights_for_classifier
         
-        if not verbosity is 0:
+        if not verbosity == 0:
             self.verbosity=1
         else:
             self.verbosity=0
@@ -291,7 +291,7 @@ class AdaSTEM(BaseEstimator):
                                             temporal_bin_start_jitter = self.temporal_bin_start_jitter,
                                             spatio_bin_jitter_magnitude = self.spatio_bin_jitter_magnitude,
                                             save_gridding_plot=self.save_gridding_plot,
-                                            njobs=self.njobs,
+                                            njobs=1, #self.njobs,
                                             verbosity=verbosity,
                                             plot_xlims = self.plot_xlims,
                                             plot_ylims = self.plot_ylims,
@@ -354,7 +354,7 @@ class AdaSTEM(BaseEstimator):
         #
         if verbosity is None:
             verbosity = self.verbosity
-        elif verbosity is 0:
+        elif verbosity == 0:
             verbosity = 0
         else:
             verbosity = 1
@@ -409,6 +409,7 @@ class AdaSTEM(BaseEstimator):
                         
                         tmp_model_dict = {}
                         current_ensemble_index = ensemble_index
+                        
                         
                 unique_stixel_id = line['unique_stixel_id']
                 name = f'{ensemble_index}_{unique_stixel_id}'
@@ -566,7 +567,7 @@ class AdaSTEM(BaseEstimator):
                 res_list = []
                 
                 temp_bin_start_list = np.unique(this_ensemble[f'{self.Temporal1}_start'])
-                iter_func = temp_bin_start_list if verbosity is 0 else tqdm(temp_bin_start_list, 
+                iter_func = temp_bin_start_list if verbosity == 0 else tqdm(temp_bin_start_list, 
                                                             total=len(temp_bin_start_list), 
                                                             desc=f'predicting ensemble {ensemble} ')
                 this_ensemble_model_dict = None
@@ -962,7 +963,7 @@ class AdaSTEM(BaseEstimator):
         #
         if verbosity is None:
             verbosity = self.verbosity
-        elif verbosity is 0:
+        elif verbosity == 0:
             verbosity = 0
         else:
             verbosity = 1

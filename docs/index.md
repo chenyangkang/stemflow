@@ -45,7 +45,7 @@ To run an auto-mini test, call:
 
 from stemflow.mini_test import run_mini_test
 
-run_mini_test(delet_tmp_files=True)
+run_mini_test(delet_tmp_files=False, speed_up_times=2)
 
 ```
 
