@@ -37,6 +37,17 @@ def run_mini_test(delet_tmp_files: bool=True, show: bool = False, ensemble_model
         12. Watermark
         13. Deleting tmp files (optional)
         
+    Args:
+        delet_tmp_files:
+            Whether to delet files after mini test.
+        show:
+            Whether to show the charts in jupyter.
+        ensemble_models_disk_saver:
+            Whether to save ensembles in disk instead of memory.
+        ensemble_models_disk_saving_dir:
+            if ensemble_models_disk_saver == True, where to save the models.
+        speed_up_times:
+            Speed up the mini test. For example, 2 means 2 times speed up. 
     """
     #
     print('Start Running Mini-test...')
