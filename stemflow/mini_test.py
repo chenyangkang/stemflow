@@ -59,7 +59,7 @@ def run_mini_test(delet_tmp_files: bool=True, show: bool = False, ensemble_model
     # download mini data
     if not os.path.exists('./stemflow_mini_test'):
         os.makedirs('./stemflow_mini_test')
-    if not 'mini_data.csv' in os.listdir('./stemflow_mini_test'):
+    if not 'mini_data.pkl' in os.listdir('./stemflow_mini_test'):
         url = "https://chenyangkang.github.io/stemflow/mini_data/mini_data.pkl"
         print(f'Requesting data from {url} ...')
         data = pickle.load(urlopen(url))
@@ -216,6 +216,7 @@ def run_mini_test(delet_tmp_files: bool=True, show: bool = False, ensemble_model
     # However, to show the process, we call it again.
     print('Calculating feature importances...')
     model.calculate_feature_importances()
+    # print(model.feature_importances_)
     # stixel-specific feature importance is saved in model.feature_importances_
     print('Done.')
 
