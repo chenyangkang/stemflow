@@ -65,9 +65,9 @@ def ST_train_test_split(X: DataFrame,
     Tindex1 = np.linspace(X[Temporal1].min(), X[Temporal1].max(), Temporal_blocks_count)
     
     indexes = [str(a)+'_'+str(b)+'_'+str(c) for a,b,c in zip(
-        np.digitize(X[Spatio1],Sindex1),
-        np.digitize(X[Spatio2],Sindex2),
-        np.digitize(X[Temporal1],Tindex1)
+        np.digitize(X[Spatio1].values,Sindex1),
+        np.digitize(X[Spatio2].values,Sindex2),
+        np.digitize(X[Temporal1].values,Tindex1)
     )]
     
     unique_indexes = list(np.unique(indexes))
@@ -76,10 +76,14 @@ def ST_train_test_split(X: DataFrame,
     test_indexes = []
     test_cell = list(rng.choice(unique_indexes, replace=False, size=int(len(unique_indexes)*test_size)))
 
-    for index, cell in enumerate(indexes):
-        if cell in test_cell:
-            test_indexes.append(index)
-        
+    tmp_table = pd.DataFrame({
+        'index':range(len(indexes)),
+        'cell':indexes
+    })
+
+    tmp_table = tmp_table[tmp_table['cell'].isin(test_cell)]
+    test_indexes = tmp_table['index'].values
+
     # get train set record indexes
     train_indexes = list(set(range(len(indexes))) - set(test_indexes))
 
@@ -163,6 +167,11 @@ def ST_CV(X: DataFrame,
     rng.shuffle(unique_indexes)
     test_size = int(len(unique_indexes) * (1/CV))
     
+    tmp_table = pd.DataFrame({
+        'index':range(len(indexes)),
+        'cell':indexes
+    })
+        
     for cv_count in range(CV):
         # get test set record indexes
         test_indexes = []
@@ -170,10 +179,9 @@ def ST_CV(X: DataFrame,
         end = np.min([(cv_count+1)*test_size, len(unique_indexes)+1])
         test_cell = unique_indexes[start: end]
 
-        for index, cell in enumerate(indexes):
-            if cell in test_cell:
-                test_indexes.append(index)
-            
+        tmp_this_CV_table = tmp_table[tmp_table['cell'].isin(test_cell)]
+        test_indexes = tmp_this_CV_table['index'].values
+        
         # get train set record indexes
         train_indexes = list(set(range(len(indexes))) - set(test_indexes))
 
