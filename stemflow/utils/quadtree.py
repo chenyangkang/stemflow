@@ -276,7 +276,7 @@ class QTree():
                             self.grid_len_lat_upper_threshold, self.grid_len_lat_lower_threshold,
                             self.points_lower_threshold)
     
-    def graph(self, scatter: bool=True):
+    def graph(self, scatter: bool=True, ax=None):
         """plot gridding
         
         Args:
@@ -315,15 +315,20 @@ class QTree():
             new_x = new_xy[:,0]
             new_y = new_xy[:,1]
 
-            plt.gcf().gca().add_patch(patches.Rectangle((new_x, new_y), n.width, n.height, fill=False,angle=self.rotation_angle, color=the_color))
-        
+            if ax is None:
+                plt.gcf().gca().add_patch(patches.Rectangle((new_x, new_y), n.width, n.height, fill=False,angle=self.rotation_angle, color=the_color))
+            else:
+                ax.add_patch(patches.Rectangle((new_x, new_y), n.width, n.height, fill=False,angle=self.rotation_angle, color=the_color))
+                
         x = np.array([point.x for point in self.points]) - self.calibration_point_x_jitter
         y = np.array([point.y for point in self.points]) - self.calibration_point_y_jitter
 
         data = np.array([x,y]).T @ rotation_matrix
         if scatter:
-            plt.scatter(data[:,0].tolist(), data[:,1].tolist(), s=0.2, c='tab:blue', alpha=0.7) # plots the points as red dots
-            
+            if ax is None:
+                plt.scatter(data[:,0].tolist(), data[:,1].tolist(), s=0.2, c='tab:blue', alpha=0.7) # plots the points as red dots
+            else:
+                ax.scatter(data[:,0].tolist(), data[:,1].tolist(), s=0.2, c='tab:blue', alpha=0.7) # plots the points as red dots
         return 
 
     def get_final_result(self) -> pandas.core.frame.DataFrame:
@@ -423,7 +428,7 @@ def generate_one_ensemble(ensemble_count,
                           grid_len_lat_upper_threshold,
                           grid_len_lat_lower_threshold,
                           points_lower_threshold,
-                          Spatio1, Spatio2, save_gridding_plot):
+                          Spatio1, Spatio2, save_gridding_plot,ax):
     this_ensemble = []
     rotation_angle = np.random.uniform(0,360)
     calibration_point_x_jitter = np.random.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
@@ -467,7 +472,7 @@ def generate_one_ensemble(ensemble_count,
         
         if save_gridding_plot:
             if time_block_index == int(len(temporal_bins)/2):
-                QT_obj.graph(scatter=False)
+                QT_obj.graph(scatter=False, ax=ax)
             
         this_slice['ensemble_index'] = ensemble_count
         this_slice[f'{Temporal1}_start'] = time_start
@@ -498,7 +503,7 @@ def get_ensemble_quadtree(data: pandas.core.frame.DataFrame,
                             verbosity: int=1,
                             plot_xlims: Tuple[Union[float, int]] = (-180,180),
                             plot_ylims: Tuple[Union[float, int]] = (-90,90),
-                            save_path: str='') -> Tuple[pandas.core.frame.DataFrame, 
+                            save_path: str='',ax=None) -> Tuple[pandas.core.frame.DataFrame, 
                                                         Union[matplotlib.figure.Figure, float]]:
     '''Generate QuadTree gridding based on the input dataframe
     
@@ -548,6 +553,8 @@ def get_ensemble_quadtree(data: pandas.core.frame.DataFrame,
             If save_gridding_plot=True, what is the ylims of the plot
         save_path:
             If not '', save the ensemble dataframe to this path
+        ax:
+            Matplotlib Axes to add to.
             
     Returns:
         A tuple of <br>
@@ -559,10 +566,14 @@ def get_ensemble_quadtree(data: pandas.core.frame.DataFrame,
     ensemble_all_df_list = []
         
     if save_gridding_plot:
-        plt.figure(figsize=(20, 20))
-        plt.xlim([plot_xlims[0],plot_xlims[1]])
-        plt.ylim([plot_ylims[0],plot_ylims[1]])
-        plt.title("Quadtree", fontsize=20)
+        if ax is None:
+            plt.figure(figsize=(20, 20))
+            plt.xlim([plot_xlims[0],plot_xlims[1]])
+            plt.ylim([plot_ylims[0],plot_ylims[1]])
+            plt.title("Quadtree", fontsize=20)
+        else:
+            # ax.set_xlim([plot_xlims[0],plot_xlims[1]])
+            pass
         
     
     
@@ -633,7 +644,7 @@ def get_ensemble_quadtree(data: pandas.core.frame.DataFrame,
                 
                 if save_gridding_plot:
                     if time_block_index == int(len(temporal_bins)/2):
-                        QT_obj.graph(scatter=False)
+                        QT_obj.graph(scatter=False, ax=ax)
                     
                 this_slice['ensemble_index'] = ensemble_count
                 this_slice[f'{Temporal1}_start'] = time_start
@@ -653,12 +664,17 @@ def get_ensemble_quadtree(data: pandas.core.frame.DataFrame,
         print(f'Saved! {save_path}')
         
     if save_gridding_plot:
-        plt.tight_layout()
-        plt.gca().set_aspect('equal')
-        ax = plt.gcf()
-        plt.close()
+        if ax is None:
+            plt.tight_layout()
+            plt.gca().set_aspect('equal')
+            ax = plt.gcf()
+            plt.close()
+            
+        else:
+            pass
         
         return ensemble_df, ax
+        
 
     else:
         return ensemble_df, np.nan

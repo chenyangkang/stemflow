@@ -74,7 +74,7 @@ class AdaSTEM(BaseEstimator):
                 temporal_step: Union[float, int]=20,
                 temporal_bin_interval: Union[float, int] = 50,
                 temporal_bin_start_jitter: Union[float, int, str] = 'random',
-                spatio_bin_jitter_magnitude: Union[float, int] = 10,
+                spatio_bin_jitter_magnitude: Union[float, int] = 100,
                 save_gridding_plot: bool=True,
                 save_tmp: bool = False,
                 save_dir: str='./',
@@ -259,12 +259,13 @@ class AdaSTEM(BaseEstimator):
             self.verbosity=0
         
     def split(self, 
-              X_train: pd.core.frame.DataFrame, verbosity: Union[None, int]=None) -> dict:
+              X_train: pd.core.frame.DataFrame, verbosity: Union[None, int]=None, ax=None) -> dict:
         """QuadTree indexing the input data
 
         Args:
             X_train: Input training data
             verbosity: 0 to output nothing, everything other wise. Default None set it to the verbosity of AdaSTEM model class.
+            ax: matplotlit Axes to add to.
         
         Returns:
             self.grid_dict, a dictionary of one DataFrame for each grid, containing the gridding information
@@ -295,7 +296,9 @@ class AdaSTEM(BaseEstimator):
                                             verbosity=verbosity,
                                             plot_xlims = self.plot_xlims,
                                             plot_ylims = self.plot_ylims,
-                                            save_path=save_path)
+                                            save_path=save_path,
+                                            ax=ax
+                                            )
 
         self.grid_dict = {}
         for ensemble_index in self.ensemble_df.ensemble_index.unique():
@@ -340,12 +343,13 @@ class AdaSTEM(BaseEstimator):
     def fit(self, 
             X_train: pd.core.frame.DataFrame, 
             y_train: Union[pd.core.frame.DataFrame, np.ndarray],
-            verbosity: Union[None, int]=None):
+            verbosity: Union[None, int]=None,ax=None):
         """Fitting method
 
         Args:
             X_train: Training variables
             y_train: Training target
+            ax: matplotlib Axes to add to
 
         Raises:
             TypeError: X_train is not a type of pd.core.frame.DataFrame
@@ -381,7 +385,7 @@ class AdaSTEM(BaseEstimator):
         # quadtree
         X_train = X_train.reset_index(drop=True) ### I reset index here!! caution!
         X_train['true_y'] = np.array(y_train).flatten()
-        grid_dict = self.split(X_train, verbosity=verbosity)
+        grid_dict = self.split(X_train, verbosity=verbosity, ax=ax)
 
         # define model dict
         self.model_dict = {}
