@@ -91,8 +91,6 @@ from stemflow.model.AdaSTEM import AdaSTEM, AdaSTEMClassifier, AdaSTEMRegressor
 from stemflow.model.Hurdle import Hurdle_for_AdaSTEM
 from xgboost import XGBClassifier, XGBRegressor
 
-SAVE_DIR = './'
-
 ## "hurdle in Ada"
 model = AdaSTEMRegressor(
     base_model=Hurdle(
