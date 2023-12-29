@@ -93,7 +93,7 @@ from xgboost import XGBClassifier, XGBRegressor
 
 SAVE_DIR = './'
 
-## 1. "hurdle in Ada"
+## "hurdle in Ada"
 model = AdaSTEMRegressor(
     base_model=Hurdle(
         classifier=XGBClassifier(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1),
