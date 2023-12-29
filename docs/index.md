@@ -119,60 +119,6 @@ model = AdaSTEMRegressor(
 )
 ```
 
-Or, use AdaSTEM in Hurdle model:
-
-```py
-from stemflow.model.AdaSTEM import AdaSTEM, AdaSTEMClassifier, AdaSTEMRegressor
-from stemflow.model.Hurdle import Hurdle_for_AdaSTEM
-from xgboost import XGBClassifier, XGBRegressor
-
-SAVE_DIR = './'
-
-## 2. "Ada in hurdle"
-# By using a hurdle model, we first execute classification test based on presence/absence information, 
-# then execute regression only based on positive samples.
-model = Hurdle_for_AdaSTEM(
-    classifier=AdaSTEMClassifier(base_model=XGBClassifier(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1),
-                                save_gridding_plot = True,
-                                ensemble_fold=10, 
-                                min_ensemble_required=7,
-                                grid_len_lon_upper_threshold=25,
-                                grid_len_lon_lower_threshold=5,
-                                grid_len_lat_upper_threshold=25,
-                                grid_len_lat_lower_threshold=5,
-                                temporal_start = 1, 
-                                temporal_end =366,
-                                temporal_step=20,
-                                temporal_bin_interval = 50,
-                                points_lower_threshold=50,
-                                Spatio1='longitude',
-                                Spatio2 = 'latitude', 
-                                Temporal1 = 'DOY',
-                                use_temporal_to_train=True,
-                                njobs=4),
-    regressor=AdaSTEMRegressor(base_model=XGBRegressor(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1),
-                                save_gridding_plot = True,
-                                ensemble_fold=10, 
-                                min_ensemble_required=7,
-                                grid_len_lon_upper_threshold=25,
-                                grid_len_lon_lower_threshold=5,
-                                grid_len_lat_upper_threshold=25,
-                                grid_len_lat_lower_threshold=5,
-                                temporal_start = 1, 
-                                temporal_end =366,
-                                temporal_step=20,
-                                temporal_bin_interval = 50,
-                                points_lower_threshold=50,
-                                Spatio1='longitude',
-                                Spatio2 = 'latitude', 
-                                Temporal1 = 'DOY',
-                                use_temporal_to_train=True,
-                                njobs=4)
-)
-```
-
-In the documentation, we mainly show examples of Hurdle model as the base model of AdaSTEMRegressor.
-
 
 Fitting and prediction methods follow the style of sklearn `BaseEstimator` class:
 
