@@ -113,7 +113,7 @@ model = AdaSTEMRegressor(
     Spatio2 = 'latitude', 
     Temporal1 = 'DOY',
     use_temporal_to_train=True,
-    njobs=4                       
+    njobs=1                       
 )
 ```
 
