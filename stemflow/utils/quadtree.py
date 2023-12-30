@@ -602,7 +602,8 @@ def get_ensemble_quadtree(data: pandas.core.frame.DataFrame,
         iter_func_ = tqdm(range(size), total=size, desc='Generating Ensemble: ') if verbosity>0 else range(size)
         
         for ensemble_count in iter_func_:
-            rotation_angle = np.random.uniform(0,360)
+            rotation_angle = np.random.uniform(0,180)
+            rotation_angle = (180/len(iter_func_)) * ensemble_count
             calibration_point_x_jitter = np.random.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
             calibration_point_y_jitter = np.random.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
 
