@@ -162,11 +162,9 @@ See section [Prediction and Visualization](https://chenyangkang.github.io/stemfl
 
 ## Contribute to stemflow :purple_heart:
 
-**Pull requests are welcomed!** Open an issue so that we can discuss the detailed implementation.
+We welcome pull requests. Contributors should follow [contributing documentation](https://github.com/chenyangkang/stemflow/raw/main/docs/CONTRIBUTING.md).
 
-**Application level cooperation is also welcomed!** My domain knowledge is in avian ecology and evolution. 
-
-You can contact me at **chenyangkang24@outlook.com**
+Application level cooperation is also welcomed. We recognized that stemflow may consume large computational resources especially as data volume boost in the future. We always welcome research collaboration of any kind. Contact me at chenyangkang24@outlook.com
 
 
 -----
