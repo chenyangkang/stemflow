@@ -1,0 +1,44 @@
+name: run-pytest
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  pytesting:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.7", "3.8", "3.9", "3.10"]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-cov pytest-xdist
+        pip install .
+        pip install xgboost>=1.7.6
+        pip install watermark>=2.3.1
+
+    - name: Run pytest
+      run: |
+        pytest -n auto --cov --no-cov-on-fail --cov-report=term-missing:skip-covered --cov-report xml:coverage.xml
+
+    - uses: action-badges/create-orphan-branch@0.1.0
+      with:
+        branch-name: badges
+
+    - name: Make Coverage Badge
+      uses: action-badges/cobertura-coverage-xml-badges@0.3.0
+      with:
+        file-name: coverage.svg
+        badge-branch: badges
+        github-token: '${{ secrets.SECRET_TOKEN }}'
+        coverage-file-name: ./coverage.xml

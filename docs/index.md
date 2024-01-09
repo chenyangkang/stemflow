@@ -37,36 +37,6 @@ Or using conda:
 conda install -c conda-forge stemflow
 ```
 
-## Mini Test  :test_tube:
-
-To run an auto-mini test, call:
-
-```py
-
-from stemflow.mini_test import run_mini_test
-
-run_mini_test(delet_tmp_files=False, speed_up_times=2)
-
-```
-
-Or, if the package was cloned from the github repo, you can run the python script:
-
-```py
-
-git clone https://github.com/chenyangkang/stemflow.git
-cd stemflow
-
-pip install -r requirements.txt  # install dependencies
-
-chmod 755 setup.py
-python setup.py # installation
-
-chmod 755 mini_test.py
-python mini_test.py # run the test
-
-```
-
-See section [Mini Test](https://chenyangkang.github.io/stemflow/Examples/00.Mini_test.html) for further illustrations of the mini test.
 
 ## Brief introduction :information_source:
 **stemflow** is a toolkit for Adaptive Spatio-Temporal Exploratory Model (AdaSTEM \[[1](https://ojs.aaai.org/index.php/AAAI/article/view/8484), [2](https://esajournals.onlinelibrary.wiley.com/doi/full/10.1002/eap.2056)\]) in python. A typical usage is daily abundance estimation using eBird citizen science data. It leverages the "adjacency" information of surrounding target values in space and time to predict the classes/continuous values of target spatial-temporal points.
@@ -147,7 +117,7 @@ model.gridding_plot
 
 ![QuadTree example](https://chenyangkang.github.io/stemflow/QuadTree.png)
 
-Here, each color shows an ensemble generated during model fitting. In each of the 10 ensembles, regions (in terms of space and time) with more training samples were gridded into finer resolution, while the sparse one remained coarse. Prediction results were aggregated across the ensembles (that is, in this example, data were gone through 10 times).
+Here, each color shows an ensemble generated during model fitting. In each of the 10 ensembles, regions (in terms of space and time) with more training samples were gridded into finer resolution, while the sparse one remained coarse. Prediction results were aggregated across the ensembles (that is, in this example, data were modeled 10 times).
 
 ---- 
 ## Example of visualization :world_map:
