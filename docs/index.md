@@ -162,7 +162,7 @@ See section [Prediction and Visualization](https://chenyangkang.github.io/stemfl
 
 ## Contribute to stemflow :purple_heart:
 
-We welcome pull requests. Contributors should follow [contributing documentation](https://github.com/chenyangkang/stemflow/raw/main/docs/CONTRIBUTING.md).
+We welcome pull requests. Contributors should follow [contributing documentation](https://github.com/chenyangkang/stemflow/blob/main/docs/CONTRIBUTING.md).
 
 Application level cooperation is also welcomed. We recognized that stemflow may consume large computational resources especially as data volume boost in the future. We always welcome research collaboration of any kind. Contact me at chenyangkang24@outlook.com
 

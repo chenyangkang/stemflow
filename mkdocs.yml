@@ -96,8 +96,10 @@ nav:
     - stemflow.mini_test: API_Documentation/stemflow.mini_test.md
   - Fun Visualization:
     - 'Global Bird Diversity': Fun_Visualization/Global_Bird_Shannon_H_Index.md
-    - 'Global NDVI': Fun_Visualization/Global_NDVI.md
     - 'Ruby-crowned_Kinglet': Fun_Visualization/Ruby-crowned_Kinglet_2020.md
+    - 'Global NDVI': Fun_Visualization/Global_NDVI.md
+    - 'Global Mean Temperature': Fun_Visualization/Global_Mean_Temperature_2020.md
+  - Contribution: CONTRIBUTING.md
 
   # - Download mini data: mini_data/mini_data.csv
 
