@@ -31,6 +31,11 @@ jobs:
       run: |
         pytest -n auto --cov --no-cov-on-fail --cov-report=term-missing:skip-covered --cov-report xml:coverage.xml
 
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v3
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        
     # - uses: action-badges/create-orphan-branch@0.1.0
     #   with:
     #     branch-name: badges
