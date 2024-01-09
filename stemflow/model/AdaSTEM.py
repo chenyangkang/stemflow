@@ -1,35 +1,18 @@
-import sys
 import pandas as pd
 import numpy as np
-import numpy
-import math
 import os
 import warnings
 import pickle
-import time
 from tqdm import tqdm
-import random
-import geopandas as gpd
-import matplotlib
-import matplotlib.pyplot as plt
-import seaborn as sns
-import json
-from warnings import simplefilter
-from matplotlib import cm
-import copy
 
 from sklearn.base import BaseEstimator
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import r2_score,mean_squared_error,mean_tweedie_deviance,\
-        mean_absolute_error,mean_absolute_percentage_error
-from sklearn.metrics import roc_auc_score, precision_score, accuracy_score, f1_score, recall_score
-from scipy.stats import spearmanr
-from sklearn.utils import class_weight
-from sklearn.inspection import partial_dependence
+
+from sklearn.metrics import roc_auc_score, cohen_kappa_score, r2_score, d2_tweedie_score, \
+    f1_score, precision_score, recall_score, average_precision_score, mean_absolute_error, mean_squared_error
+from scipy.stats import pearsonr, spearmanr
 
 #
 from multiprocessing import Pool, cpu_count
-from functools import partial
 from itertools import repeat
 
 #validation check
@@ -41,7 +24,7 @@ from typing import Union, Tuple
 ######
 from ..utils.quadtree import get_ensemble_quadtree
 from .dummy_model import dummy_model1
-from ..utils.validation import check_random_state
+# from ..utils.validation import check_random_state
 from .static_func_AdaSTEM import (
     _monkey_patched_predict_proba,
     train_one_stixel,
@@ -806,10 +789,6 @@ class AdaSTEM(BaseEstimator):
                 cls_threshold = 0.5
             elif task=='hurdle':
                 cls_threshold = 0
-        
-        from sklearn.metrics import roc_auc_score, cohen_kappa_score, r2_score, d2_tweedie_score, \
-            f1_score, precision_score, recall_score, average_precision_score, mean_absolute_error, mean_squared_error
-        from scipy.stats import pearsonr, spearmanr
 
         if not task=='regression':
             
