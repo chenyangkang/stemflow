@@ -73,7 +73,7 @@ extra:
 nav:
   - Home: index.md
   - Examples:
-    # - Examples/00.Mini_test.ipynb
+    - Examples/00.Mini_test.ipynb
     - Examples/01.AdaSTEM_demo.ipynb
     - Examples/02.AdaSTEM_learning_curve_analysis.ipynb
     - Examples/03.Binding_with_Maxent.ipynb
@@ -93,7 +93,7 @@ nav:
       - 'plot_gif': API_Documentation/stemflow.utils.plot_gif.md
       - 'generate_soft_colors': API_Documentation/stemflow.utils.generate_soft_colors.md
     - stemflow.model_selection: API_Documentation/stemflow.model_selection.md
-    # - stemflow.mini_test: API_Documentation/stemflow.mini_test.md
+    - stemflow.manually_testing: API_Documentation/stemflow.manually_testing.md
   - Fun Visualization:
     - 'Global Bird Diversity': Fun_Visualization/Global_Bird_Shannon_H_Index.md
     - 'Ruby-crowned_Kinglet': Fun_Visualization/Ruby-crowned_Kinglet_2020.md
