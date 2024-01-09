@@ -13,9 +13,10 @@
 ![PyPI version](https://img.shields.io/pypi/v/stemflow)
 ![PyPI downloads](https://img.shields.io/pypi/dm/stemflow)
 ![GitHub last commit](https://img.shields.io/github/last-commit/chenyangkang/stemflow)
+[![codecov](https://codecov.io/gh/chenyangkang/stemflow/graph/badge.svg?token=RURPF6NKIJ)](https://codecov.io/gh/chenyangkang/stemflow)
 [![status](https://joss.theoj.org/papers/50a385b3283faf346fc16484f50f6add/status.svg)](https://joss.theoj.org/papers/50a385b3283faf346fc16484f50f6add)
  <!--  -->
- 
+
 -----
 
 ## Documentation :book:
@@ -68,22 +69,22 @@ model = AdaSTEMRegressor(
         regressor=XGBRegressor(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1)
     ),
     save_gridding_plot = True,
-    ensemble_fold=10, 
+    ensemble_fold=10,
     min_ensemble_required=7,
     grid_len_lon_upper_threshold=25,
     grid_len_lon_lower_threshold=5,
     grid_len_lat_upper_threshold=25,
     grid_len_lat_lower_threshold=5,
-    temporal_start = 1, 
+    temporal_start = 1,
     temporal_end =366,
     temporal_step=20,
     temporal_bin_interval = 50,
     points_lower_threshold=50,
     Spatio1='longitude',
-    Spatio2 = 'latitude', 
+    Spatio2 = 'latitude',
     Temporal1 = 'DOY',
     use_temporal_to_train=True,
-    njobs=1                       
+    njobs=1
 )
 ```
 
@@ -119,7 +120,7 @@ model.gridding_plot
 
 Here, each color shows an ensemble generated during model fitting. In each of the 10 ensembles, regions (in terms of space and time) with more training samples were gridded into finer resolution, while the sparse one remained coarse. Prediction results were aggregated across the ensembles (that is, in this example, data were modeled 10 times).
 
----- 
+----
 ## Example of visualization :world_map:
 
 Daily Abundance Map of Barn Swallow

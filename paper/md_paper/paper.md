@@ -11,7 +11,7 @@ authors:
  - given-names: Yangkang
    surname: Chen
    orchid: 0000-0003-4996-0881
-   affiliation: "1, 2" 
+   affiliation: "1, 2"
  - given-names: Zhongru
    surname: Gu
    orchid: 0000-0002-0178-1107
@@ -31,7 +31,7 @@ affiliations:
 
  - name: Cardiff University-Institute of Zoology Joint Laboratory for Biocomplexity Research, Chinese Academy of Sciences, Beijing, China
    index: 3
-   
+
  - name: Center for Excellence in Animal Evolution and Genetics, Chinese Academy of Sciences, Kunming, China
    index: 4
 

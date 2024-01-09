@@ -1,0 +1,32 @@
+# default_language_version:
+#   python: python3.8
+
+repos:
+  - repo: https://github.com/ambv/black
+    rev: 23.1.0
+    hooks:
+      - id: black
+        args: ["stemflow", "--line-length=120", "--target-version=py37"]
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 6.0.0
+    hooks:
+      - id: flake8
+        args: ["--select=C,E,F,W,B,B950", "--max-line-length=120", "--ignore=E203,E501,W503,F401,F403"]
+
+  - repo: https://github.com/timothycrosley/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        args: ["-l 120", "--profile", "black", "."]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: check-yaml
+        exclude: recipe/meta.yaml
+      - id: check-added-large-files
+        args: ["--maxkb=1024"]
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: requirements-txt-fixer

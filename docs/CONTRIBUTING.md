@@ -27,6 +27,3 @@ git remote add upstream git://github.com/stemflow/stemflow.git
 This creates the directory `stemflow-YOURNAME` and connects your repository to the upstream (main project) elapid repository.
 
 ---
-
-
-

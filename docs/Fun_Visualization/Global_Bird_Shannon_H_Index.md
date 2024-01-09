@@ -4,6 +4,3 @@ Data Source: eBird
 
 
 ![](./shannon_H_2020.gif)
-
-
-

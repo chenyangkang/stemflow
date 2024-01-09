@@ -35,7 +35,7 @@ jobs:
       uses: codecov/codecov-action@v3
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-        
+
     # - uses: action-badges/create-orphan-branch@0.1.0
     #   with:
     #     branch-name: badges
