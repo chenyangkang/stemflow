@@ -1,3 +1,1 @@
-from .validation import (
-    check_random_state
-)
+from .validation import check_random_state

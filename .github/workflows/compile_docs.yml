@@ -1,4 +1,4 @@
-name: compile_docs 
+name: compile_docs
 
 on:
   push:

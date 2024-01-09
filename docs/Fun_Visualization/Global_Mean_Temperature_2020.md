@@ -6,7 +6,3 @@ Notice: the visualized data is not modeled by AdaSTEM. Only visualization functi
 
 
 ![](./Temp_2020.gif)
-
-
-
-
