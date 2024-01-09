@@ -14,3 +14,4 @@ stemflow/__pycache__/*
 *.DS_Store
 *.docx
 */references/*
+.github/workflows/publish-pypi.yml
