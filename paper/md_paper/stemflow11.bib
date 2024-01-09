@@ -243,27 +243,27 @@
 	doi = {10.1111/2041-210X.14052},
 	shorttitle = {{\textless}span style="font-variant},
 	abstract = {Abstract
-            
-              
-                
+
+
+
                   Large‐scale monitoring of seasonal animal movement is integral to science, conservation and outreach. However, gathering representative movement data across entire species ranges is frequently intractable. Citizen science databases collect millions of animal observations throughout the year, but it is challenging to infer individual movement behaviour solely from observational data.
-                
-                
-                  
+
+
+
                     We present
                     {BirdFlow}
                     , a probabilistic modelling framework that draws on citizen science data from the {eBird} database to model the population flows of migratory birds. We apply the model to 11 species of North American birds, using {GPS} and satellite tracking data to tune and evaluate model performance.
-                  
-                
-                
-                  
+
+
+
+
                     We show that
                     {BirdFlow}
                     models can accurately infer individual seasonal movement behaviour directly from {eBird} relative abundance estimates. Supplementing the model with a sample of tracking data from wild birds improves performance.
-                  
-                
-                
-                  
+
+
+
+
                     Researchers can extract a number of behavioural inferences from model results, including migration routes, timing, connectivity and forecasts. The
                     {BirdFlow}
                     framework has the potential to advance migration ecology research, boost insights gained from direct tracking studies and serve a number of applied functions in conservation, disease surveillance, aviation and public outreach.},
@@ -434,18 +434,18 @@
 	url = {https://besjournals.onlinelibrary.wiley.com/doi/10.1111/2041-210X.13559},
 	doi = {10.1111/2041-210X.13559},
 	abstract = {Abstract
-            
-              
-                
+
+
+
                   Count data are ubiquitous in ecology and the Poisson generalized linear model ({GLM}) is commonly used to model the association between counts and explanatory variables of interest. When fitting this model to the data, one typically proceeds by first confirming that the model assumptions are satisfied. If the residuals appear to be overdispersed or if there is zero‐inflation, key assumptions of the Poison {GLM} may be violated and researchers will then typically consider alternatives to the Poison {GLM}. An important question is whether the potential model selection bias introduced by this data‐driven multi‐stage procedure merits concern.
-                
-                
+
+
                   Here we conduct a large‐scale simulation study to investigate the potential consequences of model selection bias that can arise in the simple scenario of analysing a sample of potentially overdispersed, potentially zero‐inflated, count data. Specifically, we investigate model selection procedures recently recommended by Blasco‐Moreno et al. (2019) using either a series of score tests or information theoretic criteria to select the best model.
-                
-                
+
+
                   We find that, when sample sizes are small, model selection based on preliminary score tests (or information theoretic criteria, e.g. {AIC}, {BIC}) can lead to potentially substantial inflation of false positive rates (i.e. type 1 error inflation). When sample sizes are sufficiently large, model selection based on preliminary score tests, is not problematic.
-                
-                
+
+
                   Ignoring the possibility of overdispersion and zero‐inflation during data analyses can lead to invalid inference. However, if one does not have sufficient power to test for overdispersion and zero‐inflation, post hoc model selection may also lead to substantial bias. This ‘catch‐22’ suggests that, if sample sizes are small, a healthy skepticism is warranted whenever one rejects the null hypothesis of no association between a given outcome and covariate.},
 	pages = {665--680},
 	number = {4},
@@ -485,36 +485,36 @@
 	doi = {10.1111/2041-210X.14101},
 	shorttitle = {{\textless}span style="font-variant},
 	abstract = {Abstract
-            
-              
-                
+
+
+
                   Species distribution models ({SDM}) are widely applied to understand changing species geographical distribution and abundance patterns. However, existing {SDM} tools are inherently static and inadequate for modelling species distributions that are driven by dynamic environmental conditions.
-                
-                
-                  
-                    
+
+
+
+
                       {dynamicSDM}
-                    
+
                     provides novel tools that explicitly consider the temporal dimension at key {SDM} stages, including functions for: (a) Cleaning and filtering species occurrence records by spatial and temporal qualities; (b) Generating pseudo‐absence records through space and time; (c) Extracting spatiotemporally buffered explanatory variables; (d) Fitting {SDMs} whilst accounting for temporal biases and autocorrelation and (e) Projecting intra‐ and inter‐ annual geographical distributions and abundances at high spatiotemporal resolution.
-                  
-                
-                
-                  
+
+
+
+
                     Package functions have been designed to be: flexible for targeting specific study species; compatible with other {SDM} tools; and, by utilising Google Earth Engine and Google Drive, to have low computing power and storage needs. We illustrate
-                    
+
                       {dynamicSDM}
-                    
+
                     functions with an example of a nomadic bird in southern Africa, the red‐billed quelea
                     Quelea quelea
                     .
-                  
-                
-                
-                  
+
+
+
+
                     As
-                    
+
                       {dynamicSDM}
-                    
+
                     functions are flexible and easily applied, we suggest that these tools could be readily applied to other taxa and systems globally.},
 	pages = {1190--1199},
 	number = {5},
@@ -532,22 +532,22 @@
 	url = {http://biorxiv.org/lookup/doi/10.1101/2022.03.24.485545},
 	shorttitle = {{sdmTMB}},
 	abstract = {Abstract
-          
-            
-              
+
+
+
                 Geostatistical data—spatially referenced observations related to some continuous spatial phenomenon— are ubiquitous in ecology and can reveal ecological processes and inform management decisions. However, appropriate models to analyze these data, such as generalized linear mixed effects models ({GLMMs}) with Gaussian random fields, are often computationally intensive and challenging to implement, interpret, and evaluate.
-              
-              
+
+
                 Here, we introduce the R package {sdmTMB}, which implements predictive-process {SPDE}- (stochastic partial differential equation) based spatial and spatiotemporal models. Estimation is conducted via maximum marginal likelihood with Template Model Builder ({TMB}) but can be extended to penalized likelihood or Bayesian inference. We describe the statistical model, illustrate the package’s use through two case studies, and compare the functionality, speed, and interface to related software.
-              
-              
-                
+
+
+
                   We highlight advantages of using {sdmTMB} for this class of models: (1) {sdmTMB} provides a flexible interface familiar to users of
                   glm()
                   , lme4, {glmmTMB}, or mgcv; (2) estimation is often faster than alternatives; (3) {sdmTMB} provides simple out-of-sample cross validation; (4) non-stationary processes (time-varying and spatially varying coefficients) are easily constructed with a formula interface; and (5) {sdmTMB} includes features not available as a combination in related packages (e.g., delta/hurdle models, penalized smoothers and break-point effects, anisotropy, abundance index standardization).
-                
-              
-              
+
+
+
                 We hope that {sdmTMB}’s user-friendly interface will open this useful class of models to a wider audience within species distribution modelling and beyond.},
 	institution = {Ecology},
 	type = {preprint},

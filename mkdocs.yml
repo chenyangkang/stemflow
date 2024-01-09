@@ -69,7 +69,7 @@ extra:
     # - icon: fontawesome/brands/linkedin
     #   link: https://www.linkedin.com/in/willettjames/
 
-    
+
 nav:
   - Home: index.md
   - Examples:
@@ -119,9 +119,9 @@ markdown_extensions:
   - pymdownx.superfences
   - pymdownx.mark
   - attr_list
-  - pymdownx.emoji:
-      emoji_index: !!python/name:materialx.emoji.twemoji
-      emoji_generator: !!python/name:materialx.emoji.to_svg
+  - pymdownx.emoji
+      # emoji_index: !!python/name:materialx.emoji.twemoji
+      # emoji_generator: !!python/name:materialx.emoji.to_svg
   - pymdownx.critic
   - pymdownx.caret
   - pymdownx.keys

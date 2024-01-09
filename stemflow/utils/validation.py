@@ -1,5 +1,7 @@
-import numpy as np
 from typing import Union
+
+import numpy as np
+
 
 def check_random_state(seed: Union[None, int, np.random.RandomState]) -> np.random.RandomState:
     """Turn seed into a np.random.RandomState instance.
@@ -20,7 +22,4 @@ def check_random_state(seed: Union[None, int, np.random.RandomState]) -> np.rand
         return np.random.RandomState(seed)
     if isinstance(seed, np.random.RandomState):
         return seed
-    raise ValueError(
-        "%r cannot be used to seed a numpy.random.RandomState instance" % seed
-    )
-    
+    raise ValueError("%r cannot be used to seed a numpy.random.RandomState instance" % seed)
