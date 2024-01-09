@@ -2,8 +2,8 @@ name: compile_docs
 
 on:
   push:
-    paths:
-      - 'docs/**'
+    # paths:
+    #   - 'docs/**'
     branches:
       - main
 
