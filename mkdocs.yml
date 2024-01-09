@@ -99,7 +99,7 @@ nav:
     - 'Ruby-crowned_Kinglet': Fun_Visualization/Ruby-crowned_Kinglet_2020.md
     - 'Global NDVI': Fun_Visualization/Global_NDVI.md
     - 'Global Mean Temperature': Fun_Visualization/Global_Mean_Temperature_2020.md
-  - Contribution: CONTRIBUTING.md
+  - Contributing: CONTRIBUTING.md
 
   # - Download mini data: mini_data/mini_data.csv
 
