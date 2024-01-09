@@ -1,39 +1,13 @@
 """This file is to store static functions for multi-processing
 
 """
-import sys
 import pandas as pd
 import numpy as np
-import numpy
-import math
-import os
 import warnings
-import pickle
-import time
-from tqdm import tqdm
-import random
-import geopandas as gpd
-import matplotlib
-import matplotlib.pyplot as plt
-import seaborn as sns
-import json
 from warnings import simplefilter
-from matplotlib import cm
 import copy
 
 from sklearn.base import BaseEstimator
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import r2_score,mean_squared_error,mean_tweedie_deviance,\
-        mean_absolute_error,mean_absolute_percentage_error
-from sklearn.metrics import roc_auc_score, precision_score, accuracy_score, f1_score, recall_score
-from scipy.stats import spearmanr
-from sklearn.utils import class_weight
-from sklearn.inspection import partial_dependence
-
-#
-from multiprocessing import Pool, cpu_count
-from functools import partial
-from itertools import repeat
 
 #validation check
 from pandas.core.frame import DataFrame
