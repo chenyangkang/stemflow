@@ -18,6 +18,16 @@ import time
 
 # run_mini_test(delet_tmp_files=False, speed_up_times=2)
 
+def load_data_from_doc():
+    if not os.path.exists('./tests/stemflow_mini_test'):
+        os.makedirs('./tests/stemflow_mini_test')
+        
+    print(os.getcwd())
+    cp_results = os.popen('cp ./docs/mini_data/mini_data.pkl ./tests/stemflow_mini_test', 'w')
+    time.sleep(1)
+    print(os.listdir('./tests/stemflow_mini_test'))
+    assert os.path.exists('./tests/stemflow_mini_test/mini_data.pkl')
+
 def test_mini(delet_tmp_files: bool=True, show: bool = False, ensemble_models_disk_saver=False, ensemble_models_disk_saving_dir='./', speed_up_times=1):
     """Run a mini test
     
@@ -50,33 +60,33 @@ def test_mini(delet_tmp_files: bool=True, show: bool = False, ensemble_models_di
     """
     #
     print('Start Running Mini-test...')
-    print(f'Temporary files will be stored at: ./stemflow_mini_test/')
+    print(f'Temporary files will be stored at: ./tests/stemflow_mini_test/')
     if delet_tmp_files:
         print('Temporary files will be deleted.')
     else:
         print('Temporary files will *NOT* be deleted.')
+        
+    # Cp mini data
+    load_data_from_doc()
+    
     # download mini data
-    if not os.path.exists('./stemflow_mini_test'):
-        os.makedirs('./stemflow_mini_test')
-    if not 'mini_data.pkl' in os.listdir('./stemflow_mini_test'):
+    if not os.path.exists('./tests/stemflow_mini_test'):
+        os.makedirs('./tests/stemflow_mini_test')
+    
+    if not 'mini_data.pkl' in os.listdir('./tests/stemflow_mini_test'):
         url = "https://chenyangkang.github.io/stemflow/mini_data/mini_data.pkl"
         print(f'Requesting data from {url} ...')
         data = pickle.load(urlopen(url))
         # data = pd.read_csv(url)
-        data.to_csv('./stemflow_mini_test/mini_data.csv', index=False)
+        # data.to_csv('./stemflow_mini_test/mini_data.csv', index=False)
         print('Done.')
     else:
+        with open('./tests/stemflow_mini_test/mini_data.pkl','rb') as f:
+            data = pickle.load(f)
         print('Mini-data already downloaded.')
     
-    assert os.path.exists('./stemflow_mini_test/mini_data.csv')
+    assert os.path.exists(len(data)>0)
 
-
-    # %%
-    # load data
-    data = pd.read_csv('./stemflow_mini_test/mini_data.csv')
-
-    # %%
-    # data.head()
 
     # %%
     plt.scatter(
@@ -84,7 +94,7 @@ def test_mini(delet_tmp_files: bool=True, show: bool = False, ensemble_models_di
         data.latitude,
         s=0.2
     )
-    plt.savefig('./stemflow_mini_test/data_plot.pdf')
+    plt.savefig('./tests/stemflow_mini_test/data_plot.pdf')
     
     if show:
         plt.show()
@@ -92,7 +102,7 @@ def test_mini(delet_tmp_files: bool=True, show: bool = False, ensemble_models_di
         plt.close()
        
     time.sleep(1)
-    assert os.path.exists('./stemflow_mini_test/data_plot.pdf')
+    assert os.path.exists('./tests/stemflow_mini_test/data_plot.pdf')
 
     # %% [markdown]
     # # Get X and y
@@ -260,7 +270,7 @@ def test_mini(delet_tmp_files: bool=True, show: bool = False, ensemble_models_di
     print('Plotting top 2 important variables...')
     for var_ in top_10_important_vars.index[:2]:
         print(f'Plotting {var_}...')
-        make_sample_gif(importances_by_points, f'./stemflow_mini_test/FTR_IPT_{var_}.gif',
+        make_sample_gif(importances_by_points, f'./tests/stemflow_mini_test/FTR_IPT_{var_}.gif',
                                     col=var_, log_scale = False,
                                     Spatio1='longitude', Spatio2='latitude', Temporal1='DOY',
                                     figsize=(18,9), 
@@ -270,7 +280,7 @@ def test_mini(delet_tmp_files: bool=True, show: bool = False, ensemble_models_di
                                     ytick_interval=(data.longitude.max() - data.longitude.min())/8,
                                     lng_size = 360, lat_size = 180, dpi=100, fps=10)
         
-    assert os.path.exists(f'./stemflow_mini_test/FTR_IPT_{var_}.gif')
+    assert os.path.exists(f'./tests/stemflow_mini_test/FTR_IPT_{var_}.gif')
     print('Done.')
 
     # %% [markdown]
@@ -304,7 +314,7 @@ def test_mini(delet_tmp_files: bool=True, show: bool = False, ensemble_models_di
     )
     plt.grid(alpha=0.3)
     plt.title('Standard deviation in estimated mean occurrence')
-    plt.savefig('./stemflow_mini_test/error_plot.pdf')
+    plt.savefig('./tests/stemflow_mini_test/error_plot.pdf')
     
     if show:
         plt.show()
@@ -312,7 +322,7 @@ def test_mini(delet_tmp_files: bool=True, show: bool = False, ensemble_models_di
         plt.close()
 
     time.sleep(1)
-    assert os.path.exists('./stemflow_mini_test/error_plot.pdf')
+    assert os.path.exists('./tests/stemflow_mini_test/error_plot.pdf')
     
     # %% [markdown]
     # # Evaluation
@@ -365,8 +375,8 @@ def test_mini(delet_tmp_files: bool=True, show: bool = False, ensemble_models_di
     if delet_tmp_files:
         print('Deleting tmp files...')
         import shutil
-        shutil.rmtree('./stemflow_mini_test')
-        assert not os.path.exists('./stemflow_mini_test')
+        shutil.rmtree('./tests/stemflow_mini_test')
+        assert not os.path.exists('./tests/stemflow_mini_test')
     
     print('Finish!')
     if show:
