@@ -1,4 +1,11 @@
+
+# on:
+#   push:
+#     paths:
+#       - 'paper/md_paper/**'
+
 on: [push]
+
 
 jobs:
   paper:

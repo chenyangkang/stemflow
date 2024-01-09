@@ -2,11 +2,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, PillowWriter
 import numpy as np
-import h3pandas
-import geopandas as gpd
 import pandas
 import pandas as pd
-import numpy
 from typing import Union, Tuple
 from sklearn.preprocessing import LabelEncoder
 from functools import partial

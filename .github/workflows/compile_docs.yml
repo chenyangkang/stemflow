@@ -1,0 +1,30 @@
+name: compile_docs 
+
+on:
+  push:
+    paths:
+      - 'docs/**'
+    branches:
+      - main
+
+permissions:
+  contents: write
+jobs:
+  deploy-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+      - uses: actions/cache@v3
+        with:
+          key: ${{ github.ref }}
+          path: .cache
+      # - run: pip install xgboost watermark
+      # - run: python stemflow_test.py
+      - run: pip install mkdocs-material
+      - run: pip install pillow cairosvg
+      - run: pip install mkdocs-jupyter
+      - run: pip install 'mkdocstrings[crystal,python]'
+      - run: mkdocs gh-deploy --force
