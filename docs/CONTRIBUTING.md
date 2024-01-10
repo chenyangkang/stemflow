@@ -12,6 +12,9 @@ We welcome contribution to `stemflow`
 1. Update the docs
 1. Submit a pull request
 
+
+We recommend you to open and issue of `feature` if you wish to add brand-new features before the PR, especially with heavy mathematics to resolve.
+
 ---
 
 ## Fork the git repository
@@ -33,15 +36,13 @@ This creates the directory `stemflow-YOURNAME` and connects your repository to t
 
 Although `stemflow` has only a few dependency, we recommend creating a new environment to keep everything neat.
 
-To do this:
+To do this, first install miniconda or conda:
 
 - Install [miniconda](http://conda.pydata.org/miniconda.html) or [anaconda](http://docs.continuum.io/anaconda/)
 - `cd` to the `stemflow` source directory
 
 
-This will create a conda environment named `stemflow` then install the package, it's dependencies, `pre-commit` & `pytest`.
-
-Windows users need to do things a bit differently, as is often the case:
+Next, start a new environment called `stemflow`, activate it, and install dependencies:
 
 ```bash
 conda create -n stemflow -python=3.8 -y
@@ -101,6 +102,17 @@ Then you can render the docs locally with:
 ```bash
 mkdocs serve
 ```
+
+## Commit
+
+After you finish editing. Commit with words that summarize the changes.
+
+```
+git commit -m 'what I have changed'
+```
+
+You will possibly find that pre-commit trimmed your scripts. In this case you need to add those changed file again and commit again to save the changes.
+
 
 ---
 
