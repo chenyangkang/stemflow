@@ -10,8 +10,8 @@ theme:
   icon:
       repo: 'fontawesome/brands/github'
   features:
-    # - toc.follow
-    - toc.integrate
+    - toc.follow
+    # - toc.integrate
     - navigation.top
     - search.suggest
     - search.highlight
@@ -20,7 +20,7 @@ theme:
     - content.code.copy
     - search.share
     - navigation.indexes
-    - navigation.expand
+
 
 
   language: en
@@ -43,7 +43,7 @@ theme:
         name: Switch to light mode
 
   font:
-    text: Open Sans
+    text: Roboto
   logo: logo.png
   favicon: logo.png
 
@@ -72,8 +72,9 @@ extra:
 
 nav:
   - Home: index.md
+  - 'A Brief Introduction': A_brief_introduction/A_brief_introduction.md
   - Examples:
-    # - Examples/00.Mini_test.ipynb
+    - Examples/00.Mini_test.ipynb
     - Examples/01.AdaSTEM_demo.ipynb
     - Examples/02.AdaSTEM_learning_curve_analysis.ipynb
     - Examples/03.Binding_with_Maxent.ipynb
@@ -81,6 +82,9 @@ nav:
     - Examples/05.Hurdle_in_ada_or_ada_in_hurdle.ipynb
     - Examples/06.Base_model_choices.ipynb
     - Examples/07.Optimizing_Stixel_Size.ipynb
+  - Tips:
+    - 'Tips for data types': Tips/Tips_for_data_types.md
+    - 'Tips for different tasks': Tips/Tips_for_different_tasks.md
   - API Documentation:
     - stemflow.model:
       - 'AdaSTEM': API_Documentation/stemflow.model.AdaSTEM.md
@@ -93,20 +97,21 @@ nav:
       - 'plot_gif': API_Documentation/stemflow.utils.plot_gif.md
       - 'generate_soft_colors': API_Documentation/stemflow.utils.generate_soft_colors.md
     - stemflow.model_selection: API_Documentation/stemflow.model_selection.md
-    # - stemflow.mini_test: API_Documentation/stemflow.mini_test.md
+    - stemflow.manually_testing: API_Documentation/stemflow.manually_testing.md
   - Fun Visualization:
     - 'Global Bird Diversity': Fun_Visualization/Global_Bird_Shannon_H_Index.md
     - 'Ruby-crowned_Kinglet': Fun_Visualization/Ruby-crowned_Kinglet_2020.md
     - 'Global NDVI': Fun_Visualization/Global_NDVI.md
     - 'Global Mean Temperature': Fun_Visualization/Global_Mean_Temperature_2020.md
   - Contributing: CONTRIBUTING.md
+  - 'Code of conduct': CODE_OF_CONDUCT.md
 
   # - Download mini data: mini_data/mini_data.csv
 
 markdown_extensions:
   - tables
-  - toc:
-      toc_depth : "1-1"
+  # - toc:
+  #     toc_depth : "1-1"
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.inlinehilite
@@ -127,9 +132,9 @@ markdown_extensions:
   - pymdownx.keys
   - pymdownx.tilde
 
-extra_css:
-  - css/extra.css
+# extra_css:
+#   - css/extra.css
 
 
 copyright: |
-  &copy; 2023 <a href="https://github.com/chenyangkang"  target="_blank" rel="noopener">Yangkang Chen</a>
+  &copy; 2024 <a href="https://github.com/chenyangkang"  target="_blank" rel="noopener">Yangkang Chen</a>
