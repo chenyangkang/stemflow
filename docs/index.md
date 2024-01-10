@@ -45,7 +45,7 @@ conda install -c conda-forge stemflow
 
 **stemflow** adopts ["split-apply-combine"](https://vita.had.co.nz/papers/plyr.pdf) philosophy. It 
 
-1. Splits input data using Quadtree algorithm.
+1. Splits input data using [Quadtree algorithm](https://en.wikipedia.org/wiki/Quadtree#:~:text=A%20quadtree%20is%20a%20tree,into%20four%20quadrants%20or%20regions.).
 1. Trains each spatiotemporal split (called stixel) separately.
 1. Aggregates the ensemble to make prediction.
 

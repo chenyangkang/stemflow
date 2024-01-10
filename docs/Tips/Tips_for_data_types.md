@@ -71,6 +71,8 @@ pred = np.where(pred<0, 0, pred)
 eval_metrics = AdaSTEM.eval_STEM_res('classification',y_test, pred_mean)
 ```
 
+Note that the Quadtree algo is limited to 6 digits for efficiency. So transform your coordinates of it exceeds that threshold. For example, x=0.0000001 and y=0.0000012 will be problematic. Consider changing it to x=100 and y=1200.
+
 ------
 ## Spatial-only modeling
 
@@ -100,6 +102,39 @@ model = AdaSTEMClassifier(
 ```
 
 Setting `temporal_step` and `temporal_bin_interval` largely outweigh the temporal scale (1000 compared with 52) of your data will render only `one` temporal window during splitting. Consequently, your model would become a spatial model. This could be beneficial if temporal heterogeneity is not of interest, or without enough data to investigate.
+
+-------
+
+## Fix the gird size of Quadtree algorithm
+
+By using some tricks we can fix the gird size/edge length:
+
+```python
+model = AdaSTEMClassifier(
+    base_model=XGBClassifier(tree_method='hist',random_state=42, verbosity = 0,n_jobs=1),
+    save_gridding_plot = True,
+    ensemble_fold=10,
+    min_ensemble_required=7,
+    grid_len_lon_upper_threshold=1000,
+    grid_len_lon_lower_threshold=1000,
+    grid_len_lat_upper_threshold=1000,
+    grid_len_lat_lower_threshold=1000,
+    temporal_start=1,
+    temporal_end=52,                            
+    temporal_step=2,                 
+    temporal_bin_interval=4,         
+    points_lower_threshold=0, 
+    stixel_training_size_threshold=50,            
+    Spatio1='proj_lng',                   
+    Spatio2='proj_lat',
+    Temporal1='Week',
+    use_temporal_to_train=True,
+    njobs=1
+)
+```
+
+Quadtree will keep splitting until it hits an edge length lower than 1000 meters. Data volume won't hamper this process because the splitting threshold is set to 0 (`points_lower_threshold=0`). Stixels with sample volume less than 50 still won't be trained (`stixel_training_size_threshold=50`). However, we cannot guarantee the exact grid length. It should be somewhere between 500m and 1000m since each time Quadtree do a bifurcated splitting.
+
 
 ------
 ## Continuous and categorical features

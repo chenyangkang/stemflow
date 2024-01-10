@@ -63,6 +63,7 @@ class AdaSTEM(BaseEstimator):
         grid_len_lat_upper_threshold: Union[float, int] = 25,
         grid_len_lat_lower_threshold: Union[float, int] = 5,
         points_lower_threshold: int = 50,
+        stixel_training_size_threshold: int = None,
         temporal_start: Union[float, int] = 1,
         temporal_end: Union[float, int] = 366,
         temporal_step: Union[float, int] = 20,
@@ -107,8 +108,11 @@ class AdaSTEM(BaseEstimator):
             grid_len_lat_lower_threshold:
                 stop divide if grid latitude **will** be below than the threshold. Defaults to 5.
             points_lower_threshold:
+                Do not further split the gird if split results in less samples than this threshold.
+                Overrided by grid_len_*_upper_threshold parameters. Defaults to 50.
+            stixel_training_size_threshold:
                 Do not train the model if the available data records for this stixel is less than this threshold,
-                and directly set the value to np.nan. Defaults to 25.
+                and directly set the value to np.nan. Defaults to 50.
             temporal_start:
                 start of the temporal sequence. Defaults to 1.
             temporal_end:
@@ -237,7 +241,11 @@ class AdaSTEM(BaseEstimator):
         self.temporal_bin_start_jitter = temporal_bin_start_jitter
 
         #
-        self.stixel_training_size_threshold = points_lower_threshold
+        if stixel_training_size_threshold is None:
+            self.stixel_training_size_threshold = points_lower_threshold
+        else:
+            self.stixel_training_size_threshold = stixel_training_size_threshold
+
         self.save_gridding_plot = save_gridding_plot
         self.save_tmp = save_tmp
         self.save_dir = save_dir
@@ -1104,6 +1112,7 @@ class AdaSTEMClassifier(AdaSTEM):
         grid_len_lat_upper_threshold=25,
         grid_len_lat_lower_threshold=5,
         points_lower_threshold=50,
+        stixel_training_size_threshold=None,
         temporal_start=1,
         temporal_end=366,
         temporal_step=20,
@@ -1160,6 +1169,7 @@ class AdaSTEMClassifier(AdaSTEM):
             grid_len_lat_upper_threshold,
             grid_len_lat_lower_threshold,
             points_lower_threshold,
+            stixel_training_size_threshold,
             temporal_start,
             temporal_end,
             temporal_step,
@@ -1268,6 +1278,7 @@ class AdaSTEMRegressor(AdaSTEM):
         grid_len_lat_upper_threshold=25,
         grid_len_lat_lower_threshold=5,
         points_lower_threshold=50,
+        stixel_training_size_threshold=None,
         temporal_start=1,
         temporal_end=366,
         temporal_step=20,
@@ -1324,6 +1335,7 @@ class AdaSTEMRegressor(AdaSTEM):
             grid_len_lat_upper_threshold,
             grid_len_lat_lower_threshold,
             points_lower_threshold,
+            stixel_training_size_threshold,
             temporal_start,
             temporal_end,
             temporal_step,
