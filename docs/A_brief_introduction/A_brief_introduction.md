@@ -24,7 +24,7 @@ Technically, stemflow is positioned as a user-friendly python package to meet th
 
 If you are not familiar with these tasks and concepts, see [Tips for different tasks](https://chenyangkang.github.io/stemflow/Tips/Tips_for_different_tasks.html)
 
-## Choosing the model framework
+## Choose the model framework
 
 In the [demo](https://chenyangkang.github.io/stemflow/Examples/01.AdaSTEM_demo.html), we use `a two-step hurdle model` as "base model" (see more information about `hurdle` model [here](https://chenyangkang.github.io/stemflow/Tips/Tips_for_different_tasks.html)), with XGBoostClassifier for binary occurrence modeling and XGBoostRegressor for abundance modeling. If the task is to predict abundance, there are two ways to leverage the hurdle model. 
 
@@ -33,7 +33,7 @@ In the [demo](https://chenyangkang.github.io/stemflow/Examples/01.AdaSTEM_demo.h
 
 In the first case, the classifier and regressor "talk" to each other in each separate stixel (hereafter, "hurdle in Ada"); In the second case, the classifiers and regressors form two "unions" separately, and these two unions only "talk" to each other at the final combination, instead of in each stixel (hereafter, "Ada in hurdle"). In [Johnston (2015)](https://esajournals.onlinelibrary.wiley.com/doi/full/10.1890/14-1826.1) the first method was used. See section "[Hurdle in AdaSTEM or AdaSTEM in hurdle?](https://chenyangkang.github.io/stemflow/Examples/05.Hurdle_in_ada_or_ada_in_hurdle.html)" for further comparisons.
 
-## Choosing the gird size
+## Choose the gird size
 User can define the size of the stixels (spatial temporal grids) in terms of space and time. Larger stixel promotes generalizability but loses precision in fine resolution; Smaller stixel may have better predictability in the exact area but reduced ability of extrapolation for points outside the stixel. See section [Optimizing Stixel Size](https://chenyangkang.github.io/stemflow/Examples/07.Optimizing_Stixel_Size.html) for discussion about selecting gridding parameters.
 
 ## A simple demo
