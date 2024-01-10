@@ -103,6 +103,17 @@ Then you can render the docs locally with:
 mkdocs serve
 ```
 
+## Commit
+
+After you finish editing. Commit with words that summarize the changes.
+
+```
+git commit -m 'what I have changed'
+```
+
+You will possibly find that pre-commit trimmed your scripts. In this case you need to add those changed file again and commit again to save the changes.
+
+
 ---
 
 ## Submit a pull request
