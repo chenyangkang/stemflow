@@ -53,6 +53,34 @@ In the demo, we first split the training data using temporal sliding windows wit
 This process is executed 10 times (`ensemble_fold = 10`), each time with random jitter and random rotation of the gridding, generating 10 ensembles. In the prediction phase, only spatial-temporal points with more than 7 (`min_ensemble_required = 7`) ensembles usable are predicted (otherwise, set as `np.nan`).
 
 
+## Model and data  :slot_machine:
+
+### Supported data types
+
+:white_check_mark: All spatial indexing (CRS)<br>
+:white_check_mark: All temporal indexing<br>
+:white_check_mark: Both continuous and categorical features (prefer [one-hot encoding](https://en.wikipedia.org/wiki/One-hot))<br>
+:white_check_mark: Both static (e.g., yearly mean temperature) and dynamic features (e.g., daily temperature)
+
+For details and tips see [Tips for data types](https://chenyangkang.github.io/stemflow/Tips/Tips_for_data_types.html)
+
+---
+
+### Supported tasks
+
+:white_check_mark: Classification task<br>
+:white_check_mark: Regression task<br>
+:white_check_mark: Hurdle task (two step regression – classify then regress the non-zero part)<br>
+
+For details and tips see [Tips for different tasks](https://chenyangkang.github.io/stemflow/Tips/Tips_for_different_tasks.html)
+
+---
+
+### Supported base models
+
+:white_check_mark: sklearn style `BaseEstimator` classes ([you can make your own base model](https://scikit-learn.org/stable/developers/develop.html)), for example [here](https://chenyangkang.github.io/stemflow/Examples/06.Base_model_choices.html).
+
+
 ## Usage :star:
 
 Use Hurdle model as the base model of AdaSTEMRegressor:
@@ -67,23 +95,23 @@ model = AdaSTEMRegressor(
     base_model=Hurdle(
         classifier=XGBClassifier(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1),
         regressor=XGBRegressor(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1)
-    ),
+    ),                                            # hurdel model for zero-inflated problem (e.g., count)
     save_gridding_plot = True,
-    ensemble_fold=10,
-    min_ensemble_required=7,
-    grid_len_lon_upper_threshold=25,
-    grid_len_lon_lower_threshold=5,
-    grid_len_lat_upper_threshold=25,
-    grid_len_lat_lower_threshold=5,
-    temporal_start = 1,
-    temporal_end =366,
+    ensemble_fold=10,                             # data are modeled 10 times, each time with jitter and rotation in Quadtree algo
+    min_ensemble_required=7,                      # Only points covered by > 7 stixels will be predicted
+    grid_len_lon_upper_threshold=25,              # force splitting if the longitudinal edge of grid exceeds 25
+    grid_len_lon_lower_threshold=5,               # stop splitting if the longitudinal edge of grid fall short 5
+    grid_len_lat_upper_threshold=25,              # similar to the previous one, but latitudinal
+    grid_len_lat_lower_threshold=5,               
+    temporal_start=1,                           # The next 4 params define the temporal sliding window
+    temporal_end=366,                            
     temporal_step=20,
-    temporal_bin_interval = 50,
-    points_lower_threshold=50,
-    Spatio1='longitude',
-    Spatio2 = 'latitude',
-    Temporal1 = 'DOY',
-    use_temporal_to_train=True,
+    temporal_bin_interval=50,
+    points_lower_threshold=50,                    # Only stixels with more than 50 samples are trained
+    Spatio1='longitude',                          # The next three params define the name of 
+    Spatio2='latitude',                         # spatial coordinates shown in the dataframe
+    Temporal1='DOY',
+    use_temporal_to_train=True,                   # In each stixel, whether 'DOY' should be a predictor
     njobs=1
 )
 ```
@@ -93,7 +121,7 @@ Fitting and prediction methods follow the style of sklearn `BaseEstimator` class
 
 ```py
 ## fit
-model.fit(X_train.reset_index(drop=True), y_train)
+model = model.fit(X_train.reset_index(drop=True), y_train)
 
 ## predict
 pred = model.predict(X_test)
@@ -135,7 +163,7 @@ See section [Prediction and Visualization](https://chenyangkang.github.io/stemfl
 
 We welcome pull requests. Contributors should follow [contributor guidelines](https://github.com/chenyangkang/stemflow/blob/main/docs/CONTRIBUTING.md).
 
-Application level cooperation is also welcomed. We recognized that stemflow may consume large computational resources especially as data volume boost in the future. We always welcome research collaboration of any kind. Contact me at chenyangkang24@outlook.com
+Application level cooperation is also welcomed. We recognized that stemflow may consume large computational resources especially as data volume boosts in the future. We always welcome research collaboration of all kinds. Contact me at chenyangkang24@outlook.com
 
 
 -----
