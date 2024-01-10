@@ -10,8 +10,8 @@ theme:
   icon:
       repo: 'fontawesome/brands/github'
   features:
-    # - toc.follow
-    - toc.integrate
+    - toc.follow
+    # - toc.integrate
     - navigation.top
     - search.suggest
     - search.highlight
@@ -20,7 +20,7 @@ theme:
     - content.code.copy
     - search.share
     - navigation.indexes
-    - navigation.expand
+
 
 
   language: en
@@ -43,7 +43,7 @@ theme:
         name: Switch to light mode
 
   font:
-    text: Open Sans
+    text: Roboto
   logo: logo.png
   favicon: logo.png
 
@@ -72,6 +72,7 @@ extra:
 
 nav:
   - Home: index.md
+  - 'A Brief Introduction': A_brief_introduction/A_brief_introduction.md
   - Examples:
     - Examples/00.Mini_test.ipynb
     - Examples/01.AdaSTEM_demo.ipynb
@@ -103,13 +104,14 @@ nav:
     - 'Global NDVI': Fun_Visualization/Global_NDVI.md
     - 'Global Mean Temperature': Fun_Visualization/Global_Mean_Temperature_2020.md
   - Contributing: CONTRIBUTING.md
+  - 'Code of conduct': CODE_OF_CONDUCT.md
 
   # - Download mini data: mini_data/mini_data.csv
 
 markdown_extensions:
   - tables
-  - toc:
-      toc_depth : "1-1"
+  # - toc:
+  #     toc_depth : "1-1"
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.inlinehilite
@@ -130,9 +132,9 @@ markdown_extensions:
   - pymdownx.keys
   - pymdownx.tilde
 
-extra_css:
-  - css/extra.css
+# extra_css:
+#   - css/extra.css
 
 
 copyright: |
-  &copy; 2023 <a href="https://github.com/chenyangkang"  target="_blank" rel="noopener">Yangkang Chen</a>
+  &copy; 2024 <a href="https://github.com/chenyangkang"  target="_blank" rel="noopener">Yangkang Chen</a>

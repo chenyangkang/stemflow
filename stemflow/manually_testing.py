@@ -23,6 +23,7 @@ def run_mini_test(
     ensemble_models_disk_saver=False,
     ensemble_models_disk_saving_dir="./",
     speed_up_times=1,
+    tmp_dir="./stemflow_mini_test",
 ):
     """Run a mini test
 
@@ -62,18 +63,16 @@ def run_mini_test(
         print("Temporary files will *NOT* be deleted.")
 
     # download mini data
-    if not os.path.exists("./stemflow_mini_test"):
-        os.makedirs("./stemflow_mini_test")
+    if not os.path.exists(tmp_dir):
+        os.makedirs(tmp_dir)
 
-    if "mini_data.pkl" not in os.listdir("./stemflow_mini_test"):
+    if "mini_data.pkl" not in os.listdir(tmp_dir):
         url = "https://chenyangkang.github.io/stemflow/mini_data/mini_data.pkl"
         print(f"Requesting data from {url} ...")
         data = pickle.load(urlopen(url))
-        # data = pd.read_csv(url)
-        # data.to_csv('./stemflow_mini_test/mini_data.csv', index=False)
         print("Done.")
     else:
-        with open("./stemflow_mini_test/mini_data.pkl", "rb") as f:
+        with open(os.path.join(tmp_dir, "mini_data.pkl"), "rb") as f:
             data = pickle.load(f)
         print("Mini-data already downloaded.")
 
@@ -81,7 +80,7 @@ def run_mini_test(
 
     # %%
     plt.scatter(data.longitude, data.latitude, s=0.2)
-    plt.savefig("./stemflow_mini_test/data_plot.pdf")
+    plt.savefig(os.path.join(tmp_dir, "data_plot.pdf"))
 
     if show:
         plt.show()
@@ -89,7 +88,7 @@ def run_mini_test(
         plt.close()
 
     time.sleep(1)
-    assert os.path.exists("./stemflow_mini_test/data_plot.pdf")
+    assert os.path.exists(os.path.join(tmp_dir, "data_plot.pdf"))
 
     # %% [markdown]
     # # Get X and y
@@ -271,7 +270,7 @@ def run_mini_test(
         print(f"Plotting {var_}...")
         make_sample_gif(
             importances_by_points,
-            f"./stemflow_mini_test/FTR_IPT_{var_}.gif",
+            os.path.join(tmp_dir, f"FTR_IPT_{var_}.gif"),
             col=var_,
             log_scale=False,
             Spatio1="longitude",
@@ -289,7 +288,7 @@ def run_mini_test(
             fps=10,
         )
 
-    assert os.path.exists(f"./stemflow_mini_test/FTR_IPT_{var_}.gif")
+    assert os.path.exists(os.path.join(tmp_dir, f"FTR_IPT_{var_}.gif"))
     print("Done.")
 
     # %% [markdown]
@@ -318,7 +317,7 @@ def run_mini_test(
     plt.scatter(error_df.lng, error_df.lat, c=error_df.pred_std, s=0.5)
     plt.grid(alpha=0.3)
     plt.title("Standard deviation in estimated mean occurrence")
-    plt.savefig("./stemflow_mini_test/error_plot.pdf")
+    plt.savefig(os.path.join(tmp_dir, "error_plot.pdf"))
 
     if show:
         plt.show()
@@ -326,7 +325,7 @@ def run_mini_test(
         plt.close()
 
     time.sleep(1)
-    assert os.path.exists("./stemflow_mini_test/error_plot.pdf")
+    assert os.path.exists(os.path.join(tmp_dir, "error_plot.pdf"))
 
     # %% [markdown]
     # # Evaluation
@@ -377,8 +376,8 @@ def run_mini_test(
         print("Deleting tmp files...")
         import shutil
 
-        shutil.rmtree("./stemflow_mini_test")
-        assert not os.path.exists("./stemflow_mini_test")
+        shutil.rmtree(tmp_dir)
+        assert not os.path.exists(tmp_dir)
 
     print("Finish!")
     if show:
