@@ -71,7 +71,7 @@ pred = np.where(pred<0, 0, pred)
 eval_metrics = AdaSTEM.eval_STEM_res('classification',y_test, pred_mean)
 ```
 
-Note that the Quadtree algo is limited to 6 digits for efficiency. So transform your coordinates of it exceeds that threshold. For example, x=0.0000001 and y=0.0000012 will be problematic. Consider changing it to x=100 and y=1200.
+Note that the Quadtree algo is limited to 6 digits for efficiency. So transform your coordinate of it exceeds that threshold. For example, x=0.0000001 and y=0.0000012 will be problematic. Consider changing them to x=100 and y=1200.
 
 ------
 ## Spatial-only modeling
@@ -195,6 +195,6 @@ Likewise, we use static features for several reasons:
 
 1. In our demonstration, static features are used as "geographical configuration". In other words, we are interested in **how birds choose different types of land according to the season**. These static features are highly summarized and have good representation for biogeographic properties.
 1. We are interested in large-scale season pattern of bird migration, and are not interested in transient variation like hourly weather.
-1. Keep only `DOY` as dynamic features (temporal variables) reduce the work in compiling a prediction set. Instead of making a realtime one, now we only need to change DOY (by adding one each time) and feed it to `stemflow`. It also reduces memory/IO use.
+1. Keeping only `DOY` as dynamic features (temporal variables) reduces the work in compiling a prediction set. Instead of making a realtime one, now we only need to change DOY (by adding one each time) and feed it to `stemflow`. It also reduces memory/IO use.
 
 We recommend users thinking carefully before choosing appropriate features, considering the questions above and availability of computational resources.
