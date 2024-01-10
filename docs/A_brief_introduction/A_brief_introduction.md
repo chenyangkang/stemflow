@@ -14,6 +14,16 @@ The framework leverages the "adjacency" information of surroundings in space and
 
 Technically, stemflow is positioned as a user-friendly python package to meet the need of general application of modeling spatio-temporal large datasets. Scikit-learn style object-oriented modeling pipeline enables concise model construction with compact parameterization at the user end, while the rest of the modeling procedures are carried out under the hood. Once the fitting method is called, the model class recursively splits the input training data into smaller spatio-temporal grids (called stixels) using QuadTree algorithm. For each of the stixels, a base model is trained only using data falls into that stixel. Stixels are then aggregated and constitute an ensemble. In the prediction phase, stemflow queries stixels for the input data according to their spatial and temporal index, followed by corresponding base model prediction. Finally, prediction results are aggregated across ensembles to generate robust estimations (see [Fink et al., 2013](https://ojs.aaai.org/index.php/AAAI/article/view/8484) and stemflow documentation for details).
 
+## Know your goal
+
+`stemflow` supports different types of tabular data modeling tasks, including
+
+- Binary classification
+- Regression
+- Hurdle regression (first classify then regress on the positive part) for zero-inflated data
+
+If you are not familiar with these tasks and concepts, see [Tips for different tasks](https://chenyangkang.github.io/stemflow/Tips/Tips_for_different_tasks.html)
+
 ## Choosing the model framework
 
 In the [demo](https://chenyangkang.github.io/stemflow/Examples/01.AdaSTEM_demo.html), we use `a two-step hurdle model` as "base model" (see more information about `hurdle` model [here](https://chenyangkang.github.io/stemflow/Tips/Tips_for_different_tasks.html)), with XGBoostClassifier for binary occurrence modeling and XGBoostRegressor for abundance modeling. If the task is to predict abundance, there are two ways to leverage the hurdle model. 
@@ -21,10 +31,10 @@ In the [demo](https://chenyangkang.github.io/stemflow/Examples/01.AdaSTEM_demo.h
 1. First, **hurdle in AdaSTEM**: one can use hurdle model in each AdaSTEM (regressor) stixel; 
 1. Second, **AdaSTEM in hurdle**: one can use `AdaSTEMClassifier` as the classifier of the hurdle model, and `AdaSTEMRegressor` as the regressor of the hurdle model. 
 
-In the first case, the classifier and regressor "talk" to each other in each separate stixel (hereafter, "hurdle in Ada"); In the second case, the classifiers and regressors form two "unions" separately, and these two unions only "talk" to each other at the final combination, instead of in each stixel (hereafter, "Ada in hurdle"). In [Johnston (2015)](https://esajournals.onlinelibrary.wiley.com/doi/full/10.1890/14-1826.1) the first method was used. See section [[Hurdle in AdaSTEM or AdaSTEM in hurdle?]](https://chenyangkang.github.io/stemflow/Examples/05.Hurdle_in_ada_or_ada_in_hurdle.html) for further comparisons.
+In the first case, the classifier and regressor "talk" to each other in each separate stixel (hereafter, "hurdle in Ada"); In the second case, the classifiers and regressors form two "unions" separately, and these two unions only "talk" to each other at the final combination, instead of in each stixel (hereafter, "Ada in hurdle"). In [Johnston (2015)](https://esajournals.onlinelibrary.wiley.com/doi/full/10.1890/14-1826.1) the first method was used. See section "[Hurdle in AdaSTEM or AdaSTEM in hurdle?](https://chenyangkang.github.io/stemflow/Examples/05.Hurdle_in_ada_or_ada_in_hurdle.html)" for further comparisons.
 
 ## Choosing the gird size
-User can define the size of the stixels (spatial temporal grids) in terms of space and time. Larger stixel promotes generalizability but loses precision in fine resolution; Smaller stixel may have better predictability in the exact area but reduced ability of extrapolation for points outside the stixel. See section [Optimizing Stixel Size](https://chenyangkang.github.io/stemflow/Examples/07.Optimizing_Stixel_Size.html) for discussion about selection gridding parameters.
+User can define the size of the stixels (spatial temporal grids) in terms of space and time. Larger stixel promotes generalizability but loses precision in fine resolution; Smaller stixel may have better predictability in the exact area but reduced ability of extrapolation for points outside the stixel. See section [Optimizing Stixel Size](https://chenyangkang.github.io/stemflow/Examples/07.Optimizing_Stixel_Size.html) for discussion about selecting gridding parameters.
 
 ## A simple demo
 In the demo, we first split the training data using temporal sliding windows with size of 50 day of year (DOY) and step of 20 DOY (`temporal_start = 1`, `temporal_end=366`, `temporal_step=20`, `temporal_bin_interval=50`). For each temporal slice, a spatial gridding is applied, where we force the stixel to be split into smaller 1/4 pieces if the edge is larger than 25 units (measured in longitude and latitude, `grid_len_lon_upper_threshold=25`, `grid_len_lat_upper_threshold=25`), and stop splitting to prevent the edge length being chunked below 5 units (`grid_len_lon_lower_threshold=5`, `grid_len_lat_lower_threshold=5`) or containing less than 50 checklists (`points_lower_threshold=50`).  Model fitting is run using 1 core (`njobs=1`).
@@ -80,7 +90,7 @@ print(eval_metrics)
 
 Where the `pred` is the mean of the predicted values across ensembles.
 
-See [AdaSTEM demo](https://chenyangkang.github.io/stemflow/Examples/01.AdaSTEM_demo.html) for further functionality.
+See [AdaSTEM demo](https://chenyangkang.github.io/stemflow/Examples/01.AdaSTEM_demo.html) for further functionality and demonstration.
 
 -----
 References:
