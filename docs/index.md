@@ -83,7 +83,7 @@ For details and tips see [Tips for data types](https://chenyangkang.github.io/st
 
 ### Supported tasks
 
-:white_check_mark: Classification task<br>
+:white_check_mark: Binary classification task<br>
 :white_check_mark: Regression task<br>
 :white_check_mark: Hurdle task (two step regression – classify then regress the non-zero part)<br>
 
