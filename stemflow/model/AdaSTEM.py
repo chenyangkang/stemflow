@@ -575,19 +575,19 @@ class AdaSTEM(BaseEstimator):
 
         for ensemble in list(self.ensemble_df.ensemble_index.unique()):
             this_ensemble = self.ensemble_df[self.ensemble_df.ensemble_index == ensemble]
-            this_ensemble["stixel_calibration_point_transformed_left_bound"] = [
+            this_ensemble.loc[:, "stixel_calibration_point_transformed_left_bound"] = [
                 i[0] for i in this_ensemble["stixel_calibration_point(transformed)"]
             ]
 
-            this_ensemble["stixel_calibration_point_transformed_lower_bound"] = [
+            this_ensemble.loc[:, "stixel_calibration_point_transformed_lower_bound"] = [
                 i[1] for i in this_ensemble["stixel_calibration_point(transformed)"]
             ]
 
-            this_ensemble["stixel_calibration_point_transformed_right_bound"] = (
+            this_ensemble.loc[:, "stixel_calibration_point_transformed_right_bound"] = (
                 this_ensemble["stixel_calibration_point_transformed_left_bound"] + this_ensemble["stixel_width"]
             )
 
-            this_ensemble["stixel_calibration_point_transformed_upper_bound"] = (
+            this_ensemble.loc[:, "stixel_calibration_point_transformed_upper_bound"] = (
                 this_ensemble["stixel_calibration_point_transformed_lower_bound"] + this_ensemble["stixel_height"]
             )
 
@@ -625,7 +625,7 @@ class AdaSTEM(BaseEstimator):
                     sub_temp_ensemble = this_ensemble[this_ensemble[f"{self.Temporal1}_start"] == temp_bin_start]
                     sub_temp_X_test_copy = X_test_copy[
                         (X_test_copy[self.Temporal1] >= sub_temp_ensemble[f"{self.Temporal1}_start"].values[0])
-                        & (X_test_copy[self.Temporal1] <= sub_temp_ensemble[f"{self.Temporal1}_end"].values[0])
+                        & (X_test_copy[self.Temporal1] < sub_temp_ensemble[f"{self.Temporal1}_end"].values[0])
                     ]
 
                     for index, stixel in sub_temp_ensemble.iterrows():
@@ -1018,7 +1018,7 @@ class AdaSTEM(BaseEstimator):
             njobs = self.njobs
 
         #
-        if not (Sample_ST_df is None):
+        if Sample_ST_df is not None:
             for var_name in [self.Spatio1, self.Spatio2, self.Temporal1]:
                 if var_name not in Sample_ST_df.columns:
                     raise KeyError(f"{var_name} not found in Sample_ST_df.columns")
