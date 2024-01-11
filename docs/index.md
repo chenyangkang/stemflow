@@ -41,7 +41,7 @@ conda install -c conda-forge stemflow
 -----
 
 ## Brief introduction :information_source:
-**stemflow** is a toolkit for Adaptive Spatio-Temporal Exploratory Model (AdaSTEM \[[1](https://ojs.aaai.org/index.php/AAAI/article/view/8484), [2](https://esajournals.onlinelibrary.wiley.com/doi/full/10.1002/eap.2056)\]) in python. A typical usage is daily abundance estimation using [eBird](https://ebird.org/home) citizen science data (survey data). 
+**stemflow** is a toolkit for Adaptive Spatio-Temporal Exploratory Model (AdaSTEM \[[1](https://ojs.aaai.org/index.php/AAAI/article/view/8484), [2](https://esajournals.onlinelibrary.wiley.com/doi/full/10.1002/eap.2056)\]) in Python. A typical usage is daily abundance estimation using [eBird](https://ebird.org/home) citizen science data (survey data). 
 
 **stemflow** adopts ["split-apply-combine"](https://vita.had.co.nz/papers/plyr.pdf) philosophy. It 
 
@@ -58,8 +58,19 @@ For more information, please see [an introduction to stemflow](https://chenyangk
 
 ## Model and data  :slot_machine:
 
+| Main functionality of `stemflow` | Supported data types | Supported tasks | Supported base models |
+| -- | -- | -- | -- |
+| :white_check_mark: Spatiotemporal modeling & prediction<br> | :white_check_mark: All spatial indexing (CRS)<br> | :white_check_mark: Binary classification task<br> | :white_check_mark: sklearn style `BaseEstimator` classes ([you can make your own base model](https://scikit-learn.org/stable/developers/develop.html)), for example [here](https://chenyangkang.github.io/stemflow/Examples/06.Base_model_choices.html)<br> |
+| :white_check_mark: Calculate overall feature importances<br> | :white_check_mark: All temporal indexing<br> | :white_check_mark: Regression task<br> | :white_check_mark: sklearn style Maxent model. [Example here](https://chenyangkang.github.io/stemflow/Examples/03.Binding_with_Maxent.html). |
+| :white_check_mark: Plot spatiotemporal dynamics<br> | :white_check_mark: Spatial-only modeling<br> | :white_check_mark: Hurdle task (two step regression – classify then regress the non-zero part)<br> | |
+| | :white_check_mark: Both continuous and categorical features (prefer one-hot encoding)<br> | | |
+| | :white_check_mark: Both static (e.g., yearly mean temperature) and dynamic features (e.g., daily temperature) | | |
+| For details see [AdaSTEM Demo](https://chenyangkang.github.io/stemflow/Examples/01.AdaSTEM_demo.html) | For details and tips see [Tips for data types](https://chenyangkang.github.io/stemflow/Tips/Tips_for_data_types.html) | For details and tips see [Tips for different tasks](https://chenyangkang.github.io/stemflow/Tips/Tips_for_different_tasks.html) |
 
-### Main functionality of `stemflow`
+<!-- For details see [AdaSTEM Demo](https://chenyangkang.github.io/stemflow/Examples/01.AdaSTEM_demo.html) -->
+
+
+<!-- ### Main functionality of `stemflow`
 
 :white_check_mark: Spatiotemporal modeling & prediction<br>
 :white_check_mark: Calculate overall feature importances<br>
@@ -79,9 +90,9 @@ For details see [AdaSTEM Demo](https://chenyangkang.github.io/stemflow/Examples/
 
 For details and tips see [Tips for data types](https://chenyangkang.github.io/stemflow/Tips/Tips_for_data_types.html)
 
----
+--- -->
 
-### Supported tasks
+<!-- ### Supported tasks
 
 :white_check_mark: Binary classification task<br>
 :white_check_mark: Regression task<br>
@@ -96,7 +107,7 @@ For details and tips see [Tips for different tasks](https://chenyangkang.github.
 :white_check_mark: sklearn style `BaseEstimator` classes ([you can make your own base model](https://scikit-learn.org/stable/developers/develop.html)), for example [here](https://chenyangkang.github.io/stemflow/Examples/06.Base_model_choices.html)<br>
 :white_check_mark: sklearn style Maxent model. [Example here](https://chenyangkang.github.io/stemflow/Examples/03.Binding_with_Maxent.html).
 
------
+----- -->
 
 ## Usage :star:
 
