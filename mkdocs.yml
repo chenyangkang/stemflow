@@ -81,7 +81,7 @@ nav:
     # - Examples/04.Prediction_visualization.ipynb
     - Examples/05.Hurdle_in_ada_or_ada_in_hurdle.ipynb
     - Examples/06.Base_model_choices.ipynb
-    - Examples/07.Optimizing_Stixel_Size.ipynb
+    - Examples/07.Optimizing_stixel_size.ipynb
   - Tips:
     - 'Tips for data types': Tips/Tips_for_data_types.md
     - 'Tips for different tasks': Tips/Tips_for_different_tasks.md
