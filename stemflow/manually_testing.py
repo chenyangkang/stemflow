@@ -181,6 +181,7 @@ def run_mini_test(
 
     fold_ = int(5 * (1 / speed_up_times))
     min_req = min([1, int(fold_ * 0.7)])
+    print(f"Fold: {fold_}, min_req: {min_req}")
 
     model = AdaSTEMRegressor(
         base_model=Hurdle(
@@ -381,7 +382,7 @@ def run_mini_test(
 
     print("Finish!")
     if show:
-        return model.gridding_plot
+        return model
 
 
 # run_mini_test(delet_tmp_files=False, speed_up_times=2)

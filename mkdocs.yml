@@ -78,7 +78,7 @@ nav:
     - Examples/01.AdaSTEM_demo.ipynb
     - Examples/02.AdaSTEM_learning_curve_analysis.ipynb
     - Examples/03.Binding_with_Maxent.ipynb
-    - Examples/04.Prediction_visualization.ipynb
+    # - Examples/04.Prediction_visualization.ipynb
     - Examples/05.Hurdle_in_ada_or_ada_in_hurdle.ipynb
     - Examples/06.Base_model_choices.ipynb
     - Examples/07.Optimizing_Stixel_Size.ipynb
