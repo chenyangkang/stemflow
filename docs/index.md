@@ -161,7 +161,7 @@ print(eval_metrics)
 Where the `pred` is the mean of the predicted values across ensembles.
 
 See [AdaSTEM demo](https://chenyangkang.github.io/stemflow/Examples/01.AdaSTEM_demo.html) for further functionality.<br>
-See [Optimizing Stixel Size](https://chenyangkang.github.io/stemflow/Examples/07.Optimizing_Stixel_Size.html) for why and how you should tune the important gridding parameters.
+See [Optimizing stixel size](https://chenyangkang.github.io/stemflow/Examples/07.Optimizing_stixel_size.html) for why and how you should tune the important gridding parameters.
 
 -----
 
