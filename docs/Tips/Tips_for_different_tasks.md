@@ -155,7 +155,7 @@ model = AdaSTEMRegressor(
 
 This is a common practice in most paper I've seen, including reference [1-3].
 
-However, AdaSTEM model could also be used as regressor or classifier is needed:
+However, AdaSTEM model could also be used as regressor or classifier if needed:
 
 ```python
 model_Ada_in_Hurdle = Hurdle_for_AdaSTEM(

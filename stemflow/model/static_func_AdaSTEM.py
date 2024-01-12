@@ -144,19 +144,19 @@ def assign_points_to_one_ensemble(
         A DataFrame containing the aggregated feature importance
     """
     this_ensemble = ensemble_df[ensemble_df.ensemble_index == ensemble]
-    this_ensemble["stixel_calibration_point_transformed_left_bound"] = [
+    this_ensemble.loc[:, "stixel_calibration_point_transformed_left_bound"] = [
         i[0] for i in this_ensemble["stixel_calibration_point(transformed)"]
     ]
 
-    this_ensemble["stixel_calibration_point_transformed_lower_bound"] = [
+    this_ensemble.loc[:, "stixel_calibration_point_transformed_lower_bound"] = [
         i[1] for i in this_ensemble["stixel_calibration_point(transformed)"]
     ]
 
-    this_ensemble["stixel_calibration_point_transformed_right_bound"] = (
+    this_ensemble.loc[:, "stixel_calibration_point_transformed_right_bound"] = (
         this_ensemble["stixel_calibration_point_transformed_left_bound"] + this_ensemble["stixel_width"]
     )
 
-    this_ensemble["stixel_calibration_point_transformed_upper_bound"] = (
+    this_ensemble.loc[:, "stixel_calibration_point_transformed_upper_bound"] = (
         this_ensemble["stixel_calibration_point_transformed_lower_bound"] + this_ensemble["stixel_height"]
     )
 
@@ -168,7 +168,7 @@ def assign_points_to_one_ensemble(
         stixel_index = line["unique_stixel_id"]
         sub_Sample_ST_df = Sample_ST_df[
             (Sample_ST_df[Temporal1] >= line[f"{Temporal1}_start"])
-            & (Sample_ST_df[Temporal1] <= line[f"{Temporal1}_end"])
+            & (Sample_ST_df[Temporal1] < line[f"{Temporal1}_end"])
             & (Sample_ST_df[f"{Spatio1}_new"] >= line["stixel_calibration_point_transformed_left_bound"])
             & (Sample_ST_df[f"{Spatio1}_new"] <= line["stixel_calibration_point_transformed_right_bound"])
             & (Sample_ST_df[f"{Spatio2}_new"] >= line["stixel_calibration_point_transformed_lower_bound"])
