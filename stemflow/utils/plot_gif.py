@@ -81,6 +81,8 @@ def make_sample_gif(
             dpi of the GIF.
         fps:
             speed of GIF playing (frames per second).
+        cmap:
+            color map
 
     """
     #
