@@ -41,16 +41,16 @@ conda install -c conda-forge stemflow
 -----
 
 ## Brief introduction :information_source:
-**stemflow** is a toolkit for Adaptive Spatio-Temporal Exploratory Model (AdaSTEM \[[1](https://ojs.aaai.org/index.php/AAAI/article/view/8484), [2](https://esajournals.onlinelibrary.wiley.com/doi/full/10.1002/eap.2056)\]) in Python. A typical usage is daily abundance estimation using [eBird](https://ebird.org/home) citizen science data (survey data). 
+**stemflow** is a toolkit for Adaptive Spatio-Temporal Exploratory Model (AdaSTEM \[[1](https://ojs.aaai.org/index.php/AAAI/article/view/8484), [2](https://esajournals.onlinelibrary.wiley.com/doi/full/10.1002/eap.2056)\]) in Python. Typical usage is daily abundance estimation using [eBird](https://ebird.org/home) citizen science data (survey data). 
 
 **stemflow** adopts ["split-apply-combine"](https://vita.had.co.nz/papers/plyr.pdf) philosophy. It 
 
 1. Splits input data using [Quadtree algorithm](https://en.wikipedia.org/wiki/Quadtree#:~:text=A%20quadtree%20is%20a%20tree,into%20four%20quadrants%20or%20regions.).
 1. Trains each spatiotemporal split (called stixel) separately.
-1. Aggregates the ensemble to make prediction.
+1. Aggregates the ensemble to make the prediction.
 
 
-The framework leverages the "adjacency" information of surroundings in space and time to model/predict the values of target spatiotemporal points. This framework ameliorates the **long-distance/long-range prediction problem** [[3](https://esajournals.onlinelibrary.wiley.com/doi/abs/10.1890/09-1340.1)], and have a good spatiotemporal smoothing effect.
+The framework leverages the "adjacency" information of surroundings in space and time to model/predict the values of target spatiotemporal points. This framework ameliorates the **long-distance/long-range prediction problem** [[3](https://esajournals.onlinelibrary.wiley.com/doi/abs/10.1890/09-1340.1)], and has a good spatiotemporal smoothing effect.
 
 For more information, please see [an introduction to stemflow](https://chenyangkang.github.io/stemflow/A_brief_introduction/A_brief_introduction.html) and [learning curve analysis](https://chenyangkang.github.io/stemflow/Examples/02.AdaSTEM_learning_curve_analysis.html)
 
@@ -65,7 +65,7 @@ For more information, please see [an introduction to stemflow](https://chenyangk
 | :white_check_mark: Plot spatiotemporal dynamics<br> | :white_check_mark: Spatial-only modeling<br> | :white_check_mark: Hurdle task (two step regression – classify then regress the non-zero part)<br> | |
 | | :white_check_mark: Both continuous and categorical features (prefer one-hot encoding)<br> | | |
 | | :white_check_mark: Both static (e.g., yearly mean temperature) and dynamic features (e.g., daily temperature) | | |
-| For details see [AdaSTEM Demo](https://chenyangkang.github.io/stemflow/Examples/01.AdaSTEM_demo.html) | For details and tips see [Tips for data types](https://chenyangkang.github.io/stemflow/Tips/Tips_for_data_types.html) | For details and tips see [Tips for different tasks](https://chenyangkang.github.io/stemflow/Tips/Tips_for_different_tasks.html) |
+| For details see [AdaSTEM Demo](https://chenyangkang.github.io/stemflow/Examples/01.AdaSTEM_demo.html) | For details and tips see [Tips for data types](https://chenyangkang.github.io/stemflow/Tips/Tips_for_data_types.html) | For details and tips see [Tips for different tasks](https://chenyangkang.github.io/stemflow/Tips/Tips_for_different_tasks.html) | For details see [Base model choices](https://chenyangkang.github.io/stemflow/Examples/06.Base_model_choices.html)|
 
 <!-- For details see [AdaSTEM Demo](https://chenyangkang.github.io/stemflow/Examples/01.AdaSTEM_demo.html) -->
 
@@ -192,7 +192,7 @@ See section [AdaSTEM demo](https://chenyangkang.github.io/stemflow/Examples/01.A
 
 We welcome pull requests. Contributors should follow [contributor guidelines](https://github.com/chenyangkang/stemflow/blob/main/docs/CONTRIBUTING.md).
 
-Application level cooperation is also welcomed. We recognized that stemflow may consume large computational resources especially as data volume boosts in the future. We always welcome research collaboration of all kinds. Contact me at chenyangkang24@outlook.com
+Application-level cooperation is also welcomed. We recognized that stemflow may consume large computational resources especially as data volume boosts in the future. We always welcome research collaboration of all kinds. Contact me at chenyangkang24@outlook.com
 
 
 -----
