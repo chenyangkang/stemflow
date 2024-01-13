@@ -65,7 +65,7 @@ For more information, please see [an introduction to stemflow](https://chenyangk
 | :white_check_mark: Plot spatiotemporal dynamics<br> | :white_check_mark: Spatial-only modeling<br> | :white_check_mark: Hurdle task (two step regression – classify then regress the non-zero part)<br> | |
 | | :white_check_mark: Both continuous and categorical features (prefer one-hot encoding)<br> | | |
 | | :white_check_mark: Both static (e.g., yearly mean temperature) and dynamic features (e.g., daily temperature) | | |
-| For details see [AdaSTEM Demo](https://chenyangkang.github.io/stemflow/Examples/01.AdaSTEM_demo.html) | For details and tips see [Tips for data types](https://chenyangkang.github.io/stemflow/Tips/Tips_for_data_types.html) | For details and tips see [Tips for different tasks](https://chenyangkang.github.io/stemflow/Tips/Tips_for_different_tasks.html) |
+| For details see [AdaSTEM Demo](https://chenyangkang.github.io/stemflow/Examples/01.AdaSTEM_demo.html) | For details and tips see [Tips for data types](https://chenyangkang.github.io/stemflow/Tips/Tips_for_data_types.html) | For details and tips see [Tips for different tasks](https://chenyangkang.github.io/stemflow/Tips/Tips_for_different_tasks.html) | For details see [Base model choices](https://chenyangkang.github.io/stemflow/Examples/06.Base_model_choices.html)|
 
 <!-- For details see [AdaSTEM Demo](https://chenyangkang.github.io/stemflow/Examples/01.AdaSTEM_demo.html) -->
 
