@@ -84,7 +84,7 @@ class AdaSTEM(BaseEstimator):
         plot_ylims: Tuple[Union[float, int], Union[float, int]] = (-90, 90),
         verbosity: int = 0,
     ):
-        """Make a AdaSTEM object
+        """Make an AdaSTEM object
 
         Args:
             base_model:
