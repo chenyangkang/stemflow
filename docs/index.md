@@ -123,23 +123,21 @@ model = AdaSTEMRegressor(
     base_model=Hurdle(
         classifier=XGBClassifier(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1),
         regressor=XGBRegressor(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1)
-    ),                                            # hurdel model for zero-inflated problem (e.g., count)
+    ),                                      # hurdel model for zero-inflated problem (e.g., count)
     save_gridding_plot = True,
-    ensemble_fold=10,                             # data are modeled 10 times, each time with jitter and rotation in Quadtree algo
-    min_ensemble_required=7,                      # Only points covered by > 7 stixels will be predicted
-    grid_len_lon_upper_threshold=25,              # force splitting if the longitudinal edge of grid exceeds 25
-    grid_len_lon_lower_threshold=5,               # stop splitting if the longitudinal edge of grid fall short 5
-    grid_len_lat_upper_threshold=25,              # similar to the previous one, but latitudinal
-    grid_len_lat_lower_threshold=5,               
-    temporal_start=1,                           # The next 4 params define the temporal sliding window
+    ensemble_fold=10,                       # data are modeled 10 times, each time with jitter and rotation in Quadtree algo
+    min_ensemble_required=7,                # Only points covered by > 7 stixels will be predicted
+    grid_len_upper_threshold=25,            # force splitting if the grid length exceeds 25
+    grid_len_lower_threshold=5,             # stop splitting if the grid length fall short 5         
+    temporal_start=1,                       # The next 4 params define the temporal sliding window
     temporal_end=366,                            
-    temporal_step=20,
-    temporal_bin_interval=50,
-    points_lower_threshold=50,                    # Only stixels with more than 50 samples are trained
-    Spatio1='longitude',                          # The next three params define the name of 
-    Spatio2='latitude',                         # spatial coordinates shown in the dataframe
+    temporal_step=20,                       # The window takes steps of 20 DOY (see AdaSTEM demo for details)
+    temporal_bin_interval=50,               # Each window will contain data of 50 DOY
+    points_lower_threshold=50,              # Only stixels with more than 50 samples are trained and used for prediction
+    Spatio1='longitude',                    # The next three params define the name of 
+    Spatio2='latitude',                     # spatial coordinates shown in the dataframe
     Temporal1='DOY',
-    use_temporal_to_train=True,                   # In each stixel, whether 'DOY' should be a predictor
+    use_temporal_to_train=True,             # In each stixel, whether 'DOY' should be a predictor
     njobs=1
 )
 ```
