@@ -88,10 +88,15 @@ nav:
   - API Documentation:
     - stemflow.model:
       - 'AdaSTEM': API_Documentation/stemflow.model.AdaSTEM.md
+      - 'STEM': API_Documentation/stemflow.STEM.md
       - 'static_func_AdaSTEM': API_Documentation/stemflow.model.static_func_AdaSTEM.md
       - 'Hurdle': API_Documentation/stemflow.model.Hurdle.md
       - 'dummy_model': API_Documentation/stemflow.model.dummy_model.md
       - 'special_hurdle': API_Documentation/stemflow.model.special_hurdle.md
+    - stemflow.gridding:
+      - 'Q_blocks': API_Documentation/stemflow.model.Q_blocks.md
+      - 'QTree': API_Documentation/stemflow.model.QTree.md
+      - 'QuadGrid': API_Documentation/stemflow.model.QuadGrid.md
     - stemflow.utils:
       - 'quadtree': API_Documentation/stemflow.utils.quadtree.md
       - 'plot_gif': API_Documentation/stemflow.utils.plot_gif.md

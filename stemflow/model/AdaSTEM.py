@@ -58,10 +58,8 @@ class AdaSTEM(BaseEstimator):
         task: str = "hurdle",
         ensemble_fold: int = 10,
         min_ensemble_required: int = 7,
-        grid_len_lon_upper_threshold: Union[float, int] = 25,
-        grid_len_lon_lower_threshold: Union[float, int] = 5,
-        grid_len_lat_upper_threshold: Union[float, int] = 25,
-        grid_len_lat_lower_threshold: Union[float, int] = 5,
+        grid_len_upper_threshold: Union[float, int] = 25,
+        grid_len_lower_threshold: Union[float, int] = 5,
         points_lower_threshold: int = 50,
         stixel_training_size_threshold: int = None,
         temporal_start: Union[float, int] = 1,
@@ -86,7 +84,7 @@ class AdaSTEM(BaseEstimator):
         plot_ylims: Tuple[Union[float, int], Union[float, int]] = (-90, 90),
         verbosity: int = 0,
     ):
-        """Make a AdaSTEM object
+        """Make an AdaSTEM object
 
         Args:
             base_model:
@@ -99,17 +97,13 @@ class AdaSTEM(BaseEstimator):
                 Only points with more than this number of model ensembles available are predicted.
                 In the training phase, if stixels contain less than `points_lower_threshold` of data records,
                 the results are set to np.nan, making them `unpredictable`. Defaults to 7.
-            grid_len_lon_upper_threshold:
-                force divide if grid longitude larger than the threshold. Defaults to 25.
-            grid_len_lon_lower_threshold:
-                stop divide if grid longitude **will** be below than the threshold. Defaults to 5.
-            grid_len_lat_upper_threshold:
-                force divide if grid latitude larger than the threshold. Defaults to 25.
-            grid_len_lat_lower_threshold:
-                stop divide if grid latitude **will** be below than the threshold. Defaults to 5.
+            grid_len_upper_threshold:
+                force divide if grid length larger than the threshold. Defaults to 25.
+            grid_len_lower_threshold:
+                stop divide if grid length **will** be below than the threshold. Defaults to 5.
             points_lower_threshold:
                 Do not further split the gird if split results in less samples than this threshold.
-                Overrided by grid_len_*_upper_threshold parameters. Defaults to 50.
+                Overriden by grid_len_*_upper_threshold parameters. Defaults to 50.
             stixel_training_size_threshold:
                 Do not train the model if the available data records for this stixel is less than this threshold,
                 and directly set the value to np.nan. Defaults to 50.
@@ -215,10 +209,14 @@ class AdaSTEM(BaseEstimator):
 
         self.ensemble_fold = ensemble_fold
         self.min_ensemble_required = min_ensemble_required
-        self.grid_len_lon_upper_threshold = grid_len_lon_upper_threshold
-        self.grid_len_lon_lower_threshold = grid_len_lon_lower_threshold
-        self.grid_len_lat_upper_threshold = grid_len_lat_upper_threshold
-        self.grid_len_lat_lower_threshold = grid_len_lat_lower_threshold
+
+        self.grid_len_upper_threshold = (
+            self.grid_len_lon_upper_threshold
+        ) = self.grid_len_lat_upper_threshold = grid_len_upper_threshold
+        self.grid_len_lower_threshold = (
+            self.grid_len_lon_lower_threshold
+        ) = self.grid_len_lat_lower_threshold = grid_len_lower_threshold
+
         self.points_lower_threshold = points_lower_threshold
         self.temporal_start = temporal_start
         self.temporal_end = temporal_end
@@ -253,12 +251,14 @@ class AdaSTEM(BaseEstimator):
         # validate njobs setting
         if not isinstance(njobs, int):
             raise TypeError(f"njobs is not a integer. Got {njobs}.")
+        elif njobs > 1:
+            raise NotImplementedError("Multi-thread processing is not implemented yet.")
 
-        my_cpu_count = cpu_count()
-        if njobs > my_cpu_count:
-            raise ValueError(f"Setting of njobs ({njobs}) exceed the maximum ({my_cpu_count}).")
-
-        self.njobs = njobs
+            my_cpu_count = cpu_count()
+            if njobs > my_cpu_count:
+                raise ValueError(f"Setting of njobs ({njobs}) exceed the maximum ({my_cpu_count}).")
+        else:
+            self.njobs = njobs
 
         #
         self.sample_weights_for_classifier = sample_weights_for_classifier
@@ -284,12 +284,21 @@ class AdaSTEM(BaseEstimator):
 
         fold = self.ensemble_fold
         save_path = os.path.join(self.save_dir, "ensemble_quadtree_df.csv") if self.save_tmp else ""
+
+        if "grid_len" not in self.__dir__():
+            # We har using AdaSTEM
+            self.grid_len = None
+        else:
+            # We har using STEM
+            pass
+
         self.ensemble_df, self.gridding_plot = get_ensemble_quadtree(
             X_train[[self.Spatio1, self.Spatio2, self.Temporal1]],
             Spatio1=self.Spatio1,
             Spatio2=self.Spatio2,
             Temporal1=self.Temporal1,
             size=fold,
+            grid_len=self.grid_len,
             grid_len_lon_upper_threshold=self.grid_len_lon_upper_threshold,
             grid_len_lon_lower_threshold=self.grid_len_lon_lower_threshold,
             grid_len_lat_upper_threshold=self.grid_len_lat_upper_threshold,
@@ -661,36 +670,37 @@ class AdaSTEM(BaseEstimator):
 
                         res_list.append(res)
             else:
-                # multi-processing
-                with Pool(njobs) as p:
-                    plain_args_iterator = zip(
-                        repeat(X_test_copy),
-                        repeat(self.Temporal1),
-                        repeat(self.Spatio1),
-                        repeat(self.Spatio2),
-                        this_ensemble[f"{self.Temporal1}_start"],
-                        this_ensemble[f"{self.Temporal1}_end"],
-                        this_ensemble["stixel_calibration_point_transformed_left_bound"],
-                        this_ensemble["stixel_calibration_point_transformed_right_bound"],
-                        this_ensemble["stixel_calibration_point_transformed_lower_bound"],
-                        this_ensemble["stixel_calibration_point_transformed_upper_bound"],
-                        repeat(self.x_names),
-                        repeat(self.task),
-                        [
-                            get_model_and_stixel_specific_x_names(
-                                self.model_dict, ensemble, grid_index, self.stixel_specific_x_names, self.x_names
-                            )
-                            for grid_index in this_ensemble["unique_stixel_id"]
-                        ],
-                    )
-                    if verbosity > 0:
-                        args_iterator = tqdm(
-                            plain_args_iterator, total=len(this_ensemble), desc=f"predicting ensemble {ensemble} "
-                        )
-                    else:
-                        args_iterator = plain_args_iterator
+                # # multi-processing
+                # with Pool(njobs) as p:
+                #     plain_args_iterator = zip(
+                #         repeat(X_test_copy),
+                #         repeat(self.Temporal1),
+                #         repeat(self.Spatio1),
+                #         repeat(self.Spatio2),
+                #         this_ensemble[f"{self.Temporal1}_start"],
+                #         this_ensemble[f"{self.Temporal1}_end"],
+                #         this_ensemble["stixel_calibration_point_transformed_left_bound"],
+                #         this_ensemble["stixel_calibration_point_transformed_right_bound"],
+                #         this_ensemble["stixel_calibration_point_transformed_lower_bound"],
+                #         this_ensemble["stixel_calibration_point_transformed_upper_bound"],
+                #         repeat(self.x_names),
+                #         repeat(self.task),
+                #         [
+                #             get_model_and_stixel_specific_x_names(
+                #                 self.model_dict, ensemble, grid_index, self.stixel_specific_x_names, self.x_names
+                #             )
+                #             for grid_index in this_ensemble["unique_stixel_id"]
+                #         ],
+                #     )
+                #     if verbosity > 0:
+                #         args_iterator = tqdm(
+                #             plain_args_iterator, total=len(this_ensemble), desc=f"predicting ensemble {ensemble} "
+                #         )
+                #     else:
+                #         args_iterator = plain_args_iterator
 
-                    res_list = p.starmap(predict_one_stixel, args_iterator)
+                #     res_list = p.starmap(predict_one_stixel, args_iterator)
+                raise NotImplementedError("Multi-threading for prediction is not implemented yet")
 
             try:
                 res_list = pd.concat(res_list, axis=0)
@@ -1099,7 +1109,28 @@ class AdaSTEM(BaseEstimator):
 
 
 class AdaSTEMClassifier(AdaSTEM):
-    """AdaSTEM model Classifier interface"""
+    """AdaSTEM model Classifier interface
+
+    Example:
+        ```
+        >>> from stemflow.model.AdaSTEM import AdaSTEMClassifier
+        >>> from xgboost import XGBClassifier
+        >>> model = AdaSTEMClassifier(base_model=XGBClassifier(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1),
+                                save_gridding_plot = True,
+                                ensemble_fold=10,
+                                min_ensemble_required=7,
+                                grid_len_upper_threshold=25,
+                                grid_len_lower_threshold=5,
+                                points_lower_threshold=50,
+                                Spatio1='longitude',
+                                Spatio2 = 'latitude',
+                                Temporal1 = 'DOY',
+                                use_temporal_to_train=True)
+        >>> model.fit(X_train, y_train)
+        >>> pred = model.predict(X_test)
+        ```
+
+    """
 
     def __init__(
         self,
@@ -1107,10 +1138,8 @@ class AdaSTEMClassifier(AdaSTEM):
         task="classification",
         ensemble_fold=10,
         min_ensemble_required=7,
-        grid_len_lon_upper_threshold=25,
-        grid_len_lon_lower_threshold=5,
-        grid_len_lat_upper_threshold=25,
-        grid_len_lat_lower_threshold=5,
+        grid_len_upper_threshold=25,
+        grid_len_lower_threshold=5,
         points_lower_threshold=50,
         stixel_training_size_threshold=None,
         temporal_start=1,
@@ -1135,39 +1164,13 @@ class AdaSTEMClassifier(AdaSTEM):
         plot_ylims=(-90, 90),
         verbosity=0,
     ):
-        """
-
-        Example:
-            ```
-            >>> from stemflow.model.AdaSTEM import AdaSTEMClassifier
-            >>> from xgboost import XGBClassifier
-            >>> model = AdaSTEMClassifier(base_model=XGBClassifier(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1),
-                                    save_gridding_plot = True,
-                                    ensemble_fold=10,
-                                    min_ensemble_required=7,
-                                    grid_len_lon_upper_threshold=25,
-                                    grid_len_lon_lower_threshold=5,
-                                    grid_len_lat_upper_threshold=25,
-                                    grid_len_lat_lower_threshold=5,
-                                    points_lower_threshold=50,
-                                    Spatio1='longitude',
-                                    Spatio2 = 'latitude',
-                                    Temporal1 = 'DOY',
-                                    use_temporal_to_train=True)
-            >>> model.fit(X_train, y_train)
-            >>> pred = model.predict(X_test)
-            ```
-
-        """
         super().__init__(
             base_model,
             task,
             ensemble_fold,
             min_ensemble_required,
-            grid_len_lon_upper_threshold,
-            grid_len_lon_lower_threshold,
-            grid_len_lat_upper_threshold,
-            grid_len_lat_lower_threshold,
+            grid_len_upper_threshold,
+            grid_len_lower_threshold,
             points_lower_threshold,
             stixel_training_size_threshold,
             temporal_start,
@@ -1265,7 +1268,28 @@ class AdaSTEMClassifier(AdaSTEM):
 
 
 class AdaSTEMRegressor(AdaSTEM):
-    """AdaSTEM model Regressor interface"""
+    """AdaSTEM model Regressor interface
+
+    Example:
+    ```
+    >>> from stemflow.model.AdaSTEM import AdaSTEMRegressor
+    >>> from xgboost import XGBRegressor
+    >>> model = AdaSTEMRegressor(base_model=XGBRegressor(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1),
+                            save_gridding_plot = True,
+                            ensemble_fold=10,
+                            min_ensemble_required=7,
+                            grid_len_upper_threshold=25,
+                            grid_len_lower_threshold=5,
+                            points_lower_threshold=50,
+                            Spatio1='longitude',
+                            Spatio2 = 'latitude',
+                            Temporal1 = 'DOY',
+                            use_temporal_to_train=True)
+    >>> model.fit(X_train, y_train)
+    >>> pred = model.predict(X_test)
+    ```
+
+    """
 
     def __init__(
         self,
@@ -1273,10 +1297,8 @@ class AdaSTEMRegressor(AdaSTEM):
         task="regression",
         ensemble_fold=10,
         min_ensemble_required=7,
-        grid_len_lon_upper_threshold=25,
-        grid_len_lon_lower_threshold=5,
-        grid_len_lat_upper_threshold=25,
-        grid_len_lat_lower_threshold=5,
+        grid_len_upper_threshold=25,
+        grid_len_lower_threshold=5,
         points_lower_threshold=50,
         stixel_training_size_threshold=None,
         temporal_start=1,
@@ -1301,39 +1323,13 @@ class AdaSTEMRegressor(AdaSTEM):
         plot_ylims=(-90, 90),
         verbosity=0,
     ):
-        """
-
-        Example:
-            ```
-            >>> from stemflow.model.AdaSTEM import AdaSTEMRegressor
-            >>> from xgboost import XGBRegressor
-            >>> model = AdaSTEMRegressor(base_model=XGBRegressor(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1),
-                                    save_gridding_plot = True,
-                                    ensemble_fold=10,
-                                    min_ensemble_required=7,
-                                    grid_len_lon_upper_threshold=25,
-                                    grid_len_lon_lower_threshold=5,
-                                    grid_len_lat_upper_threshold=25,
-                                    grid_len_lat_lower_threshold=5,
-                                    points_lower_threshold=50,
-                                    Spatio1='longitude',
-                                    Spatio2 = 'latitude',
-                                    Temporal1 = 'DOY',
-                                    use_temporal_to_train=True)
-            >>> model.fit(X_train, y_train)
-            >>> pred = model.predict(X_test)
-            ```
-
-        """
         super().__init__(
             base_model,
             task,
             ensemble_fold,
             min_ensemble_required,
-            grid_len_lon_upper_threshold,
-            grid_len_lon_lower_threshold,
-            grid_len_lat_upper_threshold,
-            grid_len_lat_lower_threshold,
+            grid_len_upper_threshold,
+            grid_len_lower_threshold,
             points_lower_threshold,
             stixel_training_size_threshold,
             temporal_start,
