@@ -34,6 +34,8 @@ class Node:
 
 
 class Grid:
+    """Grid class for STEM (fixed gird size)"""
+
     def __init__(self, x_index, y_index, x_range, y_range):
         self.x_index = x_index
         self.y_index = y_index

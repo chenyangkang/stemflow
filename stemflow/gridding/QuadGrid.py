@@ -23,7 +23,7 @@ warnings.filterwarnings("ignore")
 
 
 class QuadGrid:
-    """A QuadTree class"""
+    """A QuadGrid class (fixed gird length binning)"""
 
     def __init__(
         self,

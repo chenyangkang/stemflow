@@ -39,10 +39,8 @@ model = AdaSTEMClassifier(
     save_gridding_plot = True,
     ensemble_fold=10,                      # data are modeled 10 times, each time with jitter and rotation in Quadtree algo
     min_ensemble_required=7,               # Only points covered by > 7 stixels will be predicted
-    grid_len_lon_upper_threshold=1e5,      # force splitting if the longitudinal edge of grid exceeds 1e5 meters
-    grid_len_lon_lower_threshold=1e3,      # stop splitting if the longitudinal edge of grid fall short 1e3 meters
-    grid_len_lat_upper_threshold=1e5,      # similar to the previous one, but latitudinal
-    grid_len_lat_lower_threshold=1e3,               
+    grid_len_upper_threshold=1e5,          # force splitting if the edge of grid exceeds 1e5 meters
+    grid_len_lower_threshold=1e3,          # stop splitting if the edge of grid fall short 1e3 meters             
     temporal_start=1,                      # The next 4 params define the temporal sliding window
     temporal_end=52,                            
     temporal_step=2,
@@ -84,10 +82,8 @@ model = AdaSTEMClassifier(
     save_gridding_plot = True,
     ensemble_fold=10,
     min_ensemble_required=7,
-    grid_len_lon_upper_threshold=1e5,
-    grid_len_lon_lower_threshold=1e3,
-    grid_len_lat_upper_threshold=1e5,
-    grid_len_lat_lower_threshold=1e3,
+    grid_len_upper_threshold=1e5,
+    grid_len_lower_threshold=1e3,
     temporal_start=1,
     temporal_end=52,                            
     temporal_step=1000,                 # Setting step and interval largely outweigh 
@@ -107,7 +103,9 @@ Setting `temporal_step` and `temporal_bin_interval` largely outweigh the tempora
 
 ## Fix the gird size of Quadtree algorithm
 
-By using some tricks we can fix the gird size/edge length:
+There are **two ways** to fix the grid size:
+
+### 1. By using some tricks we can fix the gird size/edge length of AdaSTEM model classes:
 
 ```python
 model = AdaSTEMClassifier(
@@ -115,10 +113,8 @@ model = AdaSTEMClassifier(
     save_gridding_plot = True,
     ensemble_fold=10,
     min_ensemble_required=7,
-    grid_len_lon_upper_threshold=1000,
-    grid_len_lon_lower_threshold=1000,
-    grid_len_lat_upper_threshold=1000,
-    grid_len_lat_lower_threshold=1000,
+    grid_len_upper_threshold=1000,
+    grid_len_lower_threshold=1000,
     temporal_start=1,
     temporal_end=52,                            
     temporal_step=2,                 
@@ -135,6 +131,34 @@ model = AdaSTEMClassifier(
 
 Quadtree will keep splitting until it hits an edge length lower than 1000 meters. Data volume won't hamper this process because the splitting threshold is set to 0 (`points_lower_threshold=0`). Stixels with sample volume less than 50 still won't be trained (`stixel_training_size_threshold=50`). However, we cannot guarantee the exact grid length. It should be somewhere between 500m and 1000m since each time Quadtree do a bifurcated splitting.
 
+###  2. Using `STEM` model classes
+
+We also implemented `STEM` model classes for fixed gridding. Instead of adaptive splitting based on data abundance, `STEM` model classes split the space with fixed grid length:
+
+```python
+from stemflow.model.STEM import STEM, STEMRegressor, STEMClassifier
+
+model = STEMClassifier(
+    base_model=XGBClassifier(tree_method='hist',random_state=42, verbosity = 0,n_jobs=1),
+    save_gridding_plot = True,
+    ensemble_fold=10,
+    min_ensemble_required=7,
+    grid_len=1000,
+    temporal_start=1,
+    temporal_end=52,                            
+    temporal_step=2,                 
+    temporal_bin_interval=4,         
+    points_lower_threshold=0, 
+    stixel_training_size_threshold=50,            
+    Spatio1='proj_lng',                   
+    Spatio2='proj_lat',
+    Temporal1='Week',
+    use_temporal_to_train=True,
+    njobs=1
+)
+```
+
+Here, `grid_len` parameter take place the original upper and lower threshold parameters. The main functionality is the same as `AdaSTEM` classes.
 
 ------
 ## Continuous and categorical features
