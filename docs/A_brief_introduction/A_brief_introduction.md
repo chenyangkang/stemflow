@@ -37,7 +37,7 @@ In the first case, the classifier and regressor "talk" to each other in each sep
 User can define the size of the stixels (spatial temporal grids) in terms of space and time. Larger stixel promotes generalizability but loses precision in fine resolution; Smaller stixel may have better predictability in the exact area but reduced ability of extrapolation for points outside the stixel. See section [Optimizing stixel size](https://chenyangkang.github.io/stemflow/Examples/07.Optimizing_stixel_size.html) for discussion about selecting gridding parameters.
 
 ## A simple demo
-In the demo, we first split the training data using temporal sliding windows with a size of 50 day of year (DOY) and step of 20 DOY (`temporal_start = 1`, `temporal_end=366`, `temporal_step=20`, `temporal_bin_interval=50`). For each temporal slice, a spatial gridding is applied, where we force the stixel to be split into smaller 1/4 pieces if the edge is larger than 25 units (measured in longitude and latitude, `grid_len_lon_upper_threshold=25`, `grid_len_lat_upper_threshold=25`), and stop splitting to prevent the edge length being chunked below 5 units (`grid_len_lon_lower_threshold=5`, `grid_len_lat_lower_threshold=5`) or containing less than 50 checklists (`points_lower_threshold=50`).  Model fitting is run using 1 core (`njobs=1`).
+In the demo, we first split the training data using temporal sliding windows with a size of 50 day of year (DOY) and step of 20 DOY (`temporal_start = 1`, `temporal_end=366`, `temporal_step=20`, `temporal_bin_interval=50`). For each temporal slice, a spatial gridding is applied, where we force the stixel to be split into smaller 1/4 pieces if the edge is larger than 25 units (measured in longitude and latitude, `grid_len_upper_threshold=25`), and stop splitting to prevent the edge length being chunked below 5 units (`grid_len_lower_threshold=5`) or containing less than 50 checklists (`points_lower_threshold=50`).  Model fitting is run using 1 core (`njobs=1`).
 
 This process is executed 10 times (`ensemble_fold = 10`), each time with random jitter and random rotation of the gridding, generating 10 ensembles. In the prediction phase, only spatial-temporal points with more than 7 (`min_ensemble_required = 7`) ensembles usable are predicted (otherwise, set as `np.nan`).
 
@@ -57,10 +57,8 @@ model = AdaSTEMRegressor(
     save_gridding_plot = True,
     ensemble_fold=10,                             # data are modeled 10 times, each time with jitter and rotation in Quadtree algo
     min_ensemble_required=7,                      # Only points covered by > 7 stixels will be predicted
-    grid_len_lon_upper_threshold=25,              # force splitting if the longitudinal edge of grid exceeds 25
-    grid_len_lon_lower_threshold=5,               # stop splitting if the longitudinal edge of grid fall short 5
-    grid_len_lat_upper_threshold=25,              # similar to the previous one, but latitudinal
-    grid_len_lat_lower_threshold=5,               
+    grid_len_upper_threshold=25,              # force splitting if the edge of grid exceeds 25
+    grid_len_lower_threshold=5,               # stop splitting if the edge of grid fall short 5           
     temporal_start=1,                           # The next 4 params define the temporal sliding window
     temporal_end=366,                            
     temporal_step=20,
