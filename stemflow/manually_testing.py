@@ -17,45 +17,7 @@ import pandas as pd
 from tqdm.auto import tqdm
 
 
-def run_mini_test(
-    delet_tmp_files: bool = True,
-    show: bool = False,
-    ensemble_models_disk_saver=False,
-    ensemble_models_disk_saving_dir="./",
-    speed_up_times=1,
-    tmp_dir="./stemflow_mini_test",
-):
-    """Run a mini test
-
-    Processes:
-        1. Request data
-        2. ST_train_test_split
-        3. Import stemflow modules
-        4. Declare model instance
-        5. Fitting model
-        6. Calculating feature importances
-        7. Assigning importance to points
-        8. Plotting top 2 important variables
-        9. Calculate the fitting errors
-        10. Predicting on test set
-        11. Evaluation
-        12. Watermark
-        13. Deleting tmp files (optional)
-
-    Args:
-        delet_tmp_files:
-            Whether to delet files after mini test.
-        show:
-            Whether to show the charts in jupyter.
-        ensemble_models_disk_saver:
-            Whether to save ensembles in disk instead of memory.
-        ensemble_models_disk_saving_dir:
-            if ensemble_models_disk_saver == True, where to save the models.
-        speed_up_times:
-            Speed up the mini test. For example, 2 means 2 times speed up.
-    """
-    #
-    print("Start Running Mini-test...")
+def get_data(delet_tmp_files, tmp_dir):
     print("Temporary files will be stored at: ./stemflow_mini_test/")
     if delet_tmp_files:
         print("Temporary files will be deleted.")
@@ -78,23 +40,10 @@ def run_mini_test(
 
     assert os.path.exists(len(data) > 0)
 
-    # %%
-    plt.scatter(data.longitude, data.latitude, s=0.2)
-    plt.savefig(os.path.join(tmp_dir, "data_plot.pdf"))
+    return data
 
-    if show:
-        plt.show()
-    else:
-        plt.close()
 
-    time.sleep(1)
-    assert os.path.exists(os.path.join(tmp_dir, "data_plot.pdf"))
-
-    # %% [markdown]
-    # # Get X and y
-
-    # %%
-
+def get_x_names():
     x_names = [
         "duration_minutes",
         "Traveling",
@@ -141,20 +90,17 @@ def run_mini_test(
         "woody_savannas",
         "entropy",
     ]
+    return x_names
 
-    X = data.drop("count", axis=1)[x_names + ["longitude", "latitude"]]
-    y = data["count"].values
 
-    # %% [markdown]
-    # # First thing first: Spatio-temporal train test split
-
-    # %%
+def get_path():
     import stemflow
 
     isl_path = stemflow.__path__[0]
     print(f"Installation path: {isl_path}")
 
-    #
+
+def ST_train_test_split(X, y):
     print("ST_train_test_split ...")
     from stemflow.model_selection import ST_train_test_split
 
@@ -163,25 +109,43 @@ def run_mini_test(
     )
     print("Done.")
     assert len(X_train) > 0 and len(X_test) > 0 and len(y_train) > 0 and len(y_test) > 0
+    return X_train, X_test, y_train, y_test
 
-    # %% [markdown]
-    # # Train AdaSTEM hurdle model
 
-    # %%
-    print("Importing stemflow modules...")
+def make_AdaSTEM_model1(fold_, min_req, ensemble_models_disk_saver, ensemble_models_disk_saving_dir):
+    from xgboost import XGBClassifier, XGBRegressor
+
+    from stemflow.model.STEM import STEM, STEMClassifier, STEMRegressor
+
+    model = STEMClassifier(
+        base_model=XGBClassifier(tree_method="hist", random_state=42, verbosity=0, n_jobs=1),
+        save_gridding_plot=True,
+        ensemble_fold=fold_,
+        min_ensemble_required=min_req,
+        grid_len=30,
+        temporal_start=1,
+        temporal_end=366,
+        temporal_step=30,
+        temporal_bin_interval=60,
+        points_lower_threshold=30,
+        Spatio1="longitude",
+        Spatio2="latitude",
+        Temporal1="DOY",
+        use_temporal_to_train=True,
+        ensemble_models_disk_saver=ensemble_models_disk_saver,
+        ensemble_models_disk_saving_dir=ensemble_models_disk_saving_dir,
+        njobs=1,
+    )
+
+    assert isinstance(model, STEMClassifier)
+    return model
+
+
+def make_AdaSTEM_model2(fold_, min_req, ensemble_models_disk_saver, ensemble_models_disk_saving_dir):
     from xgboost import XGBClassifier, XGBRegressor
 
     from stemflow.model.AdaSTEM import AdaSTEM, AdaSTEMClassifier, AdaSTEMRegressor
     from stemflow.model.Hurdle import Hurdle, Hurdle_for_AdaSTEM
-
-    print("Done.")
-
-    # %%
-    print("Declaring model instance...")
-
-    fold_ = int(5 * (1 / speed_up_times))
-    min_req = min([1, int(fold_ * 0.7)])
-    print(f"Fold: {fold_}, min_req: {min_req}")
 
     model = AdaSTEMRegressor(
         base_model=Hurdle(
@@ -206,28 +170,120 @@ def run_mini_test(
         ensemble_models_disk_saving_dir=ensemble_models_disk_saving_dir,
         njobs=1,
     )
-
-    print("Done.")
     assert isinstance(model, AdaSTEMRegressor)
+    return model
 
-    # %%
-    print("Fitting model...")
-    model.fit(X_train.reset_index(drop=True), y_train, verbosity=1)
-    assert len(model.model_dict) > 0
+
+def run_mini_test(
+    delet_tmp_files: bool = True,
+    show: bool = False,
+    ensemble_models_disk_saver=False,
+    ensemble_models_disk_saving_dir="./",
+    speed_up_times=1,
+    tmp_dir="./stemflow_mini_test",
+):
+    """Run a mini test
+
+    Processes:
+        1. Request data
+        2. ST_train_test_split
+        3. Import stemflow modules
+        4. Declare model instance
+        5. Fitting model
+        6. Calculating feature importances
+        7. Assigning importance to points
+        8. Plotting top 2 important variables
+        9. Calculate the fitting errors
+        10. Predicting on test set
+        11. Evaluation
+        12. Watermark
+        13. Deleting tmp files (optional)
+
+    Args:
+        delet_tmp_files:
+            Whether to delet files after mini test.
+        show:
+            Whether to show the charts in jupyter.
+        ensemble_models_disk_saver:
+            Whether to save ensembles in disk instead of memory.
+        ensemble_models_disk_saving_dir:
+            if ensemble_models_disk_saver == True, where to save the models.
+        speed_up_times:
+            Speed up the mini test. For example, 2 means 2 times speed up.
+    """
+    #
+    print("Start Running Mini-test...")
+    from xgboost import XGBClassifier, XGBRegressor
+
+    from stemflow.model.AdaSTEM import AdaSTEM, AdaSTEMClassifier, AdaSTEMRegressor
+    from stemflow.model.Hurdle import Hurdle, Hurdle_for_AdaSTEM
+
+    # 1. Get data
+    data = get_data(delet_tmp_files, tmp_dir)
+    plt.scatter(data.longitude, data.latitude, s=0.2)
+    plt.savefig(os.path.join(tmp_dir, "data_plot.pdf"))
+
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
+    time.sleep(1)
+    assert os.path.exists(os.path.join(tmp_dir, "data_plot.pdf"))
+
+    # 2. Get data
+    x_names = get_x_names()
+    X = data.drop("count", axis=1)[x_names + ["longitude", "latitude"]]
+    y = data["count"].values
+
+    # 2.1 check package path
+    get_path()
+
+    # 3. First thing first: Spatio-temporal train test split
+    X_train, X_test, y_train, y_test = ST_train_test_split(X, y)
+
+    # 4 training params
+    fold_ = int(5 * (1 / speed_up_times))
+    min_req = min([1, int(fold_ * 0.7)])
+    print(f"Fold: {fold_}, min_req: {min_req}")
+
+    # 5. Fixed grid_len + AdaSTEMClassifier
+    model1 = make_AdaSTEM_model1(fold_, min_req, ensemble_models_disk_saver, ensemble_models_disk_saving_dir)
+    print("Fitting model 1: STEMClassifier (fixed grid size) ...")
+    model1.fit(X_train.reset_index(drop=True), np.where(y_train > 0, 1, 0), verbosity=1)
+    assert len(model1.model_dict) > 0
     print("Done.")
 
-    # %% [markdown]
-    # # Feature importances
+    if show:
+        try:
+            from IPython.display import display
 
-    # %%
-    # Calcualte feature importance. This method is automatically called when fitting the model.
-    # However, to show the process, we call it again.
+            display(model1.gridding_plot)
+        except ModuleNotFoundError:
+            print("IPython.display module not found. Cannot display the plot.")
+
+    # 6. Adaptive grid + AdaSTEMRegressor + Hurdle
+    model2 = make_AdaSTEM_model2(fold_, min_req, ensemble_models_disk_saver, ensemble_models_disk_saving_dir)
+    print("Fitting model 1: AdaSTEMClassifier (adaptive grid size)...")
+    model2.fit(X_train.reset_index(drop=True), y_train, verbosity=1)
+    assert len(model2.model_dict) > 0
+    print("Done.")
+    if show:
+        try:
+            from IPython.display import display
+
+            display(model2.gridding_plot)
+        except ModuleNotFoundError:
+            print("IPython.display module not found. Cannot display the plot.")
+
+    #
+    model = model2
+
+    # 7. Feature importances
+    # Calcualte feature importance.
     print("Calculating feature importances...")
     model.calculate_feature_importances()
     assert len(model.feature_importances_) > 0
-
-    # print(model.feature_importances_)
-    # stixel-specific feature importance is saved in model.feature_importances_
     print("Done.")
 
     # %%
@@ -236,9 +292,6 @@ def run_mini_test(
     importances_by_points = model.assign_feature_importances_by_points(verbosity=1, njobs=1)
     assert len(importances_by_points) > 0
     print("Done.")
-
-    # %%
-    # importances_by_points.head()
 
     # %%
     # top 10 important variables
@@ -257,35 +310,33 @@ def run_mini_test(
     assert len(top_10_important_vars) > 0
     print(top_10_important_vars)
 
-    # %% [markdown]
-    # ## Ploting the feature importances by variable names
+    # 8. Ploting the feature importances by variable names
 
-    # %%
     from stemflow.utils.plot_gif import make_sample_gif
 
     # make spatio-temporal GIF for top 3 variables
-    print("Plotting top 2 important variables...")
-    for var_ in top_10_important_vars.index[:2]:
-        print(f"Plotting {var_}...")
-        make_sample_gif(
-            importances_by_points,
-            os.path.join(tmp_dir, f"FTR_IPT_{var_}.gif"),
-            col=var_,
-            log_scale=False,
-            Spatio1="longitude",
-            Spatio2="latitude",
-            Temporal1="DOY",
-            figsize=(18, 9),
-            xlims=(data.longitude.min() - 10, data.longitude.max() + 10),
-            ylims=(data.latitude.min() - 10, data.latitude.max() + 10),
-            grid=True,
-            xtick_interval=(data.longitude.max() - data.longitude.min()) / 8,
-            ytick_interval=(data.longitude.max() - data.longitude.min()) / 8,
-            lng_size=360,
-            lat_size=180,
-            dpi=100,
-            fps=10,
-        )
+    print("Plotting top 1 important variables...")
+    var_ = top_10_important_vars.index[0]
+    print(f"Plotting {var_}...")
+    make_sample_gif(
+        importances_by_points,
+        os.path.join(tmp_dir, f"FTR_IPT_{var_}.gif"),
+        col=var_,
+        log_scale=False,
+        Spatio1="longitude",
+        Spatio2="latitude",
+        Temporal1="DOY",
+        figsize=(18, 9),
+        xlims=(data.longitude.min() - 10, data.longitude.max() + 10),
+        ylims=(data.latitude.min() - 10, data.latitude.max() + 10),
+        grid=True,
+        xtick_interval=(data.longitude.max() - data.longitude.min()) / 8,
+        ytick_interval=(data.longitude.max() - data.longitude.min()) / 8,
+        lng_size=360,
+        lat_size=180,
+        dpi=100,
+        fps=10,
+    )
 
     assert os.path.exists(os.path.join(tmp_dir, f"FTR_IPT_{var_}.gif"))
     print("Done.")
@@ -293,10 +344,7 @@ def run_mini_test(
     # %% [markdown]
     # ![GIF of feature importance for variable `slope_mean`](../FTR_IPT_slope_mean.gif)
 
-    # %% [markdown]
-    # ## Plot uncertainty (error) in training
-
-    # %%
+    # 9.Plot uncertainty (error) in training
     # calculate mean and standard deviation in occurrence estimation
     print("Calculating the fitting errors...")
     pred_mean, pred_std = model.predict(X_train.reset_index(drop=True), return_std=True, verbosity=1, njobs=1)
@@ -304,8 +352,7 @@ def run_mini_test(
     assert np.sum(~np.isnan(pred_std)) > 0
     print("Done.")
 
-    # %%
-    # Aggregate error to hexagon
+    # 10.Aggregate error to hexagon
     error_df = X_train[["longitude", "latitude"]]
     error_df.columns = ["lng", "lat"]
     error_df["pred_std"] = pred_std
@@ -326,8 +373,7 @@ def run_mini_test(
     time.sleep(1)
     assert os.path.exists(os.path.join(tmp_dir, "error_plot.pdf"))
 
-    # %% [markdown]
-    # # Evaluation
+    # 11.Evaluation
 
     # %%
     print("Predicting on test set...")
@@ -355,15 +401,7 @@ def run_mini_test(
 
     print("Done.")
 
-    # %% [markdown]
-    # # Plot QuadTree ensembles
-
-    # %%
-
-    if show:
-        model.gridding_plot.show()
-
-    # %%
+    # End
     from watermark import watermark
 
     print(watermark())
@@ -379,8 +417,8 @@ def run_mini_test(
         assert not os.path.exists(tmp_dir)
 
     print("Finish!")
-    if show:
-        return model
+
+    return model
 
 
 # run_mini_test(delet_tmp_files=False, speed_up_times=2)

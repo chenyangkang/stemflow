@@ -11,46 +11,15 @@ import numpy as np
 import pandas
 import pandas as pd
 
-from .generate_soft_colors import generate_soft_color
-from .validation import check_random_state
+from ..utils.generate_soft_colors import generate_soft_color
+from ..utils.validation import check_random_state
+from .Q_blocks import Node, Point
 
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ["OMP_NUM_THREADS"] = "1"
 
 warnings.filterwarnings("ignore")
-
-
-class Point:
-    """A Point class for recording data points"""
-
-    def __init__(self, index, x, y):
-        self.x = x
-        self.y = y
-        self.index = index
-
-
-class Node:
-    """A tree-like division node class"""
-
-    def __init__(
-        self, x0: Union[float, int], y0: Union[float, int], w: Union[float, int], h: Union[float, int], points: Point
-    ):
-        self.x0 = x0
-        self.y0 = y0
-        self.width = w
-        self.height = h
-        self.points = points
-        self.children = []
-
-    def get_width(self):
-        return self.width
-
-    def get_height(self):
-        return self.height
-
-    def get_points(self):
-        return self.points
 
 
 def recursive_subdivide(
