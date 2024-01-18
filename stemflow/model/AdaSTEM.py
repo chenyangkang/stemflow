@@ -103,7 +103,7 @@ class AdaSTEM(BaseEstimator):
                 stop divide if grid length **will** be below than the threshold. Defaults to 5.
             points_lower_threshold:
                 Do not further split the gird if split results in less samples than this threshold.
-                Overrided by grid_len_*_upper_threshold parameters. Defaults to 50.
+                Overriden by grid_len_*_upper_threshold parameters. Defaults to 50.
             stixel_training_size_threshold:
                 Do not train the model if the available data records for this stixel is less than this threshold,
                 and directly set the value to np.nan. Defaults to 50.
@@ -209,12 +209,14 @@ class AdaSTEM(BaseEstimator):
 
         self.ensemble_fold = ensemble_fold
         self.min_ensemble_required = min_ensemble_required
-        self.grid_len_upper_threshold = grid_len_upper_threshold
-        self.grid_len_lower_threshold = grid_len_lower_threshold
-        self.grid_len_lon_upper_threshold = self.grid_len_upper_threshold
-        self.grid_len_lon_lower_threshold = self.grid_len_lower_threshold
-        self.grid_len_lat_upper_threshold = self.grid_len_upper_threshold
-        self.grid_len_lat_lower_threshold = self.grid_len_lower_threshold
+
+        self.grid_len_upper_threshold = (
+            self.grid_len_lon_upper_threshold
+        ) = self.grid_len_lat_upper_threshold = grid_len_upper_threshold
+        self.grid_len_lower_threshold = (
+            self.grid_len_lon_lower_threshold
+        ) = self.grid_len_lat_lower_threshold = grid_len_lower_threshold
+
         self.points_lower_threshold = points_lower_threshold
         self.temporal_start = temporal_start
         self.temporal_end = temporal_end
@@ -249,12 +251,14 @@ class AdaSTEM(BaseEstimator):
         # validate njobs setting
         if not isinstance(njobs, int):
             raise TypeError(f"njobs is not a integer. Got {njobs}.")
+        elif njobs > 1:
+            raise NotImplementedError("Multi-thread processing is not implemented yet.")
 
-        my_cpu_count = cpu_count()
-        if njobs > my_cpu_count:
-            raise ValueError(f"Setting of njobs ({njobs}) exceed the maximum ({my_cpu_count}).")
-
-        self.njobs = njobs
+            my_cpu_count = cpu_count()
+            if njobs > my_cpu_count:
+                raise ValueError(f"Setting of njobs ({njobs}) exceed the maximum ({my_cpu_count}).")
+        else:
+            self.njobs = njobs
 
         #
         self.sample_weights_for_classifier = sample_weights_for_classifier
@@ -280,12 +284,21 @@ class AdaSTEM(BaseEstimator):
 
         fold = self.ensemble_fold
         save_path = os.path.join(self.save_dir, "ensemble_quadtree_df.csv") if self.save_tmp else ""
+
+        if "grid_len" not in self.__dir__():
+            # We har using AdaSTEM
+            self.grid_len = None
+        else:
+            # We har using STEM
+            pass
+
         self.ensemble_df, self.gridding_plot = get_ensemble_quadtree(
             X_train[[self.Spatio1, self.Spatio2, self.Temporal1]],
             Spatio1=self.Spatio1,
             Spatio2=self.Spatio2,
             Temporal1=self.Temporal1,
             size=fold,
+            grid_len=self.grid_len,
             grid_len_lon_upper_threshold=self.grid_len_lon_upper_threshold,
             grid_len_lon_lower_threshold=self.grid_len_lon_lower_threshold,
             grid_len_lat_upper_threshold=self.grid_len_lat_upper_threshold,
@@ -657,36 +670,37 @@ class AdaSTEM(BaseEstimator):
 
                         res_list.append(res)
             else:
-                # multi-processing
-                with Pool(njobs) as p:
-                    plain_args_iterator = zip(
-                        repeat(X_test_copy),
-                        repeat(self.Temporal1),
-                        repeat(self.Spatio1),
-                        repeat(self.Spatio2),
-                        this_ensemble[f"{self.Temporal1}_start"],
-                        this_ensemble[f"{self.Temporal1}_end"],
-                        this_ensemble["stixel_calibration_point_transformed_left_bound"],
-                        this_ensemble["stixel_calibration_point_transformed_right_bound"],
-                        this_ensemble["stixel_calibration_point_transformed_lower_bound"],
-                        this_ensemble["stixel_calibration_point_transformed_upper_bound"],
-                        repeat(self.x_names),
-                        repeat(self.task),
-                        [
-                            get_model_and_stixel_specific_x_names(
-                                self.model_dict, ensemble, grid_index, self.stixel_specific_x_names, self.x_names
-                            )
-                            for grid_index in this_ensemble["unique_stixel_id"]
-                        ],
-                    )
-                    if verbosity > 0:
-                        args_iterator = tqdm(
-                            plain_args_iterator, total=len(this_ensemble), desc=f"predicting ensemble {ensemble} "
-                        )
-                    else:
-                        args_iterator = plain_args_iterator
+                # # multi-processing
+                # with Pool(njobs) as p:
+                #     plain_args_iterator = zip(
+                #         repeat(X_test_copy),
+                #         repeat(self.Temporal1),
+                #         repeat(self.Spatio1),
+                #         repeat(self.Spatio2),
+                #         this_ensemble[f"{self.Temporal1}_start"],
+                #         this_ensemble[f"{self.Temporal1}_end"],
+                #         this_ensemble["stixel_calibration_point_transformed_left_bound"],
+                #         this_ensemble["stixel_calibration_point_transformed_right_bound"],
+                #         this_ensemble["stixel_calibration_point_transformed_lower_bound"],
+                #         this_ensemble["stixel_calibration_point_transformed_upper_bound"],
+                #         repeat(self.x_names),
+                #         repeat(self.task),
+                #         [
+                #             get_model_and_stixel_specific_x_names(
+                #                 self.model_dict, ensemble, grid_index, self.stixel_specific_x_names, self.x_names
+                #             )
+                #             for grid_index in this_ensemble["unique_stixel_id"]
+                #         ],
+                #     )
+                #     if verbosity > 0:
+                #         args_iterator = tqdm(
+                #             plain_args_iterator, total=len(this_ensemble), desc=f"predicting ensemble {ensemble} "
+                #         )
+                #     else:
+                #         args_iterator = plain_args_iterator
 
-                    res_list = p.starmap(predict_one_stixel, args_iterator)
+                #     res_list = p.starmap(predict_one_stixel, args_iterator)
+                raise NotImplementedError("Multi-threading for prediction is not implemented yet")
 
             try:
                 res_list = pd.concat(res_list, axis=0)

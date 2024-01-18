@@ -17,8 +17,8 @@ import pandas
 import pandas as pd
 from tqdm import tqdm
 
-from .QTree import QTree
-from .QuadGrid import QuadGrid
+from ..gridding.QTree import QTree
+from ..gridding.QuadGrid import QuadGrid
 
 # from tqdm.contrib.concurrent import process_map
 # from .generate_soft_colors import generate_soft_color
