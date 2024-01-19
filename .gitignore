@@ -15,3 +15,4 @@ stemflow/__pycache__/*
 *.docx
 */references/*
 .github/workflows/publish-pypi.yml
+**__pycache__**
