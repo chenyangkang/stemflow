@@ -131,8 +131,8 @@ def make_AdaSTEM_model1(fold_, min_req, ensemble_models_disk_saver, ensemble_mod
         Spatio1="longitude",
         Spatio2="latitude",
         Temporal1="DOY",
-        temporal_bin_start_jitter='adaptive',
-        spatio_bin_jitter_magnitude='adaptive',
+        temporal_bin_start_jitter="adaptive",
+        spatio_bin_jitter_magnitude="adaptive",
         use_temporal_to_train=True,
         ensemble_models_disk_saver=ensemble_models_disk_saver,
         ensemble_models_disk_saving_dir=ensemble_models_disk_saving_dir,
@@ -167,8 +167,8 @@ def make_AdaSTEM_model2(fold_, min_req, ensemble_models_disk_saver, ensemble_mod
         Spatio1="longitude",
         Spatio2="latitude",
         Temporal1="DOY",
-        temporal_bin_start_jitter='adaptive',
-        spatio_bin_jitter_magnitude='adaptive',
+        temporal_bin_start_jitter="adaptive",
+        spatio_bin_jitter_magnitude="adaptive",
         use_temporal_to_train=True,
         ensemble_models_disk_saver=ensemble_models_disk_saver,
         ensemble_models_disk_saving_dir=ensemble_models_disk_saving_dir,
@@ -305,7 +305,8 @@ def run_mini_test(
             [
                 i
                 for i in importances_by_points.columns
-                if i not in [model.Temporal1, model.Spatio1, model.Spatio2, f"{model.Spatio1}_new", f"{model.Spatio2}_new"]
+                if i
+                not in [model.Temporal1, model.Spatio1, model.Spatio2, f"{model.Spatio1}_new", f"{model.Spatio2}_new"]
             ]
         ]
         .mean()
@@ -424,8 +425,8 @@ def run_mini_test(
     print("Finish!")
     end_time = time.time()
     time_use = end_time - start_time
-    print(f'Total time use: {time_use}')
-    
+    print(f"Total time use: {time_use}")
+
     return model
 
 

@@ -12,9 +12,9 @@ import pandas
 import pandas as pd
 
 from ..utils.generate_soft_colors import generate_soft_color
+from ..utils.jitterrotation.jitterrotator import JitterRotator
 from ..utils.validation import check_random_state
 from .Q_blocks import QGrid, QNode, QPoint
-from ..utils.jitterrotation.jitterrotator import JitterRotator
 
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
@@ -118,15 +118,17 @@ class QuadGrid:
         Args:
             scatter: Whether add scatterplot of data points
         """
-        
+
         the_color = generate_soft_color()
 
         for grid in self.grids:
-
-            old_x, old_y = JitterRotator.inverse_jitter_rotate([grid.x_range[0]], [grid.y_range[0]], 
-                                                self.rotation_angle,
-                                                self.calibration_point_x_jitter,
-                                                self.calibration_point_y_jitter)
+            old_x, old_y = JitterRotator.inverse_jitter_rotate(
+                [grid.x_range[0]],
+                [grid.y_range[0]],
+                self.rotation_angle,
+                self.calibration_point_x_jitter,
+                self.calibration_point_y_jitter,
+            )
 
             if ax is None:
                 plt.gcf().gca().add_patch(
@@ -150,23 +152,20 @@ class QuadGrid:
                         color=the_color,
                     )
                 )
-        
+
         if scatter:
             old_x, old_y = JitterRotator.inverse_jitter_rotate(
                 [point.x for point in self.points],
                 [point.y for point in self.points],
                 self.rotation_angle,
                 self.calibration_point_x_jitter,
-                self.calibration_point_y_jitter)
-            
+                self.calibration_point_y_jitter,
+            )
+
             if ax is None:
-                plt.scatter(
-                    old_x, old_y, s=0.2, c="tab:blue", alpha=0.7
-                )  # plots the points as red dots
+                plt.scatter(old_x, old_y, s=0.2, c="tab:blue", alpha=0.7)  # plots the points as red dots
             else:
-                ax.scatter(
-                    old_x, old_y, s=0.2, c="tab:blue", alpha=0.7
-                )  # plots the points as red dots
+                ax.scatter(old_x, old_y, s=0.2, c="tab:blue", alpha=0.7)  # plots the points as red dots
 
         return
 

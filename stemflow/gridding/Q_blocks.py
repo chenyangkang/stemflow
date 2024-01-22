@@ -1,6 +1,6 @@
 """I call this Q_blocks because they are essential blocks for QTree methods"""
 
-from typing import Tuple, Union, List
+from typing import List, Tuple, Union
 
 from ..utils.sphere.coordinate_transform import lonlat_spherical_transformer
 from ..utils.sphere.distance import spherical_distance_from_coordinates

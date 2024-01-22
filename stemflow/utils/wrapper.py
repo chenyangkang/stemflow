@@ -1,9 +1,10 @@
-
-from sklearn.base import BaseEstimator
+import warnings
 from typing import Union
+
 import numpy as np
 import pandas as pd
-import warnings
+from sklearn.base import BaseEstimator
+
 
 def _monkey_patched_predict_proba(
     model: BaseEstimator, X_train: Union[pd.core.frame.DataFrame, np.ndarray]
@@ -40,4 +41,3 @@ def model_wrapper(model: BaseEstimator) -> BaseEstimator:
 
         model.predict_proba = _monkey_patched_predict_proba
         return model
-    
