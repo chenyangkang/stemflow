@@ -102,8 +102,9 @@ def check_temporal_bin_start_jitter(temporal_bin_start_jitter):
 
 def check_transform_temporal_bin_start_jitter(temporal_bin_start_jitter, bin_interval):
     check_temporal_bin_start_jitter(temporal_bin_start_jitter)
-    if type(temporal_bin_start_jitter) == str and temporal_bin_start_jitter == "adaptive":
-        jit = np.random.uniform(low=0, high=bin_interval)
+    if isinstance(temporal_bin_start_jitter, str):
+        if temporal_bin_start_jitter == "adaptive":
+            jit = np.random.uniform(low=0, high=bin_interval)
     elif type(temporal_bin_start_jitter) in [int, float]:
         jit = temporal_bin_start_jitter
 
