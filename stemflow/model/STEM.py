@@ -32,8 +32,8 @@ class STEM(AdaSTEM):
         temporal_end: Union[float, int] = 366,
         temporal_step: Union[float, int] = 20,
         temporal_bin_interval: Union[float, int] = 50,
-        temporal_bin_start_jitter: Union[float, int, str] = "random",
-        spatio_bin_jitter_magnitude: Union[float, int] = 100,
+        temporal_bin_start_jitter: Union[float, int, str] = "adaptive",
+        spatio_bin_jitter_magnitude: Union[float, int] = 'adaptive',
         save_gridding_plot: bool = True,
         save_tmp: bool = False,
         save_dir: str = "./",
@@ -81,10 +81,10 @@ class STEM(AdaSTEM):
                 size of the sliding window. Defaults to 50.
             temporal_bin_start_jitter:
                 jitter of the start of the sliding window.
-                If 'random', a random jitter of range (-bin_interval, 0) will be generated
-                for the start. Defaults to 'random'.
+                If 'adaptive', a random jitter of range (-bin_interval, 0) will be generated
+                for the start. Defaults to 'adaptive'.
             spatio_bin_jitter_magnitude:
-                jitter of the spatial gridding. Defaults to 10.
+                jitter of the spatial gridding. Defaults to 'adaptive.
             save_gridding_plot:
                 Whether ot save gridding plots. Defaults to True.
             save_tmp:
@@ -215,8 +215,8 @@ class STEMClassifier(AdaSTEMClassifier):
         temporal_end=366,
         temporal_step=20,
         temporal_bin_interval=50,
-        temporal_bin_start_jitter="random",
-        spatio_bin_jitter_magnitude=100,
+        temporal_bin_start_jitter="adaptive",
+        spatio_bin_jitter_magnitude='adaptive',
         save_gridding_plot=False,
         save_tmp=False,
         save_dir="./",
@@ -304,8 +304,8 @@ class STEMRegressor(AdaSTEMRegressor):
         temporal_end=366,
         temporal_step=20,
         temporal_bin_interval=50,
-        temporal_bin_start_jitter="random",
-        spatio_bin_jitter_magnitude=10,
+        temporal_bin_start_jitter="adaptive",
+        spatio_bin_jitter_magnitude='adaptive',
         save_gridding_plot=False,
         save_tmp=False,
         save_dir="./",
