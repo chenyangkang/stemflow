@@ -1,12 +1,12 @@
 """I call this Q_blocks because they are essential blocks for QTree methods"""
 
-from typing import Tuple, Union
+from typing import Tuple, Union, List
 
 from ..utils.sphere.coordinate_transform import lonlat_spherical_transformer
 from ..utils.sphere.distance import spherical_distance_from_coordinates
 
 
-class Point:
+class QPoint:
     """A Point class for recording data points"""
 
     def __init__(self, index, x, y):
@@ -15,7 +15,7 @@ class Point:
         self.index = index
 
 
-class Node:
+class QNode:
     """A tree-like division node class"""
 
     def __init__(
@@ -24,7 +24,7 @@ class Node:
         y0: Union[float, int],
         w: Union[float, int],
         h: Union[float, int],
-        points: list[Point],
+        points: List[QPoint],
     ):
         self.x0 = x0
         self.y0 = y0
@@ -43,7 +43,7 @@ class Node:
         return self.points
 
 
-class Grid:
+class QGrid:
     """Grid class for STEM (fixed gird size)"""
 
     def __init__(self, x_index, y_index, x_range, y_range):

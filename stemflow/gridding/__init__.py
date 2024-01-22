@@ -1,1 +1,1 @@
-from .Q_blocks import Grid, Node, Point
+from .Q_blocks import QGrid, QNode, QPoint
