@@ -1,5 +1,6 @@
 """I call this Q_blocks because they are essential blocks for QTree methods"""
 
+from collections.abc import Sequence
 from typing import List, Tuple, Union
 
 from ..utils.sphere.coordinate_transform import lonlat_spherical_transformer
@@ -24,7 +25,7 @@ class QNode:
         y0: Union[float, int],
         w: Union[float, int],
         h: Union[float, int],
-        points: List[QPoint],
+        points: Sequence[QPoint],
     ):
         self.x0 = x0
         self.y0 = y0
@@ -76,7 +77,7 @@ class Sphere_Face:
         inclination2: Union[float, int],
         azimuth3: Union[float, int],
         inclination3: Union[float, int],
-        points: list[Sphere_Point],
+        points: Sequence[Sphere_Point],
     ):
         self.x0 = x0
         self.y0 = y0
