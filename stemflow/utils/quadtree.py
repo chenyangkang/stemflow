@@ -19,10 +19,7 @@ from tqdm import tqdm
 
 from ..gridding.QTree import QTree
 from ..gridding.QuadGrid import QuadGrid
-from .validation import (
-    check_transform_spatio_bin_jitter_magnitude,
-    check_transform_temporal_bin_start_jitter
-)
+from .validation import check_transform_spatio_bin_jitter_magnitude, check_transform_temporal_bin_start_jitter
 
 # from tqdm.contrib.concurrent import process_map
 # from .generate_soft_colors import generate_soft_color
@@ -83,7 +80,6 @@ def generate_temporal_bins(
     return bin_list
 
 
-
 def get_ensemble_quadtree(
     data: pandas.core.frame.DataFrame,
     Spatio1: str = "longitude",
@@ -101,7 +97,7 @@ def get_ensemble_quadtree(
     temporal_step: Union[float, int] = 20,
     temporal_bin_interval: Union[float, int] = 50,
     temporal_bin_start_jitter: Union[float, int, str] = "adaptive",
-    spatio_bin_jitter_magnitude: Union[float, int] = 'adaptive',
+    spatio_bin_jitter_magnitude: Union[float, int] = "adaptive",
     save_gridding_plot: bool = True,
     njobs: int = 1,
     verbosity: int = 1,
@@ -170,7 +166,9 @@ def get_ensemble_quadtree(
             2. grid plot. np.nan if save_gridding_plot=False<br>
 
     """
-    spatio_bin_jitter_magnitude = check_transform_spatio_bin_jitter_magnitude(data, Spatio1, Spatio2, spatio_bin_jitter_magnitude)
+    spatio_bin_jitter_magnitude = check_transform_spatio_bin_jitter_magnitude(
+        data, Spatio1, Spatio2, spatio_bin_jitter_magnitude
+    )
 
     ensemble_all_df_list = []
 
@@ -185,7 +183,6 @@ def get_ensemble_quadtree(
             pass
 
     if njobs > 1 and isinstance(njobs, int):
-        
         raise NotImplementedError("Multi-threading for ensemble generation is not implemented yet.")
 
     else:
@@ -277,7 +274,7 @@ def get_ensemble_quadtree(
         ensemble_df["stixel_calibration_point_transformed_lower_bound"] + ensemble_df["stixel_height"]
     )
     ensemble_df = ensemble_df.reset_index(drop=True)
-    
+
     del ensemble_all_df_list
 
     if not save_path == "":

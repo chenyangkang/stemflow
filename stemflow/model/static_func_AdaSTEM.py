@@ -17,8 +17,8 @@ from pandas.core.frame import DataFrame
 from sklearn.base import BaseEstimator
 from sklearn.utils import class_weight
 
-from .dummy_model import dummy_model1
 from ..utils.jitterrotation.jitterrotator import JitterRotator
+from .dummy_model import dummy_model1
 
 # warnings.filterwarnings("ignore")
 
@@ -48,21 +48,21 @@ def train_one_stixel(
     """
 
     if len(stixel_X_train) < stixel_training_size_threshold:  # threshold
-        return (None, [], 'Not_Enough_Data')
+        return (None, [], "Not_Enough_Data")
 
-    sub_y_train = stixel_X_train['true_y']
+    sub_y_train = stixel_X_train["true_y"]
     sub_X_train = stixel_X_train[x_names]
     unique_sub_y_train_binary = np.unique(np.where(sub_y_train > 0, 1, 0))
 
     # nan check
-    nan_count = np.sum(np.isnan(np.array(sub_X_train) ))+ np.sum(np.isnan(sub_y_train))
+    nan_count = np.sum(np.isnan(np.array(sub_X_train))) + np.sum(np.isnan(sub_y_train))
     if nan_count > 0:
-        return (None, [], 'Contain_Nan')
+        return (None, [], "Contain_Nan")
 
     # fit
     if (not task == "regression") and (len(unique_sub_y_train_binary) == 1):
         trained_model = dummy_model1(float(unique_sub_y_train_binary[0]))
-        return (trained_model, [], 'Success')
+        return (trained_model, [], "Success")
     else:
         # Remove the variables that have no variation
         stixel_specific_x_names = x_names.copy()
@@ -74,7 +74,7 @@ def train_one_stixel(
 
         # continue, if no variable left
         if len(stixel_specific_x_names) == 0:
-            return (None, [], 'x_names_length_zero')
+            return (None, [], "x_names_length_zero")
 
         # now we are sure to fit a model
         trained_model = copy.deepcopy(base_model)
@@ -90,7 +90,7 @@ def train_one_stixel(
             except Exception as e:
                 print(e)
                 # raise
-                return (None, [], 'Base_model_fitting_error(non-regression, balanced weight)')
+                return (None, [], "Base_model_fitting_error(non-regression, balanced weight)")
         else:
             try:
                 trained_model.fit(sub_X_train[stixel_specific_x_names], sub_y_train)
@@ -98,11 +98,9 @@ def train_one_stixel(
             except Exception as e:
                 print(e)
                 # raise
-                return (None, [], 'Base_model_fitting_error(regression)')
+                return (None, [], "Base_model_fitting_error(regression)")
 
-    return (trained_model, stixel_specific_x_names, 'Success')
-
-
+    return (trained_model, stixel_specific_x_names, "Success")
 
 
 def assign_points_to_one_ensemble(
@@ -145,8 +143,10 @@ def assign_points_to_one_ensemble(
         this_ensemble["stixel_calibration_point_transformed_lower_bound"] + this_ensemble["stixel_height"]
     )
 
-    Sample_ST_df_ = transform_pred_set_to_STEM_quad(Spatio1, Spatio2, Sample_ST_df.reset_index(drop=True), this_ensemble)
-    
+    Sample_ST_df_ = transform_pred_set_to_STEM_quad(
+        Spatio1, Spatio2, Sample_ST_df.reset_index(drop=True), this_ensemble
+    )
+
     # pred each stixel
     res_list = []
     for index, line in this_ensemble.iterrows():
@@ -213,10 +213,12 @@ def transform_pred_set_to_STEM_quad(
     calibration_point_y_jitter = float(ensemble_info["space_jitter(first rotate by zero then add this)"].iloc[0][1])
 
     X_train_ = X_train.copy()
-    a,b = JitterRotator.rotate_jitter(X_train[Spatio1], X_train[Spatio2], angle, calibration_point_x_jitter, calibration_point_y_jitter)
-    X_train_[f'{Spatio1}_new'] = a
-    X_train_[f'{Spatio2}_new'] = b
-    
+    a, b = JitterRotator.rotate_jitter(
+        X_train[Spatio1], X_train[Spatio2], angle, calibration_point_x_jitter, calibration_point_y_jitter
+    )
+    X_train_[f"{Spatio1}_new"] = a
+    X_train_[f"{Spatio2}_new"] = b
+
     return X_train_
 
 

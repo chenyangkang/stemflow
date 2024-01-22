@@ -32,26 +32,23 @@ from tqdm.auto import tqdm as tqdm_auto
 
 #
 from ..utils.quadtree import get_ensemble_quadtree
-from .dummy_model import dummy_model1
 from ..utils.validation import (
-    check_random_state, 
-    check_X_train, 
-    check_y_train, 
-    check_verbosity,
-    check_spatio_bin_jitter_magnitude,
-    check_temporal_bin_start_jitter,
-    check_task,
-    check_njobs,
     check_base_model,
-    check_X_test,
+    check_njobs,
     check_prediciton_aggregation,
-    check_prediction_return
+    check_prediction_return,
+    check_random_state,
+    check_spatio_bin_jitter_magnitude,
+    check_task,
+    check_temporal_bin_start_jitter,
+    check_verbosity,
+    check_X_test,
+    check_X_train,
+    check_y_train,
 )
-
-from ..utils.wrapper import (
-    model_wrapper
-)
-
+from ..utils.wrapper import model_wrapper
+from .dummy_model import dummy_model1
+from .Hurdle import Hurdle
 from .static_func_AdaSTEM import (  # predict_one_ensemble
     assign_points_to_one_ensemble,
     get_model_and_stixel_specific_x_names,
@@ -60,7 +57,6 @@ from .static_func_AdaSTEM import (  # predict_one_ensemble
     transform_pred_set_to_STEM_quad,
 )
 
-from .Hurdle import Hurdle
 #
 
 
@@ -85,7 +81,7 @@ class AdaSTEM(BaseEstimator):
         temporal_step: Union[float, int] = 20,
         temporal_bin_interval: Union[float, int] = 50,
         temporal_bin_start_jitter: Union[float, int, str] = "adaptive",
-        spatio_bin_jitter_magnitude: Union[float, int] = 'adaptive',
+        spatio_bin_jitter_magnitude: Union[float, int] = "adaptive",
         save_gridding_plot: bool = True,
         save_tmp: bool = False,
         save_dir: str = "./",
@@ -201,14 +197,14 @@ class AdaSTEM(BaseEstimator):
         check_base_model(base_model)
         base_model = model_wrapper(base_model)
         self.base_model = base_model
-        
+
         # 2. Model params
         check_task(task)
         self.task = task
         self.Temporal1 = Temporal1
         self.Spatio1 = Spatio1
         self.Spatio2 = Spatio2
-        
+
         # 3. Gridding params
         self.ensemble_fold = ensemble_fold
         self.min_ensemble_required = min_ensemble_required
@@ -228,7 +224,7 @@ class AdaSTEM(BaseEstimator):
         self.spatio_bin_jitter_magnitude = spatio_bin_jitter_magnitude
         check_temporal_bin_start_jitter(temporal_bin_start_jitter)
         self.temporal_bin_start_jitter = temporal_bin_start_jitter
-        
+
         # 4. Training params
         if stixel_training_size_threshold is None:
             self.stixel_training_size_threshold = points_lower_threshold
@@ -237,24 +233,24 @@ class AdaSTEM(BaseEstimator):
         self.use_temporal_to_train = use_temporal_to_train
         self.subset_x_names = subset_x_names
         self.sample_weights_for_classifier = sample_weights_for_classifier
-        
+
         # 5. Multi-threading params (not implemented yet)
         check_njobs(njobs)
         self.njobs = njobs
-        
+
         # 6. Plotting params
         self.plot_xlims = plot_xlims
         self.plot_ylims = plot_ylims
         self.save_tmp = save_tmp
         self.save_dir = save_dir
         self.save_gridding_plot = save_gridding_plot
-        
+
         # X. miscellaneous
         self.ensemble_models_disk_saver = ensemble_models_disk_saver
         self.ensemble_models_disk_saving_dir = ensemble_models_disk_saving_dir
         if self.ensemble_models_disk_saver:
             self.saving_code = np.random.randint(1, 1e8, 1)
-        
+
         if not verbosity == 0:
             self.verbosity = 1
         else:
@@ -317,10 +313,10 @@ class AdaSTEM(BaseEstimator):
         if not self.use_temporal_to_train:
             if self.Temporal1 in list(self.x_names):
                 del self.x_names[self.x_names.index(self.Temporal1)]
-                
+
         # if 'geometry' in self.x_names:
         #     del self.x_names[self.x_names.index('geometry')]
-            
+
         for i in [self.Spatio1, self.Spatio2]:
             if i in self.x_names:
                 del self.x_names[self.x_names.index(i)]
@@ -329,11 +325,11 @@ class AdaSTEM(BaseEstimator):
         """Fit one stixel
 
         Args:
-            stixel (gpd.geodataframe.GeoDataFrame): data sjoined with ensemble_df. 
+            stixel (gpd.geodataframe.GeoDataFrame): data sjoined with ensemble_df.
             For a single stixel.
         """
 
-        ensemble_index = int(stixel['ensemble_index'].iloc[0])
+        ensemble_index = int(stixel["ensemble_index"].iloc[0])
         unique_stixel_id = stixel["unique_stixel_id"].iloc[0]
         name = f"{ensemble_index}_{unique_stixel_id}"
 
@@ -347,76 +343,78 @@ class AdaSTEM(BaseEstimator):
             stixel_X_train=stixel,
         )
 
-        if not status == 'Success':
+        if not status == "Success":
             # print(f'Fitting: {ensemble_index}. Not pass: {status}')
             pass
-        
+
         else:
             self.model_dict[f"{name}_model"] = model
             self.stixel_specific_x_names[name] = stixel_specific_x_names
-            
-            
+
     def SAC_ensemble_training(self, index_df, data):
-        
         # Calculate the start indices for the sliding window
-        unique_start_indices = np.sort(index_df[f'{self.Temporal1}_start'].unique())
+        unique_start_indices = np.sort(index_df[f"{self.Temporal1}_start"].unique())
         # training, window by window
         for start in unique_start_indices:
             window_data_df = data[
-                (data[self.Temporal1]>=start) & (data[self.Temporal1] < start+self.temporal_bin_interval)
+                (data[self.Temporal1] >= start) & (data[self.Temporal1] < start + self.temporal_bin_interval)
             ]
             window_data_df = transform_pred_set_to_STEM_quad(self.Spatio1, self.Spatio2, window_data_df, index_df)
-            window_index_df = index_df[index_df[f'{self.Temporal1}_start']==start]
-            
+            window_index_df = index_df[index_df[f"{self.Temporal1}_start"] == start]
+
             # Merge
             def find_belonged_points(df, df_a):
                 return df_a[
-                    (df_a[f'{self.Spatio1}_new']>=df['stixel_calibration_point_transformed_left_bound'].iloc[0]) &\
-                    (df_a[f'{self.Spatio1}_new']<df['stixel_calibration_point_transformed_right_bound'].iloc[0]) &\
-                    (df_a[f'{self.Spatio2}_new']>=df['stixel_calibration_point_transformed_lower_bound'].iloc[0]) &\
-                    (df_a[f'{self.Spatio2}_new']<df['stixel_calibration_point_transformed_upper_bound'].iloc[0])
+                    (df_a[f"{self.Spatio1}_new"] >= df["stixel_calibration_point_transformed_left_bound"].iloc[0])
+                    & (df_a[f"{self.Spatio1}_new"] < df["stixel_calibration_point_transformed_right_bound"].iloc[0])
+                    & (df_a[f"{self.Spatio2}_new"] >= df["stixel_calibration_point_transformed_lower_bound"].iloc[0])
+                    & (df_a[f"{self.Spatio2}_new"] < df["stixel_calibration_point_transformed_upper_bound"].iloc[0])
                 ]
-            
-            query_results = (window_index_df[['ensemble_index','unique_stixel_id',
-                                              'stixel_calibration_point_transformed_left_bound',
-                                              'stixel_calibration_point_transformed_right_bound',
-                                              'stixel_calibration_point_transformed_lower_bound',
-                                              'stixel_calibration_point_transformed_upper_bound']]
-                .groupby(['ensemble_index','unique_stixel_id'])
+
+            query_results = (
+                window_index_df[
+                    [
+                        "ensemble_index",
+                        "unique_stixel_id",
+                        "stixel_calibration_point_transformed_left_bound",
+                        "stixel_calibration_point_transformed_right_bound",
+                        "stixel_calibration_point_transformed_lower_bound",
+                        "stixel_calibration_point_transformed_upper_bound",
+                    ]
+                ]
+                .groupby(["ensemble_index", "unique_stixel_id"])
                 .apply(find_belonged_points, df_a=window_data_df)
-                )
-            
-            if len(query_results)==0:
+            )
+
+            if len(query_results) == 0:
                 """All points fall out of the grids"""
                 continue
 
             # train
             (
-                query_results
-                .reset_index(drop=False, level=[0,1])
-                .dropna(subset='unique_stixel_id')
-                .groupby('unique_stixel_id')
+                query_results.reset_index(drop=False, level=[0, 1])
+                .dropna(subset="unique_stixel_id")
+                .groupby("unique_stixel_id")
                 .apply(lambda stixel: self.stixel_fitting(stixel))
             )
-            
 
     def SAC_training(self, ensemble_df, data, verbosity):
         """Training with the whole input data
-        
+
         split (S), apply(A), combine (C). Ensemble level
-        
+
         """
-        
-        if verbosity>0:
+
+        if verbosity > 0:
             tqdm_auto.pandas(desc="training", postfix=None)
-            ensemble_df.groupby('ensemble_index').progress_apply(lambda ensemble: self.SAC_ensemble_training(
-                 index_df=ensemble, data=data
-                ))
+            ensemble_df.groupby("ensemble_index").progress_apply(
+                lambda ensemble: self.SAC_ensemble_training(index_df=ensemble, data=data)
+            )
         else:
-            ensemble_df.groupby('ensemble_index').apply(lambda ensemble: self.SAC_ensemble_training(
-                index_df=ensemble, data=data
-                ))
-            
+            ensemble_df.groupby("ensemble_index").apply(
+                lambda ensemble: self.SAC_ensemble_training(index_df=ensemble, data=data)
+            )
+
     def fit(
         self,
         X_train: pd.core.frame.DataFrame,
@@ -452,45 +450,41 @@ class AdaSTEM(BaseEstimator):
         self.stixel_specific_x_names = {}
 
         if self.njobs > 1:
-            raise NotImplementedError('Multi-threading not implemented yet.')
+            raise NotImplementedError("Multi-threading not implemented yet.")
         else:
             # single processing
             self.SAC_training(self.ensemble_df, X_train, verbosity)
- 
+
         return self
-    
+
     def stixel_predict(self, stixel):
         """Predict one stixel
 
         Args:
-            stixel (pd.core.frame.DataFrame): data joined with ensemble_df. 
+            stixel (pd.core.frame.DataFrame): data joined with ensemble_df.
             For a single stixel.
         """
-        ensemble_index = stixel['ensemble_index'].iloc[0]
+        ensemble_index = stixel["ensemble_index"].iloc[0]
         unique_stixel_id = stixel["unique_stixel_id"].iloc[0]
 
         model_x_names_tuple = get_model_and_stixel_specific_x_names(
-                            self.model_dict,
-                            ensemble_index,
-                            unique_stixel_id,
-                            self.stixel_specific_x_names,
-                            self.x_names,
-                        )
-        
+            self.model_dict,
+            ensemble_index,
+            unique_stixel_id,
+            self.stixel_specific_x_names,
+            self.x_names,
+        )
+
         if model_x_names_tuple[0] is None:
             return None
-                        
-        pred = predict_one_stixel(
-            stixel,
-            self.task,
-            model_x_names_tuple
-        )
+
+        pred = predict_one_stixel(stixel, self.task, model_x_names_tuple)
 
         if pred is None:
             return None
         else:
             return pred
-        
+
     def SAC_ensemble_predict(self, index_df, data):
         """Predict one ensemble
 
@@ -498,10 +492,10 @@ class AdaSTEM(BaseEstimator):
             index_df (pd.core.frame.DataFrame): ensemble data (model.ensemble_df)
             data (pd.core.frame.DataFrame): input covariates to predict
         """
-        
-        temp_start = index_df[f'{self.Temporal1}_start'].min()
-        temp_end = index_df[f'{self.Temporal1}_end'].max()
-        
+
+        temp_start = index_df[f"{self.Temporal1}_start"].min()
+        temp_end = index_df[f"{self.Temporal1}_end"].max()
+
         # Calculate the start indices for the sliding window
         start_indices = np.arange(temp_start, temp_end, self.temporal_step)
 
@@ -509,68 +503,71 @@ class AdaSTEM(BaseEstimator):
         window_prediction_list = []
         for start in start_indices:
             window_data_df = data[
-                (data[self.Temporal1]>=start) & (data[self.Temporal1] < start+self.temporal_bin_interval)
+                (data[self.Temporal1] >= start) & (data[self.Temporal1] < start + self.temporal_bin_interval)
             ]
             window_data_df = transform_pred_set_to_STEM_quad(self.Spatio1, self.Spatio2, window_data_df, index_df)
-            window_index_df = index_df[index_df[f'{self.Temporal1}_start']==start]
-            
-            
+            window_index_df = index_df[index_df[f"{self.Temporal1}_start"] == start]
+
             def find_belonged_points(df, df_a):
                 return df_a[
-                    (df_a[f'{self.Spatio1}_new']>=df['stixel_calibration_point_transformed_left_bound'].iloc[0]) &\
-                    (df_a[f'{self.Spatio1}_new']<df['stixel_calibration_point_transformed_right_bound'].iloc[0]) &\
-                    (df_a[f'{self.Spatio2}_new']>=df['stixel_calibration_point_transformed_lower_bound'].iloc[0]) &\
-                    (df_a[f'{self.Spatio2}_new']<df['stixel_calibration_point_transformed_upper_bound'].iloc[0])
+                    (df_a[f"{self.Spatio1}_new"] >= df["stixel_calibration_point_transformed_left_bound"].iloc[0])
+                    & (df_a[f"{self.Spatio1}_new"] < df["stixel_calibration_point_transformed_right_bound"].iloc[0])
+                    & (df_a[f"{self.Spatio2}_new"] >= df["stixel_calibration_point_transformed_lower_bound"].iloc[0])
+                    & (df_a[f"{self.Spatio2}_new"] < df["stixel_calibration_point_transformed_upper_bound"].iloc[0])
                 ]
-                
 
-            query_results = (window_index_df[['ensemble_index','unique_stixel_id',
-                                              'stixel_calibration_point_transformed_left_bound',
-                                              'stixel_calibration_point_transformed_right_bound',
-                                              'stixel_calibration_point_transformed_lower_bound',
-                                              'stixel_calibration_point_transformed_upper_bound']]
-                .groupby(['ensemble_index','unique_stixel_id'])
+            query_results = (
+                window_index_df[
+                    [
+                        "ensemble_index",
+                        "unique_stixel_id",
+                        "stixel_calibration_point_transformed_left_bound",
+                        "stixel_calibration_point_transformed_right_bound",
+                        "stixel_calibration_point_transformed_lower_bound",
+                        "stixel_calibration_point_transformed_upper_bound",
+                    ]
+                ]
+                .groupby(["ensemble_index", "unique_stixel_id"])
                 .apply(find_belonged_points, df_a=window_data_df)
-                )
-            
-            if len(query_results)==0:
+            )
+
+            if len(query_results) == 0:
                 """All points fall out of the grids"""
                 continue
 
             # predict
             window_prediction = (
-                query_results
-                .reset_index(drop=False, level=[0,1])
-                .dropna(subset='unique_stixel_id')
-                .groupby('unique_stixel_id')
+                query_results.reset_index(drop=False, level=[0, 1])
+                .dropna(subset="unique_stixel_id")
+                .groupby("unique_stixel_id")
                 .apply(lambda stixel: self.stixel_predict(stixel))
             )
-            
+
             window_prediction_list.append(window_prediction)
-        
+
         ensemble_prediction = pd.concat(window_prediction_list, axis=0)
         ensemble_prediction = ensemble_prediction.droplevel(0, axis=0)
-        ensemble_prediction = ensemble_prediction.groupby('index').mean().reset_index(drop=False)
+        ensemble_prediction = ensemble_prediction.groupby("index").mean().reset_index(drop=False)
         return ensemble_prediction
-    
+
     def SAC_predict(self, ensemble_df, data, verbosity):
         """split (S), apply(A), combine (C). Ensemble level"""
-        
-        if verbosity>0:
+
+        if verbosity > 0:
             tqdm_auto.pandas(desc="predicting", postfix=None)
-            pred = ensemble_df.groupby('ensemble_index').progress_apply(lambda ensemble: self.SAC_ensemble_predict(
-                 index_df=ensemble, data=data
-                ))
+            pred = ensemble_df.groupby("ensemble_index").progress_apply(
+                lambda ensemble: self.SAC_ensemble_predict(index_df=ensemble, data=data)
+            )
         else:
-            pred = ensemble_df.groupby('ensemble_index').apply(lambda ensemble: self.SAC_ensemble_predict(
-                index_df=ensemble, data=data
-                ))
-        
+            pred = ensemble_df.groupby("ensemble_index").apply(
+                lambda ensemble: self.SAC_ensemble_predict(index_df=ensemble, data=data)
+            )
+
         # pred = pred.reset_index(drop=False)
         pred = pred.droplevel(1, axis=0).reset_index(drop=False)
-        pred = pred.pivot_table(index='index',columns='ensemble_index', values='pred')
+        pred = pred.pivot_table(index="index", columns="ensemble_index", values="pred")
         return pred
-    
+
     def predict_proba(
         self,
         X_test: pd.core.frame.DataFrame,
@@ -618,7 +615,7 @@ class AdaSTEM(BaseEstimator):
         return_by_separate_ensembles, return_std = check_prediction_return(return_by_separate_ensembles, return_std)
         verbosity = check_verbosity(self, verbosity)
         check_njobs(njobs)
-        
+
         res = self.SAC_predict(self.ensemble_df, X_test, verbosity=verbosity)
 
         # Experimental Function
@@ -626,7 +623,7 @@ class AdaSTEM(BaseEstimator):
             new_res = pd.DataFrame({"index": list(X_test.index)}).set_index("index")
             new_res = new_res.merge(res, left_on="index", right_on="index", how="left")
             return new_res.values
-        
+
         # Aggregate
         if aggregation == "mean":
             res_mean = res.mean(axis=1, skipna=True)  # mean of all grid model that predicts this stixel
@@ -656,7 +653,6 @@ class AdaSTEM(BaseEstimator):
             return new_res["pred_mean"].values, new_res["pred_std"].values
         else:
             return new_res["pred_mean"].values
-      
 
     def predict(
         self,
@@ -847,11 +843,12 @@ class AdaSTEM(BaseEstimator):
         # generate feature importance dict
         feature_importance_list = []
 
-
-        for index, ensemble_row in self.ensemble_df[self.ensemble_df['stixel_checklist_count']>=self.stixel_training_size_threshold].iterrows():
+        for index, ensemble_row in self.ensemble_df[
+            self.ensemble_df["stixel_checklist_count"] >= self.stixel_training_size_threshold
+        ].iterrows():
             if ensemble_row["stixel_checklist_count"] < self.stixel_training_size_threshold:
                 continue
-            
+
             try:
                 ensemble_index = ensemble_row["ensemble_index"]
                 stixel_index = ensemble_row["unique_stixel_id"]
@@ -861,7 +858,7 @@ class AdaSTEM(BaseEstimator):
                 if isinstance(the_model, dummy_model1):
                     importance_dict = dict(zip(self.x_names, [1 / len(self.x_names)] * len(self.x_names)))
                 elif isinstance(the_model, Hurdle):
-                    if 'feature_importances_' in the_model.__dir__():
+                    if "feature_importances_" in the_model.__dir__():
                         importance_dict = dict(zip(x_names, the_model.feature_importances_))
                     else:
                         if isinstance(the_model.classifier, dummy_model1):
@@ -878,7 +875,6 @@ class AdaSTEM(BaseEstimator):
                 warnings.warn(f"{e}")
                 # print(e)
                 continue
-            
 
         self.feature_importances_ = (
             pd.DataFrame(feature_importance_list).set_index("stixel_index").reset_index(drop=False).fillna(0)
@@ -1064,7 +1060,7 @@ class AdaSTEMClassifier(AdaSTEM):
         temporal_step=20,
         temporal_bin_interval=50,
         temporal_bin_start_jitter="adaptive",
-        spatio_bin_jitter_magnitude='adaptive',
+        spatio_bin_jitter_magnitude="adaptive",
         save_gridding_plot=False,
         save_tmp=False,
         save_dir="./",
@@ -1223,7 +1219,7 @@ class AdaSTEMRegressor(AdaSTEM):
         temporal_step=20,
         temporal_bin_interval=50,
         temporal_bin_start_jitter="adaptive",
-        spatio_bin_jitter_magnitude='adaptive',
+        spatio_bin_jitter_magnitude="adaptive",
         save_gridding_plot=False,
         save_tmp=False,
         save_dir="./",

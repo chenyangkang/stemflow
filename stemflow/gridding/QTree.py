@@ -12,9 +12,9 @@ import pandas
 import pandas as pd
 
 from ..utils.generate_soft_colors import generate_soft_color
+from ..utils.jitterrotation.jitterrotator import JitterRotator
 from ..utils.validation import check_random_state
 from .Q_blocks import QNode, QPoint
-from ..utils.jitterrotation.jitterrotator import JitterRotator
 
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
@@ -204,12 +204,11 @@ class QTree:
         """
         if not len(x_array) == len(y_array) or not len(x_array) == len(indexes):
             raise ValueError("input longitude and latitude and indexes not in same length!")
-        
-        lon_new, lat_new = JitterRotator.rotate_jitter(x_array, y_array, 
-                                                       self.rotation_angle, 
-                                                       self.calibration_point_x_jitter,
-                                                       self.calibration_point_y_jitter)
-        
+
+        lon_new, lat_new = JitterRotator.rotate_jitter(
+            x_array, y_array, self.rotation_angle, self.calibration_point_x_jitter, self.calibration_point_y_jitter
+        )
+
         for index, lon, lat in zip(indexes, lon_new, lat_new):
             self.points.append(QPoint(index, lon, lat))
 
@@ -270,10 +269,9 @@ class QTree:
         c = find_children(self.root)
 
         for n in c:
-            old_x, old_y = JitterRotator.inverse_jitter_rotate([n.x0], [n.y0], 
-                                                self.rotation_angle,
-                                                self.calibration_point_x_jitter,
-                                                self.calibration_point_y_jitter)
+            old_x, old_y = JitterRotator.inverse_jitter_rotate(
+                [n.x0], [n.y0], self.rotation_angle, self.calibration_point_x_jitter, self.calibration_point_y_jitter
+            )
 
             if ax is None:
                 plt.gcf().gca().add_patch(
@@ -288,27 +286,21 @@ class QTree:
                     )
                 )
 
-
         if scatter:
             old_x, old_y = JitterRotator.inverse_jitter_rotate(
                 [point.x for point in self.points],
                 [point.y for point in self.points],
                 self.rotation_angle,
                 self.calibration_point_x_jitter,
-                self.calibration_point_y_jitter
-                )
-            
+                self.calibration_point_y_jitter,
+            )
+
             if ax is None:
-                plt.scatter(
-                    old_x, old_y, s=0.2, c="tab:blue", alpha=0.7
-                )  # plots the points as red dots
+                plt.scatter(old_x, old_y, s=0.2, c="tab:blue", alpha=0.7)  # plots the points as red dots
             else:
-                ax.scatter(
-                    old_x, old_y, s=0.2, c="tab:blue", alpha=0.7
-                )  # plots the points as red dots
+                ax.scatter(old_x, old_y, s=0.2, c="tab:blue", alpha=0.7)  # plots the points as red dots
         return
-    
-    
+
     def get_final_result(self) -> pandas.core.frame.DataFrame:
         """get points assignment to each grid and transform the data into pandas df.
 
