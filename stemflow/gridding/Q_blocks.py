@@ -25,7 +25,7 @@ class QNode:
         y0: Union[float, int],
         w: Union[float, int],
         h: Union[float, int],
-        points: Sequence[QPoint],
+        points: Sequence,
     ):
         self.x0 = x0
         self.y0 = y0
@@ -77,7 +77,7 @@ class Sphere_Face:
         inclination2: Union[float, int],
         azimuth3: Union[float, int],
         inclination3: Union[float, int],
-        points: Sequence[Sphere_Point],
+        points: Sequence,
     ):
         self.x0 = x0
         self.y0 = y0
