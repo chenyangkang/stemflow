@@ -12,8 +12,9 @@ import pandas
 import pandas as pd
 
 from ..utils.generate_soft_colors import generate_soft_color
+from ..utils.jitterrotation.jitterrotator import JitterRotator
 from ..utils.validation import check_random_state
-from .Q_blocks import Node, Point
+from .Q_blocks import QNode, QPoint
 
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
@@ -23,7 +24,7 @@ warnings.filterwarnings("ignore")
 
 
 def recursive_subdivide(
-    node: Node,
+    node: QNode,
     grid_len_lon_upper_threshold: Union[float, int],
     grid_len_lon_lower_threshold: Union[float, int],
     grid_len_lat_upper_threshold: Union[float, int],
@@ -53,7 +54,7 @@ def recursive_subdivide(
     h_ = float(node.height / 2)
 
     p = contains(node.x0, node.y0, w_, h_, node.points)
-    x1 = Node(node.x0, node.y0, w_, h_, p)
+    x1 = QNode(node.x0, node.y0, w_, h_, p)
     recursive_subdivide(
         x1,
         grid_len_lon_upper_threshold,
@@ -64,7 +65,7 @@ def recursive_subdivide(
     )
 
     p = contains(node.x0, node.y0 + h_, w_, h_, node.points)
-    x2 = Node(node.x0, node.y0 + h_, w_, h_, p)
+    x2 = QNode(node.x0, node.y0 + h_, w_, h_, p)
     recursive_subdivide(
         x2,
         grid_len_lon_upper_threshold,
@@ -75,7 +76,7 @@ def recursive_subdivide(
     )
 
     p = contains(node.x0 + w_, node.y0, w_, h_, node.points)
-    x3 = Node(node.x0 + w_, node.y0, w_, h_, p)
+    x3 = QNode(node.x0 + w_, node.y0, w_, h_, p)
     recursive_subdivide(
         x3,
         grid_len_lon_upper_threshold,
@@ -86,7 +87,7 @@ def recursive_subdivide(
     )
 
     p = contains(node.x0 + w_, node.y0 + h_, w_, h_, node.points)
-    x4 = Node(node.x0 + w_, node.y0 + h_, w_, h_, p)
+    x4 = QNode(node.x0 + w_, node.y0 + h_, w_, h_, p)
     recursive_subdivide(
         x4,
         grid_len_lon_upper_threshold,
@@ -204,17 +205,12 @@ class QTree:
         if not len(x_array) == len(y_array) or not len(x_array) == len(indexes):
             raise ValueError("input longitude and latitude and indexes not in same length!")
 
-        data = np.array([x_array, y_array]).T
-        angle = self.rotation_angle
-        r = angle / 360
-        theta = r * np.pi * 2
-        rotation_matrix = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
-        data = data @ rotation_matrix
-        lon_new = (data[:, 0] + self.calibration_point_x_jitter).tolist()
-        lat_new = (data[:, 1] + self.calibration_point_y_jitter).tolist()
+        lon_new, lat_new = JitterRotator.rotate_jitter(
+            x_array, y_array, self.rotation_angle, self.calibration_point_x_jitter, self.calibration_point_y_jitter
+        )
 
         for index, lon, lat in zip(indexes, lon_new, lat_new):
-            self.points.append(Point(index, lon, lat))
+            self.points.append(QPoint(index, lon, lat))
 
     def generate_gridding_params(self):
         """generate the gridding params after data are added
@@ -233,7 +229,7 @@ class QTree:
 
         self.left_bottom_point = (left_bottom_point_x, left_bottom_point_y)
         if self.lon_lat_equal_grid is True:
-            self.root = Node(
+            self.root = QNode(
                 left_bottom_point_x,
                 left_bottom_point_y,
                 max(self.grid_length_x, self.grid_length_y),
@@ -241,7 +237,7 @@ class QTree:
                 self.points,
             )
         elif self.lon_lat_equal_grid is False:
-            self.root = Node(
+            self.root = QNode(
                 left_bottom_point_x, left_bottom_point_y, self.grid_length_x, self.grid_length_y, self.points
             )
         else:
@@ -272,58 +268,37 @@ class QTree:
 
         c = find_children(self.root)
 
-        # areas = set()
-        # width_set = set()
-        # height_set = set()
-        # for el in c:
-        #     areas.add(el.width * el.height)
-        #     width_set.add(el.width)
-        #     height_set.add(el.height)
-
-        theta = -(self.rotation_angle / 360) * np.pi * 2
-        rotation_matrix = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
-
         for n in c:
-            xy0_trans = np.array([[n.x0, n.y0]])
-            if self.calibration_point_x_jitter:
-                new_x = xy0_trans[:, 0] - self.calibration_point_x_jitter
-            else:
-                new_x = xy0_trans[:, 0]
-
-            if self.calibration_point_y_jitter:
-                new_y = xy0_trans[:, 1] - self.calibration_point_y_jitter
-            else:
-                new_y = xy0_trans[:, 1]
-            new_xy = np.array([[new_x[0], new_y[0]]]) @ rotation_matrix
-            new_x = new_xy[:, 0]
-            new_y = new_xy[:, 1]
+            old_x, old_y = JitterRotator.inverse_jitter_rotate(
+                [n.x0], [n.y0], self.rotation_angle, self.calibration_point_x_jitter, self.calibration_point_y_jitter
+            )
 
             if ax is None:
                 plt.gcf().gca().add_patch(
                     patches.Rectangle(
-                        (new_x, new_y), n.width, n.height, fill=False, angle=self.rotation_angle, color=the_color
+                        (old_x, old_y), n.width, n.height, fill=False, angle=self.rotation_angle, color=the_color
                     )
                 )
             else:
                 ax.add_patch(
                     patches.Rectangle(
-                        (new_x, new_y), n.width, n.height, fill=False, angle=self.rotation_angle, color=the_color
+                        (old_x, old_y), n.width, n.height, fill=False, angle=self.rotation_angle, color=the_color
                     )
                 )
 
-        x = np.array([point.x for point in self.points]) - self.calibration_point_x_jitter
-        y = np.array([point.y for point in self.points]) - self.calibration_point_y_jitter
-
-        data = np.array([x, y]).T @ rotation_matrix
         if scatter:
+            old_x, old_y = JitterRotator.inverse_jitter_rotate(
+                [point.x for point in self.points],
+                [point.y for point in self.points],
+                self.rotation_angle,
+                self.calibration_point_x_jitter,
+                self.calibration_point_y_jitter,
+            )
+
             if ax is None:
-                plt.scatter(
-                    data[:, 0].tolist(), data[:, 1].tolist(), s=0.2, c="tab:blue", alpha=0.7
-                )  # plots the points as red dots
+                plt.scatter(old_x, old_y, s=0.2, c="tab:blue", alpha=0.7)  # plots the points as red dots
             else:
-                ax.scatter(
-                    data[:, 0].tolist(), data[:, 1].tolist(), s=0.2, c="tab:blue", alpha=0.7
-                )  # plots the points as red dots
+                ax.scatter(old_x, old_y, s=0.2, c="tab:blue", alpha=0.7)  # plots the points as red dots
         return
 
     def get_final_result(self) -> pandas.core.frame.DataFrame:
@@ -333,13 +308,13 @@ class QTree:
             results (DataFrame): A pandas dataframe containing the gridding information
         """
         all_grids = find_children(self.root)
-        point_indexes_list = []
+        # point_indexes_list = []
         point_grid_width_list = []
         point_grid_height_list = []
         point_grid_points_number_list = []
         calibration_point_list = []
         for grid in all_grids:
-            point_indexes_list.append([point.index for point in grid.points])
+            # point_indexes_list.append([point.index for point in grid.points])
             point_grid_width_list.append(grid.width)
             point_grid_height_list.append(grid.height)
             point_grid_points_number_list.append(len(grid.points))
@@ -347,7 +322,7 @@ class QTree:
 
         result = pd.DataFrame(
             {
-                "checklist_indexes": point_indexes_list,
+                # "checklist_indexes": point_indexes_list,
                 "stixel_indexes": list(range(len(point_grid_width_list))),
                 "stixel_width": point_grid_width_list,
                 "stixel_height": point_grid_height_list,

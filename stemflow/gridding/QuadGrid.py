@@ -12,8 +12,9 @@ import pandas
 import pandas as pd
 
 from ..utils.generate_soft_colors import generate_soft_color
+from ..utils.jitterrotation.jitterrotator import JitterRotator
 from ..utils.validation import check_random_state
-from .Q_blocks import Grid, Node, Point
+from .Q_blocks import QGrid, QNode, QPoint
 
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
@@ -64,7 +65,7 @@ class QuadGrid:
         lat_new = (data[:, 1] + self.calibration_point_y_jitter).tolist()
 
         for index, lon, lat in zip(indexes, lon_new, lat_new):
-            self.points.append(Point(index, lon, lat))
+            self.points.append(QPoint(index, lon, lat))
 
     def generate_gridding_params(self):
         """For completeness"""
@@ -85,10 +86,10 @@ class QuadGrid:
         ymin = np.min(y_list)
         ymax = np.max(y_list)
 
-        self.x_start = xmin - self.grid_len + self.calibration_point_x_jitter
-        self.x_end = xmax + self.grid_len + self.calibration_point_x_jitter
-        self.y_start = ymin - self.grid_len + self.calibration_point_y_jitter
-        self.y_end = ymax + self.grid_len + self.calibration_point_y_jitter
+        self.x_start = xmin - self.grid_len
+        self.x_end = xmax + self.grid_len
+        self.y_start = ymin - self.grid_len
+        self.y_end = ymax + self.grid_len
         x_grids = np.arange(self.x_start, self.x_end, self.grid_len)
         y_grids = np.arange(self.y_start, self.y_end, self.grid_len)
 
@@ -99,7 +100,7 @@ class QuadGrid:
         self.grids = []
         for i in range(len(x_grids) - 1):
             for j in range(len(y_grids) - 1):
-                gird = Grid(i, j, (x_grids[i], x_grids[i + 1]), (y_grids[j], y_grids[j + 1]))
+                gird = QGrid(i, j, (x_grids[i], x_grids[i + 1]), (y_grids[j], y_grids[j + 1]))
                 self.grids.append(gird)
 
         # Use numpy.digitize to bin points into grids
@@ -112,30 +113,27 @@ class QuadGrid:
             grid.points = [self.points[i] for i in indices]
 
     def graph(self, scatter: bool = True, ax=None):
+        """plot gridding
+
+        Args:
+            scatter: Whether add scatterplot of data points
+        """
+
         the_color = generate_soft_color()
 
-        theta = -(self.rotation_angle / 360) * np.pi * 2
-        rotation_matrix = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
-
         for grid in self.grids:
-            xy0_trans = np.array([[grid.x_range[0], grid.y_range[0]]])
-            if self.calibration_point_x_jitter:
-                new_x = xy0_trans[:, 0] - self.calibration_point_x_jitter
-            else:
-                new_x = xy0_trans[:, 0]
-
-            if self.calibration_point_y_jitter:
-                new_y = xy0_trans[:, 1] - self.calibration_point_y_jitter
-            else:
-                new_y = xy0_trans[:, 1]
-            new_xy = np.array([[new_x[0], new_y[0]]]) @ rotation_matrix
-            new_x = new_xy[:, 0]
-            new_y = new_xy[:, 1]
+            old_x, old_y = JitterRotator.inverse_jitter_rotate(
+                [grid.x_range[0]],
+                [grid.y_range[0]],
+                self.rotation_angle,
+                self.calibration_point_x_jitter,
+                self.calibration_point_y_jitter,
+            )
 
             if ax is None:
                 plt.gcf().gca().add_patch(
                     patches.Rectangle(
-                        (new_x, new_y),
+                        (old_x, old_y),
                         self.grid_len,
                         self.grid_len,
                         fill=False,
@@ -146,7 +144,7 @@ class QuadGrid:
             else:
                 ax.add_patch(
                     patches.Rectangle(
-                        (new_x, new_y),
+                        (old_x, old_y),
                         self.grid_len,
                         self.grid_len,
                         fill=False,
@@ -155,19 +153,19 @@ class QuadGrid:
                     )
                 )
 
-        x = np.array([point.x for point in self.points]) - self.calibration_point_x_jitter
-        y = np.array([point.y for point in self.points]) - self.calibration_point_y_jitter
-
-        data = np.array([x, y]).T @ rotation_matrix
         if scatter:
+            old_x, old_y = JitterRotator.inverse_jitter_rotate(
+                [point.x for point in self.points],
+                [point.y for point in self.points],
+                self.rotation_angle,
+                self.calibration_point_x_jitter,
+                self.calibration_point_y_jitter,
+            )
+
             if ax is None:
-                plt.scatter(
-                    data[:, 0].tolist(), data[:, 1].tolist(), s=0.2, c="tab:blue", alpha=0.7
-                )  # plots the points as red dots
+                plt.scatter(old_x, old_y, s=0.2, c="tab:blue", alpha=0.7)  # plots the points as red dots
             else:
-                ax.scatter(
-                    data[:, 0].tolist(), data[:, 1].tolist(), s=0.2, c="tab:blue", alpha=0.7
-                )  # plots the points as red dots
+                ax.scatter(old_x, old_y, s=0.2, c="tab:blue", alpha=0.7)  # plots the points as red dots
 
         return
 
@@ -178,21 +176,21 @@ class QuadGrid:
             results (DataFrame): A pandas dataframe containing the gridding information
         """
 
-        point_indexes_list = []
+        # point_indexes_list = []
         point_grid_width_list = []
         point_grid_height_list = []
         point_grid_points_number_list = []
         calibration_point_list = []
         for grid in self.grids:
-            point_indexes_list.append([point.index for point in grid.points])
+            # point_indexes_list.append([point.index for point in grid.points])
             point_grid_width_list.append(self.grid_len)
             point_grid_height_list.append(self.grid_len)
             point_grid_points_number_list.append(len(grid.points))
-            calibration_point_list.append((round(grid.x_range[0], 6), round(grid.x_range[0], 6)))
+            calibration_point_list.append((round(grid.x_range[0], 6), round(grid.y_range[0], 6)))
 
         result = pd.DataFrame(
             {
-                "checklist_indexes": point_indexes_list,
+                # "checklist_indexes": point_indexes_list,
                 "stixel_indexes": list(range(len(point_grid_width_list))),
                 "stixel_width": point_grid_width_list,
                 "stixel_height": point_grid_height_list,

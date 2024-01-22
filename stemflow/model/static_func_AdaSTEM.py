@@ -17,26 +17,10 @@ from pandas.core.frame import DataFrame
 from sklearn.base import BaseEstimator
 from sklearn.utils import class_weight
 
+from ..utils.jitterrotation.jitterrotator import JitterRotator
 from .dummy_model import dummy_model1
 
 # warnings.filterwarnings("ignore")
-
-
-def _monkey_patched_predict_proba(
-    model: BaseEstimator, X_train: Union[pd.core.frame.DataFrame, np.ndarray]
-) -> np.ndarray:
-    """the monkey patching predict_proba method
-
-    Args:
-        model: the input model
-        X_train: input training data
-
-    Returns:
-        predicted proba
-    """
-    pred = model.predict(X_train)
-    pred = np.array(pred).reshape(-1, 1)
-    return np.concatenate([np.zeros(shape=pred.shape), pred], axis=1)
 
 
 def train_one_stixel(
@@ -46,8 +30,7 @@ def train_one_stixel(
     base_model: BaseEstimator,
     sample_weights_for_classifier: bool,
     subset_x_names: bool,
-    X_train_copy: pd.core.frame.DataFrame,
-    checklist_indexes: list,
+    stixel_X_train: pd.core.frame.DataFrame,
 ) -> Tuple[Union[None, BaseEstimator], list]:
     """Train one stixel
 
@@ -58,30 +41,28 @@ def train_one_stixel(
         base_model (BaseEstimator): Base model estimator.
         sample_weights_for_classifier (bool): Whether to balance the sample weights in classifier for imbalanced samples.
         subset_x_names (bool): Whether to only store variables with std > 0 for each stixel.
-        X_train_copy (pd.core.frame.DataFrame): Input training dataframe.
-        checklist_indexes (list): Each element is a list that contain all checklist indexes for this stixel.
+        sub_X_train (pd.core.frame.DataFrame): Input training dataframe for THE stixel.
 
     Returns:
         tuple[Union[None, BaseEstimator], list]: trained_model, stixel_specific_x_names
     """
-    sub_X_train = X_train_copy.iloc[checklist_indexes, :]
 
-    if len(sub_X_train) < stixel_training_size_threshold:  # threshold
-        return (None, [])
+    if len(stixel_X_train) < stixel_training_size_threshold:  # threshold
+        return (None, [], "Not_Enough_Data")
 
-    sub_y_train = sub_X_train.iloc[:, -1]
-    sub_X_train = sub_X_train[x_names]
+    sub_y_train = stixel_X_train["true_y"]
+    sub_X_train = stixel_X_train[x_names]
     unique_sub_y_train_binary = np.unique(np.where(sub_y_train > 0, 1, 0))
 
     # nan check
-    nan_count = np.sum(np.isnan(sub_y_train)) + np.sum(np.isnan(sub_y_train))
+    nan_count = np.sum(np.isnan(np.array(sub_X_train))) + np.sum(np.isnan(sub_y_train))
     if nan_count > 0:
-        return (None, [])
+        return (None, [], "Contain_Nan")
 
     # fit
     if (not task == "regression") and (len(unique_sub_y_train_binary) == 1):
         trained_model = dummy_model1(float(unique_sub_y_train_binary[0]))
-        return (trained_model, [])
+        return (trained_model, [], "Success")
     else:
         # Remove the variables that have no variation
         stixel_specific_x_names = x_names.copy()
@@ -93,7 +74,7 @@ def train_one_stixel(
 
         # continue, if no variable left
         if len(stixel_specific_x_names) == 0:
-            return (None, [])
+            return (None, [], "x_names_length_zero")
 
         # now we are sure to fit a model
         trained_model = copy.deepcopy(base_model)
@@ -108,16 +89,18 @@ def train_one_stixel(
 
             except Exception as e:
                 print(e)
-                return (None, [])
+                # raise
+                return (None, [], "Base_model_fitting_error(non-regression, balanced weight)")
         else:
             try:
                 trained_model.fit(sub_X_train[stixel_specific_x_names], sub_y_train)
 
             except Exception as e:
                 print(e)
-                return (None, [])
+                # raise
+                return (None, [], "Base_model_fitting_error(regression)")
 
-    return (trained_model, stixel_specific_x_names)
+    return (trained_model, stixel_specific_x_names, "Success")
 
 
 def assign_points_to_one_ensemble(
@@ -160,19 +143,21 @@ def assign_points_to_one_ensemble(
         this_ensemble["stixel_calibration_point_transformed_lower_bound"] + this_ensemble["stixel_height"]
     )
 
-    Sample_ST_df = transform_pred_set_to_STEM_quad(Spatio1, Spatio2, Sample_ST_df.reset_index(drop=True), this_ensemble)
+    Sample_ST_df_ = transform_pred_set_to_STEM_quad(
+        Spatio1, Spatio2, Sample_ST_df.reset_index(drop=True), this_ensemble
+    )
 
     # pred each stixel
     res_list = []
     for index, line in this_ensemble.iterrows():
         stixel_index = line["unique_stixel_id"]
-        sub_Sample_ST_df = Sample_ST_df[
-            (Sample_ST_df[Temporal1] >= line[f"{Temporal1}_start"])
-            & (Sample_ST_df[Temporal1] < line[f"{Temporal1}_end"])
-            & (Sample_ST_df[f"{Spatio1}_new"] >= line["stixel_calibration_point_transformed_left_bound"])
-            & (Sample_ST_df[f"{Spatio1}_new"] <= line["stixel_calibration_point_transformed_right_bound"])
-            & (Sample_ST_df[f"{Spatio2}_new"] >= line["stixel_calibration_point_transformed_lower_bound"])
-            & (Sample_ST_df[f"{Spatio2}_new"] <= line["stixel_calibration_point_transformed_upper_bound"])
+        sub_Sample_ST_df = Sample_ST_df_[
+            (Sample_ST_df_[Temporal1] >= line[f"{Temporal1}_start"])
+            & (Sample_ST_df_[Temporal1] < line[f"{Temporal1}_end"])
+            & (Sample_ST_df_[f"{Spatio1}_new"] >= line["stixel_calibration_point_transformed_left_bound"])
+            & (Sample_ST_df_[f"{Spatio1}_new"] <= line["stixel_calibration_point_transformed_right_bound"])
+            & (Sample_ST_df_[f"{Spatio2}_new"] >= line["stixel_calibration_point_transformed_lower_bound"])
+            & (Sample_ST_df_[f"{Spatio2}_new"] <= line["stixel_calibration_point_transformed_upper_bound"])
         ]
 
         if len(sub_Sample_ST_df) == 0:
@@ -223,25 +208,18 @@ def transform_pred_set_to_STEM_quad(
 
     """
 
-    x_array = X_train[Spatio1]
-    y_array = X_train[Spatio2]
-    coord = np.array([x_array, y_array]).T
-    angle = float(ensemble_info.iloc[0, :]["rotation"])
-    r = angle / 360
-    theta = r * np.pi * 2
-    rotation_matrix = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
+    angle = float(ensemble_info["rotation"].iloc[0])
+    calibration_point_x_jitter = float(ensemble_info["space_jitter(first rotate by zero then add this)"].iloc[0][0])
+    calibration_point_y_jitter = float(ensemble_info["space_jitter(first rotate by zero then add this)"].iloc[0][1])
 
-    coord = coord @ rotation_matrix
-    calibration_point_x_jitter = float(ensemble_info.iloc[0, :]["space_jitter(first rotate by zero then add this)"][0])
-    calibration_point_y_jitter = float(ensemble_info.iloc[0, :]["space_jitter(first rotate by zero then add this)"][1])
+    X_train_ = X_train.copy()
+    a, b = JitterRotator.rotate_jitter(
+        X_train[Spatio1], X_train[Spatio2], angle, calibration_point_x_jitter, calibration_point_y_jitter
+    )
+    X_train_[f"{Spatio1}_new"] = a
+    X_train_[f"{Spatio2}_new"] = b
 
-    long_new = (coord[:, 0] + calibration_point_x_jitter).tolist()
-    lat_new = (coord[:, 1] + calibration_point_y_jitter).tolist()
-
-    X_train[f"{Spatio1}_new"] = long_new
-    X_train[f"{Spatio2}_new"] = lat_new
-
-    return X_train
+    return X_train_
 
 
 def get_model_by_name(model_dict: dict, ensemble: str, grid_index: str) -> Union[None, BaseEstimator]:
@@ -312,17 +290,7 @@ def get_model_and_stixel_specific_x_names(
 
 
 def predict_one_stixel(
-    X_test_copy: pd.core.frame.DataFrame,
-    Temporal1: str,
-    Spatio1: str,
-    Spatio2: str,
-    Temporal1_start: Union[float, int],
-    Temporal1_end: Union[float, int],
-    stixel_calibration_point_transformed_left_bound: Union[float, int],
-    stixel_calibration_point_transformed_right_bound: Union[float, int],
-    stixel_calibration_point_transformed_lower_bound: Union[float, int],
-    stixel_calibration_point_transformed_upper_bound: Union[float, int],
-    x_names: list,
+    X_test_stixel: pd.core.frame.DataFrame,
     task: str,
     model_x_names_tuple: Tuple[Union[None, BaseEstimator], list],
 ) -> pd.core.frame.DataFrame:
@@ -330,16 +298,6 @@ def predict_one_stixel(
 
     Args:
         X_test_copy (pd.core.frame.DataFrame): Input testing variables
-        Temporal1 (str): Temporal variable name 1
-        Spatio1 (str): Spatio variable name 1
-        Spatio2 (str): Spatio variable name 2
-        Temporal1_start (Union[float, int]): Starting point of Temporal variable for the sliding window.
-        Temporal1_end (Union[float, int]): Ending point of Temporal variable for the sliding window.
-        stixel_calibration_point_transformed_left_bound (Union[float, int]): The left bound of the stixel after transformation.
-        stixel_calibration_point_transformed_right_bound (Union[float, int]): The right bound of the stixel after transformation.
-        stixel_calibration_point_transformed_lower_bound (Union[float, int]): The lower bound of the stixel after transformation.
-        stixel_calibration_point_transformed_upper_bound (Union[float, int]): The upper bound of the stixel after transformation.
-        x_names (list): Total x_names. All variables.
         task (str): One of 'regression', 'classification' and 'hurdle'
         model_x_names_tuple (tuple[Union[None, BaseEstimator], list]): A tuple of (model, stixel_specific_x_names)
 
@@ -349,24 +307,15 @@ def predict_one_stixel(
     if model_x_names_tuple[0] is None:
         return None
 
-    X_test_copy = X_test_copy[
-        (X_test_copy[Temporal1] >= Temporal1_start)
-        & (X_test_copy[Temporal1] <= Temporal1_end)
-        & (X_test_copy[f"{Spatio1}_new"] >= stixel_calibration_point_transformed_left_bound)
-        & (X_test_copy[f"{Spatio1}_new"] <= stixel_calibration_point_transformed_right_bound)
-        & (X_test_copy[f"{Spatio2}_new"] >= stixel_calibration_point_transformed_lower_bound)
-        & (X_test_copy[f"{Spatio2}_new"] <= stixel_calibration_point_transformed_upper_bound)
-    ]
-
-    if len(X_test_copy) == 0:
+    if len(X_test_stixel) == 0:
         return None
 
     # get test data
     if task == "regression":
-        pred = model_x_names_tuple[0].predict(np.array(X_test_copy[model_x_names_tuple[1]]))
+        pred = model_x_names_tuple[0].predict(np.array(X_test_stixel[model_x_names_tuple[1]]))
     else:
-        pred = model_x_names_tuple[0].predict_proba(np.array(X_test_copy[model_x_names_tuple[1]]))[:, 1]
+        pred = model_x_names_tuple[0].predict_proba(np.array(X_test_stixel[model_x_names_tuple[1]]))[:, 1]
 
-    res = pd.DataFrame({"index": list(X_test_copy.index), "pred": np.array(pred).flatten()}).set_index("index")
+    res = pd.DataFrame({"index": list(X_test_stixel.index), "pred": np.array(pred).flatten()}).set_index("index")
 
     return res
