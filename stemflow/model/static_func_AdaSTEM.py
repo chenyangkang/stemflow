@@ -379,7 +379,8 @@ def get_model_by_name(model_dict: dict, ensemble: str, grid_index: str) -> Union
         model = model_dict[f"{ensemble}_{grid_index}_model"]
         return model
     except Exception as e:
-        warnings.warn(f"Cannot find model: {e}")
+        if not isinstance(e, KeyError):
+            warnings.warn(f"Cannot find model: {e}")
         return None
 
 

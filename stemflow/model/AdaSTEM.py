@@ -953,7 +953,10 @@ class AdaSTEM(BaseEstimator):
 
         # assign input spatio-temporal points to stixels
 
-        if not njobs > 1:
+        if njobs > 1:
+            raise NotImplementedError("Multi-threading is not implemented yet")
+
+        else:
             # Single processing
             round_res_list = []
             iter_func_ = (
@@ -972,25 +975,6 @@ class AdaSTEM(BaseEstimator):
                     self.feature_importances_,
                 )
                 round_res_list.append(res_list)
-
-        else:
-            # multi-processing
-            with Pool(njobs) as p:
-                plain_args_iterator = zip(
-                    repeat(self.ensemble_df),
-                    list(self.ensemble_df.ensemble_index.unique()),
-                    repeat(Sample_ST_df),
-                    repeat(self.Temporal1),
-                    repeat(self.Spatio1),
-                    repeat(self.Spatio2),
-                    repeat(self.feature_importances_),
-                )
-                if verbosity > 0:
-                    args_iterator = tqdm(plain_args_iterator, total=len(list(self.ensemble_df.ensemble_index.unique())))
-                else:
-                    args_iterator = plain_args_iterator
-
-                round_res_list = p.starmap(assign_points_to_one_ensemble, args_iterator)
 
         round_res_df = pd.concat(round_res_list, axis=0)
         ensemble_available_count = round_res_df.groupby("sample_index").count().iloc[:, 0]

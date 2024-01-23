@@ -30,7 +30,7 @@ def test_STEMClassifier():
 
     pred = model.predict(X_test)
     assert len(pred) == len(X_test)
-    assert np.isnan(pred) / len(pred) <= 0.3
+    assert np.sum(np.isnan(pred)) / len(pred) <= 0.3
 
     pred_df = pd.DataFrame(
         {"y_true": y_test.flatten(), "y_pred": np.where(pred.flatten() < 0, 0, pred.flatten())}
@@ -47,7 +47,7 @@ def test_STEMClassifier():
 
     importances_by_points = model.assign_feature_importances_by_points(verbosity=0, njobs=1)
     assert importances_by_points.shape[0] > 0
-    assert importances_by_points.shape[1] == len(x_names) + 1
+    assert importances_by_points.shape[1] == len(x_names) + 3
 
 
 def test_STEMRegressor():
@@ -60,7 +60,7 @@ def test_STEMRegressor():
 
     pred = model.predict(X_test)
     assert len(pred) == len(X_test)
-    assert np.isnan(pred) / len(pred) <= 0.3
+    assert np.sum(np.isnan(pred)) / len(pred) <= 0.3
 
     pred_df = pd.DataFrame(
         {"y_true": y_test.flatten(), "y_pred": np.where(pred.flatten() < 0, 0, pred.flatten())}
@@ -77,7 +77,7 @@ def test_STEMRegressor():
 
     importances_by_points = model.assign_feature_importances_by_points(verbosity=0, njobs=1)
     assert importances_by_points.shape[0] > 0
-    assert importances_by_points.shape[1] == len(x_names) + 1
+    assert importances_by_points.shape[1] == len(x_names) + 3
 
 
 def test_AdaSTEMClassifier():
@@ -90,7 +90,7 @@ def test_AdaSTEMClassifier():
 
     pred = model.predict(X_test)
     assert len(pred) == len(X_test)
-    assert np.isnan(pred) / len(pred) <= 0.3
+    assert np.sum(np.isnan(pred)) / len(pred) <= 0.3
 
     pred_df = pd.DataFrame(
         {"y_true": y_test.flatten(), "y_pred": np.where(pred.flatten() < 0, 0, pred.flatten())}
@@ -107,7 +107,7 @@ def test_AdaSTEMClassifier():
 
     importances_by_points = model.assign_feature_importances_by_points(verbosity=0, njobs=1)
     assert importances_by_points.shape[0] > 0
-    assert importances_by_points.shape[1] == len(x_names) + 1
+    assert importances_by_points.shape[1] == len(x_names) + 3
 
 
 def test_AdaSTEMRegressor():
@@ -137,7 +137,7 @@ def test_AdaSTEMRegressor():
 
     importances_by_points = model.assign_feature_importances_by_points(verbosity=0, njobs=1)
     assert importances_by_points.shape[0] > 0
-    assert importances_by_points.shape[1] == len(x_names) + 1
+    assert importances_by_points.shape[1] == len(x_names) + 3
 
 
 def test_SphereAdaClassifier():
@@ -150,7 +150,7 @@ def test_SphereAdaClassifier():
 
     pred = model.predict(X_test)
     assert len(pred) == len(X_test)
-    assert np.isnan(pred) / len(pred) <= 0.3
+    assert np.sum(np.isnan(pred)) / len(pred) <= 0.3
 
     pred_df = pd.DataFrame(
         {"y_true": y_test.flatten(), "y_pred": np.where(pred.flatten() < 0, 0, pred.flatten())}
@@ -167,7 +167,7 @@ def test_SphereAdaClassifier():
 
     importances_by_points = model.assign_feature_importances_by_points(verbosity=0, njobs=1)
     assert importances_by_points.shape[0] > 0
-    assert importances_by_points.shape[1] == len(x_names) + 1
+    assert importances_by_points.shape[1] == len(x_names) + 3
 
 
 def test_SphereAdaSTEMRegressor():
@@ -180,7 +180,7 @@ def test_SphereAdaSTEMRegressor():
 
     pred = model.predict(X_test)
     assert len(pred) == len(X_test)
-    assert np.isnan(pred) / len(pred) <= 0.3
+    assert np.sum(np.isnan(pred)) / len(pred) <= 0.3
 
     pred_df = pd.DataFrame(
         {"y_true": y_test.flatten(), "y_pred": np.where(pred.flatten() < 0, 0, pred.flatten())}
@@ -197,4 +197,4 @@ def test_SphereAdaSTEMRegressor():
 
     importances_by_points = model.assign_feature_importances_by_points(verbosity=0, njobs=1)
     assert importances_by_points.shape[0] > 0
-    assert importances_by_points.shape[1] == len(x_names) + 1
+    assert importances_by_points.shape[1] == len(x_names) + 3
