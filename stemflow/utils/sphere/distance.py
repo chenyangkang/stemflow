@@ -1,5 +1,18 @@
 import numpy as np
 
+from .coordinate_transform import lonlat_cartesian_3D_transformer
+
+
+def distance_from_3D_point(x1, y1, z1, x2, y2, z2, radius=6371.0):
+    # Convert Cartesian coordinates to spherical coordinates (latitude and longitude)
+    lon1, lat1 = lonlat_cartesian_3D_transformer.inverse_transform(x1, y1, z1)
+    lon2, lat2 = lonlat_cartesian_3D_transformer.inverse_transform(x2, y2, z2)
+
+    # Haversine formula
+    distance = haversine_distance((lon1, lat1), (lon2, lat2), radius_earth=radius)
+
+    return distance
+
 
 def spherical_distance_from_coordinates(inclination1, azimuth1, inclination2, azimuth2, radius=6371.0):
     """
@@ -28,30 +41,60 @@ def spherical_distance_from_coordinates(inclination1, azimuth1, inclination2, az
     return distance
 
 
-def haversine_distance(lat1, lon1, lat2, lon2, radius=6371.0):
+def haversine_distance(coord1, coord2, radius_earth):
     """
-    Calculate the spherical distance between two points on the Earth's surface.
+    Calculate the Haversine distance between two sets of coordinates.
 
-    Args:
-        lat1 (float): Latitude of the first point in Radius.
-        lon1 (float): Longitude of the first point in Radius.
-        lat2 (float): Latitude of the second point in Radius.
-        lon2 (float): Longitude of the second point in Radius.
-        radius (float, optional): Radius of the Earth in kilometers (default is 6371.0).
+    Parameters:
+        coord1 (tuple): (latitude, longitude) for the first point
+        coord2 (tuple): (latitude, longitude) for the second point
 
     Returns:
-        float: Spherical distance between the two points in kilometers.
-
+        float: Haversine distance in kilometers
     """
-    # Calculate differences in coordinates
-    dlat = lat2 - lat1
-    dlon = lon2 - lon1
+    # Convert latitude and longitude from degrees to radians
+    lon1, lat1 = np.radians(coord1)
+    lon2, lat2 = np.radians(coord2)
 
     # Haversine formula
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
     a = np.sin(dlat / 2) ** 2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2) ** 2
-    c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
+    c = 2 * np.arcsin(np.sqrt(a))
 
-    # Calculate distance
-    distance = radius * c
+    # Radius of the Earth in kilometers (mean value)
+    radius_earth = 6371.0
+
+    # Calculate the distance
+    distance = radius_earth * c
 
     return distance
+
+
+# def haversine_distance(lon1, lat1, lon2, lat2, radius=6371.0):
+#     """
+#     Calculate the spherical distance between two points on the Earth's surface.
+
+#     Args:
+#         lat1 (float): Latitude of the first point in Radius.
+#         lon1 (float): Longitude of the first point in Radius.
+#         lat2 (float): Latitude of the second point in Radius.
+#         lon2 (float): Longitude of the second point in Radius.
+#         radius (float, optional): Radius of the Earth in kilometers (default is 6371.0).
+
+#     Returns:
+#         float: Spherical distance between the two points in kilometers.
+
+#     """
+#     # Calculate differences in coordinates
+#     dlat = lat2 - lat1
+#     dlon = lon2 - lon1
+
+#     # Haversine formula
+#     a = np.sin(dlat / 2) ** 2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2) ** 2
+#     c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
+
+#     # Calculate distance
+#     distance = radius * c
+
+#     return distance
