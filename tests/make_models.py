@@ -23,7 +23,7 @@ fold_ = 2
 min_req = 1
 
 
-def make_STEMClassifier(fold_, min_req, ensemble_models_disk_saver, ensemble_models_disk_saving_dir):
+def make_STEMClassifier(fold_=2, min_req=1, ensemble_models_disk_saver=False, ensemble_models_disk_saving_dir=""):
     model = STEMClassifier(
         base_model=XGBClassifier(tree_method="hist", random_state=42, verbosity=0, n_jobs=1),
         save_gridding_plot=True,
@@ -49,7 +49,7 @@ def make_STEMClassifier(fold_, min_req, ensemble_models_disk_saver, ensemble_mod
     return model
 
 
-def make_STEMRegressor(fold_, min_req, ensemble_models_disk_saver, ensemble_models_disk_saving_dir):
+def make_STEMRegressor(fold_=2, min_req=1, ensemble_models_disk_saver=False, ensemble_models_disk_saving_dir=""):
     model = STEMRegressor(
         base_model=Hurdle(
             classifier=XGBClassifier(tree_method="hist", random_state=42, verbosity=0, n_jobs=1),
@@ -78,8 +78,8 @@ def make_STEMRegressor(fold_, min_req, ensemble_models_disk_saver, ensemble_mode
     return model
 
 
-def make_AdaSTEMClassifier(fold_, min_req, ensemble_models_disk_saver, ensemble_models_disk_saving_dir):
-    model = make_AdaSTEMClassifier(
+def make_AdaSTEMClassifier(fold_=2, min_req=1, ensemble_models_disk_saver=False, ensemble_models_disk_saving_dir=""):
+    model = AdaSTEMClassifier(
         base_model=XGBClassifier(tree_method="hist", random_state=42, verbosity=0, n_jobs=1),
         save_gridding_plot=True,
         ensemble_fold=fold_,
@@ -104,7 +104,7 @@ def make_AdaSTEMClassifier(fold_, min_req, ensemble_models_disk_saver, ensemble_
     return model
 
 
-def make_AdaSTEMRegressor(fold_, min_req, ensemble_models_disk_saver, ensemble_models_disk_saving_dir):
+def make_AdaSTEMRegressor(fold_=2, min_req=1, ensemble_models_disk_saver=False, ensemble_models_disk_saving_dir=""):
     model = AdaSTEMRegressor(
         base_model=Hurdle(
             classifier=XGBClassifier(tree_method="hist", random_state=42, verbosity=0, n_jobs=1),
@@ -133,7 +133,9 @@ def make_AdaSTEMRegressor(fold_, min_req, ensemble_models_disk_saver, ensemble_m
     return model
 
 
-def make_SphereAdaSTEMRegressor(fold_, min_req, ensemble_models_disk_saver, ensemble_models_disk_saving_dir):
+def make_SphereAdaSTEMRegressor(
+    fold_=2, min_req=1, ensemble_models_disk_saver=False, ensemble_models_disk_saving_dir=""
+):
     model = SphereAdaSTEMRegressor(
         base_model=Hurdle(
             classifier=XGBClassifier(tree_method="hist", random_state=42, verbosity=0, n_jobs=1),
@@ -161,7 +163,7 @@ def make_SphereAdaSTEMRegressor(fold_, min_req, ensemble_models_disk_saver, ense
     return model
 
 
-def make_SphereAdaClassifier(fold_, min_req, ensemble_models_disk_saver, ensemble_models_disk_saving_dir):
+def make_SphereAdaClassifier(fold_=2, min_req=1, ensemble_models_disk_saver=False, ensemble_models_disk_saving_dir=""):
     model = SphereAdaSTEMClassifier(
         base_model=XGBClassifier(tree_method="hist", random_state=42, verbosity=0, n_jobs=1),
         save_gridding_plot=True,
