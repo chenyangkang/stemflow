@@ -1,6 +1,6 @@
 import numpy as np
 
-from .coordinate_transform import cartesian_3D_to_lonlat
+from .coordinate_transform import lonlat_cartesian_3D_transformer
 
 
 def get_Icosahedron_vertices():
@@ -51,20 +51,33 @@ def get_Icosahedron_faces():
     return face_list
 
 
-def get_earth_Icosahedron_vertices_and_faces():
+def get_earth_Icosahedron_vertices_and_faces_lonlat():
     # earth_radius_km=6371.0
     # get Icosahedron vertices and faces
     vertices = get_Icosahedron_vertices()
     face_list = get_Icosahedron_faces()
 
     # Scale: from 2 to 6371
-    # scale_ori = (np.sum(vertices**2, axis=1)**(1/2))[0]
-    # # Scale vertices and face_list to km
-    # vertices = vertices * (earth_radius_km/scale_ori)
-    # face_list = face_list * (earth_radius_km/scale_ori)
-
-    vertices_lng, vertices_lat = cartesian_3D_to_lonlat(vertices[:, 0], vertices[:, 1], vertices[:, 2])
-
-    faces_lng, faces_lat = cartesian_3D_to_lonlat(face_list[:, :, 0], face_list[:, :, 1], face_list[:, :, 2])
+    vertices_lng, vertices_lat = lonlat_cartesian_3D_transformer.inverse_transform(
+        vertices[:, 0], vertices[:, 1], vertices[:, 2]
+    )
+    faces_lng, faces_lat = lonlat_cartesian_3D_transformer.inverse_transform(
+        face_list[:, :, 0], face_list[:, :, 1], face_list[:, :, 2]
+    )
 
     return np.stack([vertices_lng, vertices_lat], axis=-1), np.stack([faces_lng, faces_lat], axis=-1)
+
+
+def get_earth_Icosahedron_vertices_and_faces_3D(radius=1):
+    # earth_radius_km=6371.0
+    # get Icosahedron vertices and faces
+    vertices = get_Icosahedron_vertices()
+    face_list = get_Icosahedron_faces()
+
+    # Scale: from 2 to 6371
+    scale_ori = (np.sum(vertices**2, axis=1) ** (1 / 2))[0]
+    # Scale vertices and face_list to km
+    vertices = vertices * (radius / scale_ori)
+    face_list = face_list * (radius / scale_ori)
+
+    return vertices, face_list

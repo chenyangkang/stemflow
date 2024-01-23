@@ -30,8 +30,11 @@ from sklearn.metrics import (
 from tqdm import tqdm
 from tqdm.auto import tqdm as tqdm_auto
 
+from ..utils.sphere.coordinate_transform import lonlat_cartesian_3D_transformer
+from ..utils.sphere.discriminant_formula import intersect_triangle_plane
+
 #
-from ..utils.quadtree import get_ensemble_quadtree
+from ..utils.sphere_quadtree import get_ensemble_sphere_quadtree
 from ..utils.validation import (
     check_base_model,
     check_njobs,
@@ -47,21 +50,31 @@ from ..utils.validation import (
     check_y_train,
 )
 from ..utils.wrapper import model_wrapper
+from .AdaSTEM import AdaSTEM, AdaSTEMClassifier, AdaSTEMRegressor
 from .dummy_model import dummy_model1
 from .Hurdle import Hurdle
 from .static_func_AdaSTEM import (  # predict_one_ensemble
-    assign_points_to_one_ensemble,
+    assign_points_to_one_ensemble_sphere,
     get_model_and_stixel_specific_x_names,
     predict_one_stixel,
     train_one_stixel,
-    transform_pred_set_to_STEM_quad,
+    transform_pred_set_to_Sphere_STEM_quad,
 )
 
 #
 
 
-class AdaSTEM(BaseEstimator):
-    """A AdaSTEM model class inherited by AdaSTEMClassifier and AdaSTEMRegressor"""
+class SphereAdaSTEM(AdaSTEM):
+    """A SphereAdaSTEm model class (allow fixed grid size)
+
+    Parents:
+        stemflow.model.AdaSTEM
+
+    Children:
+        stemflow.model.SphereAdaSTEM.SphereAdaSTEMClassifier
+        stemflow.model.SphereAdaSTEM.SphereAdaSTEMRegressor
+
+    """
 
     def __init__(
         self,
@@ -69,8 +82,8 @@ class AdaSTEM(BaseEstimator):
         task: str = "hurdle",
         ensemble_fold: int = 10,
         min_ensemble_required: int = 7,
-        grid_len_upper_threshold: Union[float, int] = 25,
-        grid_len_lower_threshold: Union[float, int] = 5,
+        grid_len_upper_threshold: Union[float, int] = 8000,
+        grid_len_lower_threshold: Union[float, int] = 100,
         points_lower_threshold: int = 50,
         stixel_training_size_threshold: int = None,
         temporal_start: Union[float, int] = 1,
@@ -141,9 +154,9 @@ class AdaSTEM(BaseEstimator):
             ensemble_models_disk_saver:
                 Whether to balance the sample weights of classifier for imbalanced datasets. Defaults to True.
             Spatio1:
-                Spatial column name 1 in data. Defaults to 'longitude'.
+                Spatial column name 1 in data. For SphereAdaSTEM, this HAS to be 'longitude'.
             Spatio2:
-                Spatial column name 2 in data. Defaults to 'latitude'.
+                Spatial column name 2 in data. For SphereAdaSTEM, this HAS to be 'latitude'.
             Temporal1:
                 Temporal column name 1 in data.  Defaults to 'DOY'.
             use_temporal_to_train:
@@ -169,7 +182,7 @@ class AdaSTEM(BaseEstimator):
             AttributeError: Base model do not have method 'fit' or 'predict'
             AttributeError: task not in one of ['regression', 'classification', 'hurdle']
             AttributeError: temporal_bin_start_jitter not in one of [str, float, int]
-            AttributeError: temporal_bin_start_jitter is type str, but not 'random'
+            AttributeError: temporal_bin_start_jitter is type str, but not 'adaptive'
 
         Attributes:
             x_names (list):
@@ -201,6 +214,8 @@ class AdaSTEM(BaseEstimator):
         self.Temporal1 = Temporal1
         self.Spatio1 = Spatio1
         self.Spatio2 = Spatio2
+        if not ((self.Spatio1 == "longitude") and (self.Spatio2 == "latitude")):
+            raise ValueError("Spatio1 and Spatio2 must be longitude and latitude!")
 
         # 3. Gridding params
         self.ensemble_fold = ensemble_fold
@@ -240,7 +255,7 @@ class AdaSTEM(BaseEstimator):
         self.plot_ylims = plot_ylims
         self.save_tmp = save_tmp
         self.save_dir = save_dir
-        self.save_gridding_plot = save_gridding_plot
+        self.save_gridding_plot = save_gridding_plot  # Actually means plotly
 
         # X. miscellaneous
         self.ensemble_models_disk_saver = ensemble_models_disk_saver
@@ -277,17 +292,12 @@ class AdaSTEM(BaseEstimator):
             # We har using STEM
             pass
 
-        self.ensemble_df, self.gridding_plot = get_ensemble_quadtree(
+        self.ensemble_df, self.gridding_plot = get_ensemble_sphere_quadtree(
             X_train[[self.Spatio1, self.Spatio2, self.Temporal1]],
-            Spatio1=self.Spatio1,
-            Spatio2=self.Spatio2,
             Temporal1=self.Temporal1,
             size=fold,
-            grid_len=self.grid_len,
-            grid_len_lon_upper_threshold=self.grid_len_lon_upper_threshold,
-            grid_len_lon_lower_threshold=self.grid_len_lon_lower_threshold,
-            grid_len_lat_upper_threshold=self.grid_len_lat_upper_threshold,
-            grid_len_lat_lower_threshold=self.grid_len_lat_lower_threshold,
+            grid_len_upper_threshold=self.grid_len_upper_threshold,
+            grid_len_lower_threshold=self.grid_len_lower_threshold,
             points_lower_threshold=self.points_lower_threshold,
             temporal_start=self.temporal_start,
             temporal_end=self.temporal_end,
@@ -295,7 +305,8 @@ class AdaSTEM(BaseEstimator):
             temporal_bin_interval=self.temporal_bin_interval,
             temporal_bin_start_jitter=self.temporal_bin_start_jitter,
             spatio_bin_jitter_magnitude=self.spatio_bin_jitter_magnitude,
-            save_gridding_plot=self.save_gridding_plot,
+            save_gridding_plotly=self.save_gridding_plot,  # currently only allow output plotly
+            save_gridding_plot=False,
             njobs=self.njobs,
             verbosity=verbosity,
             plot_xlims=self.plot_xlims,
@@ -303,50 +314,6 @@ class AdaSTEM(BaseEstimator):
             save_path=save_path,
             ax=ax,
         )
-
-    def store_x_names(self, X_train):
-        # store x_names
-        self.x_names = list(X_train.columns)
-        if not self.use_temporal_to_train:
-            if self.Temporal1 in list(self.x_names):
-                del self.x_names[self.x_names.index(self.Temporal1)]
-
-        # if 'geometry' in self.x_names:
-        #     del self.x_names[self.x_names.index('geometry')]
-
-        for i in [self.Spatio1, self.Spatio2]:
-            if i in self.x_names:
-                del self.x_names[self.x_names.index(i)]
-
-    def stixel_fitting(self, stixel):
-        """Fit one stixel
-
-        Args:
-            stixel (gpd.geodataframe.GeoDataFrame): data sjoined with ensemble_df.
-            For a single stixel.
-        """
-
-        ensemble_index = int(stixel["ensemble_index"].iloc[0])
-        unique_stixel_id = stixel["unique_stixel_id"].iloc[0]
-        name = f"{ensemble_index}_{unique_stixel_id}"
-
-        model, stixel_specific_x_names, status = train_one_stixel(
-            stixel_training_size_threshold=self.stixel_training_size_threshold,
-            x_names=self.x_names,
-            task=self.task,
-            base_model=self.base_model,
-            sample_weights_for_classifier=self.sample_weights_for_classifier,
-            subset_x_names=self.subset_x_names,
-            stixel_X_train=stixel,
-        )
-
-        if not status == "Success":
-            # print(f'Fitting: {ensemble_index}. Not pass: {status}')
-            pass
-
-        else:
-            self.model_dict[f"{name}_model"] = model
-            self.stixel_specific_x_names[name] = stixel_specific_x_names
 
     def SAC_ensemble_training(self, index_df, data):
         # Calculate the start indices for the sliding window
@@ -356,27 +323,38 @@ class AdaSTEM(BaseEstimator):
             window_data_df = data[
                 (data[self.Temporal1] >= start) & (data[self.Temporal1] < start + self.temporal_bin_interval)
             ]
-            window_data_df = transform_pred_set_to_STEM_quad(self.Spatio1, self.Spatio2, window_data_df, index_df)
+            window_data_df = transform_pred_set_to_Sphere_STEM_quad(
+                self.Spatio1, self.Spatio2, window_data_df, index_df
+            )
             window_index_df = index_df[index_df[f"{self.Temporal1}_start"] == start]
 
             # Merge
             def find_belonged_points(df, df_a):
-                return df_a[
-                    (df_a[f"{self.Spatio1}_new"] >= df["stixel_calibration_point_transformed_left_bound"].iloc[0])
-                    & (df_a[f"{self.Spatio1}_new"] < df["stixel_calibration_point_transformed_right_bound"].iloc[0])
-                    & (df_a[f"{self.Spatio2}_new"] >= df["stixel_calibration_point_transformed_lower_bound"].iloc[0])
-                    & (df_a[f"{self.Spatio2}_new"] < df["stixel_calibration_point_transformed_upper_bound"].iloc[0])
-                ]
+                P0 = np.array([0, 0, 0]).reshape(1, -1)
+                A = np.array(df[["p1x", "p1y", "p1z"]].iloc[0])
+                B = np.array(df[["p2x", "p2y", "p2z"]].iloc[0])
+                C = np.array(df[["p3x", "p3y", "p3z"]].iloc[0])
+
+                intersect = intersect_triangle_plane(
+                    P0=P0, V=df_a[["x_3D_transformed", "y_3D_transformed", "z_3D_transformed"]].values, A=A, B=B, C=C
+                )
+
+                return df_a.iloc[np.where(intersect)[0], :]
 
             query_results = (
                 window_index_df[
                     [
                         "ensemble_index",
                         "unique_stixel_id",
-                        "stixel_calibration_point_transformed_left_bound",
-                        "stixel_calibration_point_transformed_right_bound",
-                        "stixel_calibration_point_transformed_lower_bound",
-                        "stixel_calibration_point_transformed_upper_bound",
+                        "p1x",
+                        "p1y",
+                        "p1z",
+                        "p2x",
+                        "p2y",
+                        "p2z",
+                        "p3x",
+                        "p3y",
+                        "p3z",
                     ]
                 ]
                 .groupby(["ensemble_index", "unique_stixel_id"])
@@ -394,93 +372,6 @@ class AdaSTEM(BaseEstimator):
                 .groupby("unique_stixel_id")
                 .apply(lambda stixel: self.stixel_fitting(stixel))
             )
-
-    def SAC_training(self, ensemble_df, data, verbosity):
-        """Training with the whole input data
-
-        split (S), apply(A), combine (C). Ensemble level
-
-        """
-
-        if verbosity > 0:
-            tqdm_auto.pandas(desc="training", postfix=None)
-            ensemble_df.groupby("ensemble_index").progress_apply(
-                lambda ensemble: self.SAC_ensemble_training(index_df=ensemble, data=data)
-            )
-        else:
-            ensemble_df.groupby("ensemble_index").apply(
-                lambda ensemble: self.SAC_ensemble_training(index_df=ensemble, data=data)
-            )
-
-    def fit(
-        self,
-        X_train: pd.core.frame.DataFrame,
-        y_train: Union[pd.core.frame.DataFrame, np.ndarray],
-        verbosity: Union[None, int] = None,
-        ax=None,
-    ):
-        """Fitting method
-
-        Args:
-            X_train: Training variables
-            y_train: Training target
-            ax: matplotlib Axes to add to
-
-        Raises:
-            TypeError: X_train is not a type of pd.core.frame.DataFrame
-            TypeError: y_train is not a type of np.ndarray or pd.core.frame.DataFrame
-        """
-        #
-        verbosity = check_verbosity(self, verbosity)
-        check_X_train(X_train)
-        check_y_train(y_train)
-        self.store_x_names(X_train)
-
-        # quadtree
-        X_train = X_train.reset_index(drop=True)  # I reset index here!! caution!
-        X_train["true_y"] = np.array(y_train).flatten()
-        self.split(X_train, verbosity=verbosity, ax=ax)
-
-        # define model dict
-        self.model_dict = {}
-        # stixel specific x_names list
-        self.stixel_specific_x_names = {}
-
-        if self.njobs > 1:
-            raise NotImplementedError("Multi-threading not implemented yet.")
-        else:
-            # single processing
-            self.SAC_training(self.ensemble_df, X_train, verbosity)
-
-        return self
-
-    def stixel_predict(self, stixel):
-        """Predict one stixel
-
-        Args:
-            stixel (pd.core.frame.DataFrame): data joined with ensemble_df.
-            For a single stixel.
-        """
-        ensemble_index = stixel["ensemble_index"].iloc[0]
-        unique_stixel_id = stixel["unique_stixel_id"].iloc[0]
-
-        model_x_names_tuple = get_model_and_stixel_specific_x_names(
-            self.model_dict,
-            ensemble_index,
-            unique_stixel_id,
-            self.stixel_specific_x_names,
-            self.x_names,
-        )
-
-        if model_x_names_tuple[0] is None:
-            return None
-
-        pred = predict_one_stixel(stixel, self.task, model_x_names_tuple)
-
-        if pred is None:
-            return None
-        else:
-            return pred
 
     def SAC_ensemble_predict(self, index_df, data):
         """Predict one ensemble
@@ -502,26 +393,37 @@ class AdaSTEM(BaseEstimator):
             window_data_df = data[
                 (data[self.Temporal1] >= start) & (data[self.Temporal1] < start + self.temporal_bin_interval)
             ]
-            window_data_df = transform_pred_set_to_STEM_quad(self.Spatio1, self.Spatio2, window_data_df, index_df)
+            window_data_df = transform_pred_set_to_Sphere_STEM_quad(
+                self.Spatio1, self.Spatio2, window_data_df, index_df
+            )
             window_index_df = index_df[index_df[f"{self.Temporal1}_start"] == start]
 
             def find_belonged_points(df, df_a):
-                return df_a[
-                    (df_a[f"{self.Spatio1}_new"] >= df["stixel_calibration_point_transformed_left_bound"].iloc[0])
-                    & (df_a[f"{self.Spatio1}_new"] < df["stixel_calibration_point_transformed_right_bound"].iloc[0])
-                    & (df_a[f"{self.Spatio2}_new"] >= df["stixel_calibration_point_transformed_lower_bound"].iloc[0])
-                    & (df_a[f"{self.Spatio2}_new"] < df["stixel_calibration_point_transformed_upper_bound"].iloc[0])
-                ]
+                P0 = np.array([0, 0, 0]).reshape(1, -1)
+                A = np.array(df[["p1x", "p1y", "p1z"]].iloc[0])
+                B = np.array(df[["p2x", "p2y", "p2z"]].iloc[0])
+                C = np.array(df[["p3x", "p3y", "p3z"]].iloc[0])
+
+                intersect = intersect_triangle_plane(
+                    P0=P0, V=df_a[["x_3D_transformed", "y_3D_transformed", "z_3D_transformed"]].values, A=A, B=B, C=C
+                )
+
+                return df_a.iloc[np.where(intersect)[0], :]
 
             query_results = (
                 window_index_df[
                     [
                         "ensemble_index",
                         "unique_stixel_id",
-                        "stixel_calibration_point_transformed_left_bound",
-                        "stixel_calibration_point_transformed_right_bound",
-                        "stixel_calibration_point_transformed_lower_bound",
-                        "stixel_calibration_point_transformed_upper_bound",
+                        "p1x",
+                        "p1y",
+                        "p1z",
+                        "p2x",
+                        "p2y",
+                        "p2z",
+                        "p3x",
+                        "p3y",
+                        "p3z",
                     ]
                 ]
                 .groupby(["ensemble_index", "unique_stixel_id"])
@@ -546,336 +448,6 @@ class AdaSTEM(BaseEstimator):
         ensemble_prediction = ensemble_prediction.droplevel(0, axis=0)
         ensemble_prediction = ensemble_prediction.groupby("index").mean().reset_index(drop=False)
         return ensemble_prediction
-
-    def SAC_predict(self, ensemble_df, data, verbosity):
-        """split (S), apply(A), combine (C). Ensemble level"""
-
-        if verbosity > 0:
-            tqdm_auto.pandas(desc="predicting", postfix=None)
-            pred = ensemble_df.groupby("ensemble_index").progress_apply(
-                lambda ensemble: self.SAC_ensemble_predict(index_df=ensemble, data=data)
-            )
-        else:
-            pred = ensemble_df.groupby("ensemble_index").apply(
-                lambda ensemble: self.SAC_ensemble_predict(index_df=ensemble, data=data)
-            )
-
-        # pred = pred.reset_index(drop=False)
-        pred = pred.droplevel(1, axis=0).reset_index(drop=False)
-        pred = pred.pivot_table(index="index", columns="ensemble_index", values="pred")
-        return pred
-
-    def predict_proba(
-        self,
-        X_test: pd.core.frame.DataFrame,
-        verbosity: Union[int, None] = None,
-        return_std: bool = False,
-        njobs: Union[None, int] = 1,
-        aggregation: str = "mean",
-        return_by_separate_ensembles: bool = False,
-    ) -> Union[np.ndarray, Tuple[np.ndarray]]:
-        """Predict probability
-
-        Args:
-            X_test (pd.core.frame.DataFrame):
-                Testing variables.
-            verbosity (int, optional):
-                show progress bar or not. Yes for 0, and No for other. Defaults to None, which set it as the verbosity of the main model class.
-            return_std (bool, optional):
-                Whether return the standard deviation among ensembles. Defaults to False.
-            njobs (Union[int, None], optional):
-                Number of processes used in this task. If None, use the self.njobs. Default to 1.
-                I do not recommend setting value larger than 1.
-                In practice, multi-processing seems to slow down the process instead of speeding up.
-                Could be more practical with large amount of data.
-                Still in experiment.
-            aggregation (str, optional):
-                'mean' or 'median' for aggregation method across ensembles.
-            return_by_separate_ensembles (bool, optional):
-                Experimental function. return not by aggregation, but by separate ensembles.
-
-        Raises:
-            TypeError:
-                X_test is not of type pd.core.frame.DataFrame.
-            ValueError:
-                aggregation is not in ['mean','median'].
-
-        Returns:
-            predicted results. (pred_mean, pred_std) if return_std==true, and pred_mean if return_std==False.
-
-            If return_by_separate_ensembles == True:
-                Return numpy.ndarray of shape (n_samples, n_ensembles)
-
-        """
-        check_X_test(X_test)
-        check_prediciton_aggregation(aggregation)
-        return_by_separate_ensembles, return_std = check_prediction_return(return_by_separate_ensembles, return_std)
-        verbosity = check_verbosity(self, verbosity)
-        check_njobs(njobs)
-
-        res = self.SAC_predict(self.ensemble_df, X_test, verbosity=verbosity)
-
-        # Experimental Function
-        if return_by_separate_ensembles:
-            new_res = pd.DataFrame({"index": list(X_test.index)}).set_index("index")
-            new_res = new_res.merge(res, left_on="index", right_on="index", how="left")
-            return new_res.values
-
-        # Aggregate
-        if aggregation == "mean":
-            res_mean = res.mean(axis=1, skipna=True)  # mean of all grid model that predicts this stixel
-        elif aggregation == "median":
-            res_mean = res.median(axis=1, skipna=True)
-        res_std = res.std(axis=1, skipna=True)
-
-        # Nan count
-        res_nan_count = res.isnull().sum(axis=1)
-
-        pred_mean = np.where(res_nan_count.values >= self.min_ensemble_required, np.nan, res_mean.values)
-        pred_std = np.where(res_nan_count.values >= self.min_ensemble_required, np.nan, res_std.values)
-
-        res = pd.DataFrame({"index": list(res_mean.index), "pred_mean": pred_mean, "pred_std": pred_std}).set_index(
-            "index"
-        )
-
-        # Preparing output (formatting)
-        new_res = pd.DataFrame({"index": list(X_test.index)}).set_index("index")
-        new_res = new_res.merge(res, left_on="index", right_on="index", how="left")
-
-        nan_count = np.sum(np.isnan(new_res["pred_mean"].values))
-        nan_frac = nan_count / len(new_res["pred_mean"].values)
-        warnings.warn(f"There are {nan_frac}% points ({nan_count} points) fell out of predictable range.")
-
-        if return_std:
-            return new_res["pred_mean"].values, new_res["pred_std"].values
-        else:
-            return new_res["pred_mean"].values
-
-    def predict(
-        self,
-        X_test: pd.core.frame.DataFrame,
-        verbosity: Union[None, int] = None,
-        return_std: bool = False,
-        njobs: Union[None, int] = 1,
-        aggregation: str = "mean",
-        return_by_separate_ensembles: bool = False,
-    ) -> Union[np.ndarray, Tuple[np.ndarray]]:
-        """A rewrite of predict_proba
-
-        Args:
-            X_test (pd.core.frame.DataFrame):
-                Testing variables.
-            verbosity (Union[None, int], optional):
-                0 to output nothing, everything other wise. Default None set it to the verbosity of AdaSTEM model class.
-            return_std (bool, optional):
-                Whether return the standard deviation among ensembles. Defaults to False.
-            njobs (Union[int, None], optional):
-                Number of processes used in this task. If None, use the self.njobs. Default to 1.
-                I do not recommend setting value larger than 1.
-                In practice, multi-processing seems to slow down the process instead of speeding up.
-                Could be more practical with large amount of data.
-                Still in experiment.
-            aggregation (str, optional):
-                'mean' or 'median' for aggregation method across ensembles.
-            return_by_separate_ensembles (bool, optional):
-                Experimental function. return not by aggregation, but by separate ensembles.
-
-        Raises:
-            TypeError:
-                X_test is not of type pd.core.frame.DataFrame.
-            ValueError:
-                aggregation is not in ['mean','median'].
-
-        Returns:
-            predicted results. (pred_mean, pred_std) if return_std==true, and pred_mean if return_std==False.
-
-            If return_by_separate_ensembles == True:
-                Return numpy.ndarray of shape (n_samples, n_ensembles)
-
-        """
-
-        return self.predict_proba(
-            X_test,
-            verbosity=verbosity,
-            return_std=return_std,
-            njobs=njobs,
-            aggregation=aggregation,
-            return_by_separate_ensembles=return_by_separate_ensembles,
-        )
-
-    @classmethod
-    def eval_STEM_res(
-        self,
-        task: str,
-        y_test: Union[pd.core.series.Series, np.ndarray],
-        y_pred: Union[pd.core.series.Series, np.ndarray],
-        cls_threshold: Union[float, None] = None,
-    ) -> dict:
-        """Evaluation using multiple metrics
-
-        Classification metrics used:
-        1. AUC
-        2. Cohen's Kappa
-        3. F1
-        4. precision
-        5. recall
-        6. average precision
-
-        Regression metrics used:
-        1. spearman's r
-        2. peason's r
-        3. R2
-        4. mean absolute error (MAE)
-        5. mean squared error (MSE)
-        6. poisson deviance explained (PDE)
-
-        Args:
-            task (str):
-                one of 'regression', 'classification' or 'hurdle'.
-            y_test (Union[pd.core.series.Series, np.ndarray]):
-                y true
-            y_pred (Union[pd.core.series.Series, np.ndarray]):
-                y predicted
-            cls_threshold (Union[float, None], optional):
-                Cutting threshold for the classification.
-                Values above cls_threshold will be labeled as 1 and 0 otherwise.
-                Defaults to None (0.5 for classification and 0 for hurdle).
-
-        Raises:
-            AttributeError: task not one of 'regression', 'classification' or 'hurdle'.
-
-        Returns:
-            dict: dictionary containing the metric names and their values.
-        """
-
-        if task not in ["regression", "classification", "hurdle"]:
-            raise AttributeError(
-                f"task type must be one of 'regression', 'classification', or 'hurdle'! Now it is {task}"
-            )
-
-        if cls_threshold is None:
-            if task == "classification":
-                cls_threshold = 0.5
-            elif task == "hurdle":
-                cls_threshold = 0
-
-        if not task == "regression":
-            a = pd.DataFrame({"y_true": np.array(y_test).flatten(), "pred": np.array(y_pred).flatten()}).dropna()
-
-            y_test_b = np.where(a.y_true > cls_threshold, 1, 0)
-            y_pred_b = np.where(a.pred > cls_threshold, 1, 0)
-
-            if len(np.unique(y_test_b)) == 1 and len(np.unique(y_pred_b)) == 1:
-                auc, kappa, f1, precision, recall, average_precision = [np.nan] * 6
-
-            else:
-                auc = roc_auc_score(y_test_b, y_pred_b)
-                kappa = cohen_kappa_score(y_test_b, y_pred_b)
-                f1 = f1_score(y_test_b, y_pred_b)
-                precision = precision_score(y_test_b, y_pred_b)
-                recall = recall_score(y_test_b, y_pred_b)
-                average_precision = average_precision_score(y_test_b, y_pred_b)
-
-        else:
-            auc, kappa, f1, precision, recall, average_precision = [np.nan] * 6
-
-        if not task == "classification":
-            a = pd.DataFrame({"y_true": y_test, "pred": y_pred}).dropna()
-            s_r, _ = spearmanr(np.array(a.y_true), np.array(a.pred))
-            p_r, _ = pearsonr(np.array(a.y_true), np.array(a.pred))
-            r2 = r2_score(a.y_true, a.pred)
-            MAE = mean_absolute_error(a.y_true, a.pred)
-            MSE = mean_squared_error(a.y_true, a.pred)
-            try:
-                poisson_deviance_explained = d2_tweedie_score(a[a.pred > 0].y_true, a[a.pred > 0].pred, power=1)
-            except Exception as e:
-                warnings.warn(f"PED estimation fail: {e}")
-                poisson_deviance_explained = np.nan
-        else:
-            s_r, p_r, r2, MAE, MSE, poisson_deviance_explained = [np.nan] * 6
-
-        return {
-            "AUC": auc,
-            "kappa": kappa,
-            "f1": f1,
-            "precision": precision,
-            "recall": recall,
-            "average_precision": average_precision,
-            "Spearman_r": s_r,
-            "Pearson_r": p_r,
-            "R2": r2,
-            "MAE": MAE,
-            "MSE": MSE,
-            "poisson_deviance_explained": poisson_deviance_explained,
-        }
-
-    def score(self, X_test: pd.core.frame.DataFrame, y_test: Union[pd.core.series.Series, np.ndarray]) -> dict:
-        """Combine predicting and evaluating in one method
-
-        Args:
-            X_test (pd.core.frame.DataFrame): Testing variables
-            y_test (Union[pd.core.series.Series, np.ndarray]): y true
-
-        Returns:
-            dict: dictionary containing the metric names and their values.
-        """
-
-        y_pred, _ = self.predict(X_test)
-        score_dict = AdaSTEM.eval_STEM_res(self.task, y_test, y_pred)
-        self.score_dict = score_dict
-        return self.score_dict
-
-    def calculate_feature_importances(self):
-        """A method to generate feature importance values for each stixel.
-
-        feature importances are saved in self.feature_importances_.
-
-        Attribute dependence:
-            1. self.ensemble_df
-            2. self.model_dict
-            3. self.stixel_specific_x_names
-            4. The input base model should have attribute `feature_importances_`
-
-        """
-        # generate feature importance dict
-        feature_importance_list = []
-
-        for index, ensemble_row in self.ensemble_df[
-            self.ensemble_df["stixel_checklist_count"] >= self.stixel_training_size_threshold
-        ].iterrows():
-            if ensemble_row["stixel_checklist_count"] < self.stixel_training_size_threshold:
-                continue
-
-            try:
-                ensemble_index = ensemble_row["ensemble_index"]
-                stixel_index = ensemble_row["unique_stixel_id"]
-                the_model = self.model_dict[f"{ensemble_index}_{stixel_index}_model"]
-                x_names = self.stixel_specific_x_names[f"{ensemble_index}_{stixel_index}"]
-
-                if isinstance(the_model, dummy_model1):
-                    importance_dict = dict(zip(self.x_names, [1 / len(self.x_names)] * len(self.x_names)))
-                elif isinstance(the_model, Hurdle):
-                    if "feature_importances_" in the_model.__dir__():
-                        importance_dict = dict(zip(x_names, the_model.feature_importances_))
-                    else:
-                        if isinstance(the_model.classifier, dummy_model1):
-                            importance_dict = dict(zip(self.x_names, [1 / len(self.x_names)] * len(self.x_names)))
-                        else:
-                            importance_dict = dict(zip(x_names, the_model.classifier.feature_importances_))
-                else:
-                    importance_dict = dict(zip(x_names, the_model.feature_importances_))
-
-                importance_dict["stixel_index"] = stixel_index
-                feature_importance_list.append(importance_dict)
-
-            except Exception as e:
-                warnings.warn(f"{e}")
-                # print(e)
-                continue
-
-        self.feature_importances_ = (
-            pd.DataFrame(feature_importance_list).set_index("stixel_index").reset_index(drop=False).fillna(0)
-        )
 
     def assign_feature_importances_by_points(
         self,
@@ -918,7 +490,7 @@ class AdaSTEM(BaseEstimator):
             DataFrame with feature importance assigned.
         """
         #
-        verbosity = check_verbosity(self, verbosity=verbosity)
+        verbosity = check_verbosity(self, verbosity)
 
         #
         if "feature_importances_" not in dir(self):
@@ -962,7 +534,7 @@ class AdaSTEM(BaseEstimator):
                 else list(self.ensemble_df.ensemble_index.unique())
             )
             for ensemble in iter_func_:
-                res_list = assign_points_to_one_ensemble(
+                res_list = assign_points_to_one_ensemble_sphere(
                     self.ensemble_df,
                     ensemble,
                     Sample_ST_df,
@@ -974,23 +546,7 @@ class AdaSTEM(BaseEstimator):
                 round_res_list.append(res_list)
 
         else:
-            # multi-processing
-            with Pool(njobs) as p:
-                plain_args_iterator = zip(
-                    repeat(self.ensemble_df),
-                    list(self.ensemble_df.ensemble_index.unique()),
-                    repeat(Sample_ST_df),
-                    repeat(self.Temporal1),
-                    repeat(self.Spatio1),
-                    repeat(self.Spatio2),
-                    repeat(self.feature_importances_),
-                )
-                if verbosity > 0:
-                    args_iterator = tqdm(plain_args_iterator, total=len(list(self.ensemble_df.ensemble_index.unique())))
-                else:
-                    args_iterator = plain_args_iterator
-
-                round_res_list = p.starmap(assign_points_to_one_ensemble, args_iterator)
+            raise NotImplementedError("Multi-threading not implemented")
 
         round_res_df = pd.concat(round_res_list, axis=0)
         ensemble_available_count = round_res_df.groupby("sample_index").count().iloc[:, 0]
@@ -1013,7 +569,7 @@ class AdaSTEM(BaseEstimator):
         return out_
 
 
-class AdaSTEMClassifier(AdaSTEM):
+class SphereAdaSTEMClassifier(SphereAdaSTEM):
     """AdaSTEM model Classifier interface
 
     Example:
@@ -1043,8 +599,8 @@ class AdaSTEMClassifier(AdaSTEM):
         task="classification",
         ensemble_fold=10,
         min_ensemble_required=7,
-        grid_len_upper_threshold=25,
-        grid_len_lower_threshold=5,
+        grid_len_upper_threshold=8000,
+        grid_len_lower_threshold=100,
         points_lower_threshold=50,
         stixel_training_size_threshold=None,
         temporal_start=1,
@@ -1172,7 +728,7 @@ class AdaSTEMClassifier(AdaSTEM):
             return mean
 
 
-class AdaSTEMRegressor(AdaSTEM):
+class SphereAdaSTEMRegressor(SphereAdaSTEM):
     """AdaSTEM model Regressor interface
 
     Example:
@@ -1202,8 +758,8 @@ class AdaSTEMRegressor(AdaSTEM):
         task="regression",
         ensemble_fold=10,
         min_ensemble_required=7,
-        grid_len_upper_threshold=25,
-        grid_len_lower_threshold=5,
+        grid_len_upper_threshold=8000,
+        grid_len_lower_threshold=100,
         points_lower_threshold=50,
         stixel_training_size_threshold=None,
         temporal_start=1,
