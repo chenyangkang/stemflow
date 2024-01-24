@@ -57,57 +57,75 @@ For more information, please see [an introduction to stemflow](https://chenyangk
 -----
 
 ## Model and data  :slot_machine:
-
+<!-- 
 | Main functionality of `stemflow` | Supported data types | Supported tasks | Supported base models |
 | -- | -- | -- | -- |
-| :white_check_mark: Spatiotemporal modeling & prediction<br> | :white_check_mark: All spatial indexing (CRS)<br> | :white_check_mark: Binary classification task<br> | :white_check_mark: sklearn style `BaseEstimator` classes ([you can make your own base model](https://scikit-learn.org/stable/developers/develop.html)), for example [here](https://chenyangkang.github.io/stemflow/Examples/06.Base_model_choices.html)<br> |
-| :white_check_mark: Calculate overall feature importances<br> | :white_check_mark: All temporal indexing<br> | :white_check_mark: Regression task<br> | :white_check_mark: sklearn style Maxent model. [Example here](https://chenyangkang.github.io/stemflow/Examples/03.Binding_with_Maxent.html). |
+| :white_check_mark: Spatiotemporal modeling & prediction<br> | :white_check_mark: User-defined 2D spatial indexing (CRS)<br> | :white_check_mark: Binary classification task<br> | :white_check_mark: sklearn style `BaseEstimator` classes ([you can make your own base model](https://scikit-learn.org/stable/developers/develop.html)), for example [here](https://chenyangkang.github.io/stemflow/Examples/06.Base_model_choices.html)<br> |
+| :white_check_mark: Calculate overall feature importances<br> | :white_check_mark: User-defined temporal indexing<br> | :white_check_mark: Regression task<br> | :white_check_mark: sklearn style Maxent model. [Example here](https://chenyangkang.github.io/stemflow/Examples/03.Binding_with_Maxent.html). |
 | :white_check_mark: Plot spatiotemporal dynamics<br> | :white_check_mark: Spatial-only modeling<br> | :white_check_mark: Hurdle task (two step regression – classify then regress the non-zero part)<br> | |
 | | :white_check_mark: Both continuous and categorical features (prefer one-hot encoding)<br> | | |
 | | :white_check_mark: Both static (e.g., yearly mean temperature) and dynamic features (e.g., daily temperature) | | |
 | For details see [AdaSTEM Demo](https://chenyangkang.github.io/stemflow/Examples/01.AdaSTEM_demo.html) | For details and tips see [Tips for data types](https://chenyangkang.github.io/stemflow/Tips/Tips_for_data_types.html) | For details and tips see [Tips for different tasks](https://chenyangkang.github.io/stemflow/Tips/Tips_for_different_tasks.html) | For details see [Base model choices](https://chenyangkang.github.io/stemflow/Examples/06.Base_model_choices.html)|
+ -->
 
-<!-- For details see [AdaSTEM Demo](https://chenyangkang.github.io/stemflow/Examples/01.AdaSTEM_demo.html) -->
+| Main functionality of `stemflow` | Supported indexing | Supported tasks |
+| :-- | :-- | :-- |
+| :white_check_mark: Spatiotemporal modeling & prediction<br> | :white_check_mark: User-defined 2D spatial indexing (CRS)<br> | :white_check_mark: Binary classification task<br> |
+| :white_check_mark: Calculate overall feature importances<br> | :white_check_mark: Spherical indexing <br> | :white_check_mark: Regression task<br> |
+| :white_check_mark: Plot spatiotemporal dynamics<br> | :white_check_mark: User-defined temporal indexing<br> | :white_check_mark: Hurdle task (two step regression – classify then regress the non-zero part)<br> |
+| | :white_check_mark: Spatial-only modeling<br> | |
+| For details see [AdaSTEM Demo](https://chenyangkang.github.io/stemflow/Examples/01.AdaSTEM_demo.html) | For details and tips see [Tips for data types](https://chenyangkang.github.io/stemflow/Tips/Tips_for_data_types.html) | For details and tips see [Tips for different tasks](https://chenyangkang.github.io/stemflow/Tips/Tips_for_different_tasks.html) |
 
 
-<!-- ### Main functionality of `stemflow`
+<!-- column 1 -->
+<!-- | Main functionality of `stemflow` 
+| -- 
+| :white_check_mark: Spatiotemporal modeling & prediction<br> 
+| :white_check_mark: Calculate overall feature importances<br> 
+| :white_check_mark: Plot spatiotemporal dynamics<br> 
+| For details see [AdaSTEM Demo](https://chenyangkang.github.io/stemflow/Examples/01.AdaSTEM_demo.html)  -->
 
-:white_check_mark: Spatiotemporal modeling & prediction<br>
-:white_check_mark: Calculate overall feature importances<br>
-:white_check_mark: Plot spatiotemporal dynamics<br>
 
-For details see [AdaSTEM Demo](https://chenyangkang.github.io/stemflow/Examples/01.AdaSTEM_demo.html)
+<!-- column 2 -->
+<!-- | Supported indexing
+| -- 
+| :white_check_mark: User-defined 2D spatial indexing (CRS)<br>
+| :white_check_mark: Spherical indexing <br>
+| :white_check_mark: User-defined temporal indexing<br> 
+| :white_check_mark: Spatial-only modeling<br> 
+| For details and tips see [Tips for data types](https://chenyangkang.github.io/stemflow/Tips/Tips_for_data_types.html)  -->
 
----
+<!-- column 3 -->
+<!-- | Supported tasks
+| --
+| :white_check_mark: Binary classification task<br> 
+| :white_check_mark: Regression task<br> 
+| :white_check_mark: Hurdle task (two step regression – classify then regress the non-zero part)<br> 
+| For details and tips see [Tips for different tasks](https://chenyangkang.github.io/stemflow/Tips/Tips_for_different_tasks.html)  -->
 
-### Supported data types
 
-:white_check_mark: All spatial indexing (CRS)<br>
-:white_check_mark: All temporal indexing<br>
-:white_check_mark: Spatial-only modeling<br>
-:white_check_mark: Both continuous and categorical features (prefer one-hot encoding)<br>
-:white_check_mark: Both static (e.g., yearly mean temperature) and dynamic features (e.g., daily temperature)
+| Supported data types | Supported base models |
+| -- | -- |
+| :white_check_mark: Both continuous and categorical features (prefer one-hot encoding)<br> | :white_check_mark: sklearn style `BaseEstimator` classes ([you can make your own base model](https://scikit-learn.org/stable/developers/develop.html)), for example [here](https://chenyangkang.github.io/stemflow/Examples/06.Base_model_choices.html)<br> |
+| :white_check_mark: Both static (e.g., yearly mean temperature) and dynamic features (e.g., daily temperature)<br> |  :white_check_mark: sklearn style Maxent model. [Example here](https://chenyangkang.github.io/stemflow/Examples/03.Binding_with_Maxent.html). |
+| For details and tips see [Tips for data types](https://chenyangkang.github.io/stemflow/Tips/Tips_for_data_types.html) |  For details see [Base model choices](https://chenyangkang.github.io/stemflow/Examples/06.Base_model_choices.html) |
 
-For details and tips see [Tips for data types](https://chenyangkang.github.io/stemflow/Tips/Tips_for_data_types.html)
+<!-- column 4 -->
+<!-- | Supported data types
+| -- 
+| :white_check_mark: Both continuous and categorical features (prefer one-hot encoding)<br> 
+| :white_check_mark: Both static (e.g., yearly mean temperature) and dynamic features (e.g., daily temperature)<br>
+| For details and tips see [Tips for data types](https://chenyangkang.github.io/stemflow/Tips/Tips_for_data_types.html)  -->
 
---- -->
 
-<!-- ### Supported tasks
+<!-- column 5 -->
+<!-- | Supported base models 
+| --
+| :white_check_mark: sklearn style `BaseEstimator` classes ([you can make your own base model](https://scikit-learn.org/stable/developers/develop.html)), for example [here](https://chenyangkang.github.io/stemflow/Examples/06.Base_model_choices.html)<br> 
+|  :white_check_mark: sklearn style Maxent model. [Example here](https://chenyangkang.github.io/stemflow/Examples/03.Binding_with_Maxent.html). 
+|  For details see [Base model choices](https://chenyangkang.github.io/stemflow/Examples/06.Base_model_choices.html) -->
 
-:white_check_mark: Binary classification task<br>
-:white_check_mark: Regression task<br>
-:white_check_mark: Hurdle task (two step regression – classify then regress the non-zero part)<br>
 
-For details and tips see [Tips for different tasks](https://chenyangkang.github.io/stemflow/Tips/Tips_for_different_tasks.html)
-
----
-
-### Supported base models
-
-:white_check_mark: sklearn style `BaseEstimator` classes ([you can make your own base model](https://scikit-learn.org/stable/developers/develop.html)), for example [here](https://chenyangkang.github.io/stemflow/Examples/06.Base_model_choices.html)<br>
-:white_check_mark: sklearn style Maxent model. [Example here](https://chenyangkang.github.io/stemflow/Examples/03.Binding_with_Maxent.html).
-
------ -->
 
 ## Usage :star:
 
@@ -174,6 +192,14 @@ model.gridding_plot
 ![QuadTree example](https://chenyangkang.github.io/stemflow/QuadTree.png)
 
 Here, each color shows an ensemble generated during model fitting. In each of the 10 ensembles, regions (in terms of space and time) with more training samples were gridded into finer resolution, while the sparse one remained coarse. Prediction results were aggregated across the ensembles (that is, in this example, data were modeled 10 times).
+
+If you use `SphereAdaSTEM` module, the gridding plot is a `plotly` generated interactive object by default:
+
+![Sphere Gridding](https://github.com/chenyangkang/stemflow/raw/main/docs/Sphere_gridding.png)
+
+See ![Interactive spherical gridding plot](https://github.com/chenyangkang/stemflow/raw/main/docs/Sphere_gridding.html).
+
+
 
 ----
 ## Example of visualization :world_map:
