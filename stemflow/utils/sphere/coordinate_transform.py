@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from typing import Tuple, Union
 
 import numpy as np
 
@@ -6,10 +7,23 @@ from ...gridding.Q_blocks import QPoint_3D
 
 
 class lonlat_cartesian_3D_transformer:
+    """Transformer between longitude,latitude and 3d dimension (x,y,z)."""
+
     def __init__(self) -> None:
         pass
 
-    def transform(lng, lat, radius=6371):
+    def transform(lng: np.ndarray, lat: np.ndarray, radius: float = 6371.0) -> Tuple[np.ndarray, np.ndarray]:
+        """Transform lng, lat to x,y,z
+
+        Args:
+            lng (np.ndarray): lng
+            lat (np.ndarray): lat
+            radius (float, optional): radius of earth in km. Defaults to 6371.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]: x,y,z
+        """
+
         # Convert latitude and longitude from degrees to radians
         lat_rad = np.radians(lat)
         lng_rad = np.radians(lng)
@@ -21,7 +35,20 @@ class lonlat_cartesian_3D_transformer:
 
         return x, y, z
 
-    def inverse_transform(x, y, z, r=None):
+    def inverse_transform(
+        x: np.ndarray, y: np.ndarray, z: np.ndarray, r: float = None
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """transform x,y,z to lon, lat
+
+        Args:
+            x (np.ndarray): x
+            y (np.ndarray): y
+            z (np.ndarray): z
+            r (float, optional): Radius of your spherical coordinate. If not given, calculate from x,y,z. Defaults to None.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]: longitude, latitude
+        """
         if r is None:
             r = np.sqrt(x**2 + y**2 + z**2)
         latitude = np.degrees(np.arcsin(z / r))
@@ -29,7 +56,17 @@ class lonlat_cartesian_3D_transformer:
         return longitude, latitude
 
 
-def get_midpoint_3D(p1, p2, radius=6371):
+def get_midpoint_3D(p1: QPoint_3D, p2: QPoint_3D, radius: float = 6371.0) -> QPoint_3D:
+    """Get the mid-point of three QPoint_3D objet (vector)
+
+    Args:
+        p1 (QPoint_3D): p1
+        p2 (QPoint_3D): p2
+        radius (float, optional): radius of earth in km. Defaults to 6371.0.
+
+    Returns:
+        QPoint_3D: mid-point.
+    """
     v1 = np.array([p1.x, p1.y, p1.z])
     v2 = np.array([p2.x, p2.y, p2.z])
 
@@ -41,7 +78,19 @@ def get_midpoint_3D(p1, p2, radius=6371):
     return p3
 
 
-def continuous_interpolation_3D_plotting(p1, p2, radius=6371):
+def continuous_interpolation_3D_plotting(
+    p1: np.ndarray, p2: np.ndarray, radius: float = 6371.0
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """interpolate 10 points on earth surface between the given two points. For plotting.
+
+    Args:
+        p1 (np.ndarray): p1
+        p2 (np.ndarray): p2
+        radius (float, optional): radius of earth in km. Defaults to 6371.0.
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray, np.ndarray]: 10 x, 10 y, 10 z
+    """
     v1 = np.array([p1[0], p1[1], p1[2]])
     v2 = np.array([p2[0], p2[1], p2[2]])
 

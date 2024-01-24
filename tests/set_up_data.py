@@ -5,27 +5,11 @@ from urllib.request import urlopen
 import stemflow
 
 
-def get_data(delet_tmp_files, tmp_dir):
-    print("Temporary files will be stored at: ./stemflow_mini_test/")
-    if delet_tmp_files:
-        print("Temporary files will be deleted.")
-    else:
-        print("Temporary files will *NOT* be deleted.")
-
-    # download mini data
-    if not os.path.exists(tmp_dir):
-        os.makedirs(tmp_dir)
-
-    if "mini_data.pkl" not in os.listdir(tmp_dir):
-        url = "https://chenyangkang.github.io/stemflow/mini_data/mini_data.pkl"
-        print(f"Requesting data from {url} ...")
-        data = pickle.load(urlopen(url))
-        print("Done.")
-    else:
-        with open(os.path.join(tmp_dir, "mini_data.pkl"), "rb") as f:
-            data = pickle.load(f)
-        print("Mini-data already downloaded.")
-
+def get_data():
+    url = "https://chenyangkang.github.io/stemflow/mini_data/mini_data.pkl"
+    print(f"Requesting data from {url} ...")
+    data = pickle.load(urlopen(url))
+    print("Done.")
     x_names = get_x_names()
     X = data.drop("count", axis=1)[x_names + ["longitude", "latitude"]]
     y = data["count"].values
@@ -89,5 +73,5 @@ def test_path():
     print(f"Installation path: {isl_path}")
 
 
-def set_up_data(delet_tmp_files, tmp_dir):
-    return get_x_names(), get_data(delet_tmp_files, tmp_dir)
+def set_up_data():
+    return get_x_names(), get_data()

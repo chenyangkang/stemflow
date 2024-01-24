@@ -2,7 +2,7 @@ from stemflow.model_selection import ST_CV, ST_train_test_split
 
 from .set_up_data import set_up_data
 
-x_names, (X, y) = set_up_data(delet_tmp_files=False, tmp_dir="./stemflow_test")
+x_names, (X, y) = set_up_data()
 
 
 def test_ST_train_test_splot():
