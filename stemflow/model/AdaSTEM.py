@@ -5,7 +5,7 @@ from itertools import repeat
 
 #
 from multiprocessing import Pool, cpu_count
-from typing import Tuple, Union
+from typing import Callable, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -304,7 +304,12 @@ class AdaSTEM(BaseEstimator):
             ax=ax,
         )
 
-    def store_x_names(self, X_train):
+    def store_x_names(self, X_train: pd.core.frame.DataFrame):
+        """Store the training variables
+
+        Args:
+            X_train (pd.core.frame.DataFrame): input training data.
+        """
         # store x_names
         self.x_names = list(X_train.columns)
         if not self.use_temporal_to_train:
@@ -319,10 +324,10 @@ class AdaSTEM(BaseEstimator):
                 del self.x_names[self.x_names.index(i)]
 
     def stixel_fitting(self, stixel):
-        """Fit one stixel
+        """A sub module of SAC training. Fit one stixel
 
         Args:
-            stixel (gpd.geodataframe.GeoDataFrame): data sjoined with ensemble_df.
+            stixel (pd.core.frame.DataFrame): data sjoined with ensemble_df.
             For a single stixel.
         """
 
@@ -348,7 +353,15 @@ class AdaSTEM(BaseEstimator):
             self.model_dict[f"{name}_model"] = model
             self.stixel_specific_x_names[name] = stixel_specific_x_names
 
-    def SAC_ensemble_training(self, index_df, data):
+    def SAC_ensemble_training(self, index_df: pd.core.frame.DataFrame, data: pd.core.frame.DataFrame):
+        """A sub-module of SAC training function.
+        Train only one ensemble.
+
+        Args:
+            index_df (pd.core.frame.DataFrame): ensemble data (model.ensemble_df)
+            data (pd.core.frame.DataFrame): input covariates to train
+        """
+
         # Calculate the start indices for the sliding window
         unique_start_indices = np.sort(index_df[f"{self.Temporal1}_start"].unique())
         # training, window by window
@@ -395,10 +408,15 @@ class AdaSTEM(BaseEstimator):
                 .apply(lambda stixel: self.stixel_fitting(stixel))
             )
 
-    def SAC_training(self, ensemble_df, data, verbosity):
-        """Training with the whole input data
+    def SAC_training(self, ensemble_df: pd.core.frame.DataFrame, data: pd.core.frame.DataFrame, verbosity: int = 0):
+        """This function is a training function with SAC strategy:
+        Split (S), Apply(A), Combine (C). At ensemble level.
+        It is built on pandas `apply` method.
 
-        split (S), apply(A), combine (C). Ensemble level
+        Args:
+            ensemble_df (pd.core.frame.DataFrame): gridding information for all ensemble
+            data (pd.core.frame.DataFrame): data
+            verbosity (int, optional): Defaults to 0.
 
         """
 
@@ -454,12 +472,15 @@ class AdaSTEM(BaseEstimator):
 
         return self
 
-    def stixel_predict(self, stixel):
-        """Predict one stixel
+    def stixel_predict(self, stixel: pd.core.frame.DataFrame) -> Union[None, pd.core.frame.DataFrame]:
+        """A sub module of SAC prediction. Predict one stixel
 
         Args:
             stixel (pd.core.frame.DataFrame): data joined with ensemble_df.
             For a single stixel.
+
+        Returns:
+            pd.core.frame.DataFrame: the prediction result of this stixel
         """
         ensemble_index = stixel["ensemble_index"].iloc[0]
         unique_stixel_id = stixel["unique_stixel_id"].iloc[0]
@@ -482,12 +503,17 @@ class AdaSTEM(BaseEstimator):
         else:
             return pred
 
-    def SAC_ensemble_predict(self, index_df, data):
-        """Predict one ensemble
+    def SAC_ensemble_predict(
+        self, index_df: pd.core.frame.DataFrame, data: pd.core.frame.DataFrame
+    ) -> pd.core.frame.DataFrame:
+        """A sub-module of SAC prediction function.
+        Predict only one ensemble.
 
         Args:
             index_df (pd.core.frame.DataFrame): ensemble data (model.ensemble_df)
             data (pd.core.frame.DataFrame): input covariates to predict
+        Returns:
+            pd.core.frame.DataFrame: Prediction result of one ensemble.
         """
 
         temp_start = index_df[f"{self.Temporal1}_start"].min()
@@ -547,8 +573,21 @@ class AdaSTEM(BaseEstimator):
         ensemble_prediction = ensemble_prediction.groupby("index").mean().reset_index(drop=False)
         return ensemble_prediction
 
-    def SAC_predict(self, ensemble_df, data, verbosity):
-        """split (S), apply(A), combine (C). Ensemble level"""
+    def SAC_predict(
+        self, ensemble_df: pd.core.frame.DataFrame, data: pd.core.frame.DataFrame, verbosity: int = 0
+    ) -> pd.core.frame.DataFrame:
+        """This function is a prediction function with SAC strategy:
+        Split (S), Apply(A), Combine (C). At ensemble level.
+        It is built on pandas `apply` method.
+
+        Args:
+            ensemble_df (pd.core.frame.DataFrame): gridding information for all ensemble
+            data (pd.core.frame.DataFrame): data
+            verbosity (int, optional): Defaults to 0.
+
+        Returns:
+            pd.core.frame.DataFrame: prediction results.
+        """
 
         if verbosity > 0:
             tqdm_auto.pandas(desc="predicting", postfix=None)
@@ -883,6 +922,7 @@ class AdaSTEM(BaseEstimator):
         verbosity: Union[None, int] = None,
         aggregation: str = "mean",
         njobs: Union[int, None] = 1,
+        assign_function: Callable = assign_points_to_one_ensemble,
     ) -> pd.core.frame.DataFrame:
         """Assign feature importance to the input spatio-temporal points
 
@@ -919,6 +959,7 @@ class AdaSTEM(BaseEstimator):
         """
         #
         verbosity = check_verbosity(self, verbosity=verbosity)
+        check_prediciton_aggregation(aggregation)
 
         #
         if "feature_importances_" not in dir(self):
@@ -926,18 +967,11 @@ class AdaSTEM(BaseEstimator):
                 "feature_importances_ attribute is not calculated. Try model.calculate_feature_importances() first."
             )
         #
-        if aggregation not in ["mean", "median"]:
-            raise ValueError("aggregation not one of ['mean','median'].")
-        #
         if njobs is None:
             njobs = self.njobs
 
         #
-        if Sample_ST_df is not None:
-            for var_name in [self.Spatio1, self.Spatio2, self.Temporal1]:
-                if var_name not in Sample_ST_df.columns:
-                    raise KeyError(f"{var_name} not found in Sample_ST_df.columns")
-        else:
+        if Sample_ST_df is None:
             Spatio_var1 = np.arange(-180, 180, 1)
             Spatio_var2 = np.arange(-90, 90, 1)
             Temporal_var1 = np.arange(1, 366, 7)
@@ -950,12 +984,14 @@ class AdaSTEM(BaseEstimator):
                     self.Spatio2: new_Spatio_var2.flatten(),
                 }
             )
+        else:
+            for var_name in [self.Spatio1, self.Spatio2, self.Temporal1]:
+                if var_name not in Sample_ST_df.columns:
+                    raise KeyError(f"{var_name} not found in Sample_ST_df.columns")
 
         # assign input spatio-temporal points to stixels
-
         if njobs > 1:
             raise NotImplementedError("Multi-threading is not implemented yet")
-
         else:
             # Single processing
             round_res_list = []
@@ -965,7 +1001,7 @@ class AdaSTEM(BaseEstimator):
                 else list(self.ensemble_df.ensemble_index.unique())
             )
             for ensemble in iter_func_:
-                res_list = assign_points_to_one_ensemble(
+                res_list = assign_function(
                     self.ensemble_df,
                     ensemble,
                     Sample_ST_df,
