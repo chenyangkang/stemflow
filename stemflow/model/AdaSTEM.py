@@ -60,9 +60,6 @@ from .static_func_AdaSTEM import (  # predict_one_ensemble
 #
 
 
-#
-
-
 class AdaSTEM(BaseEstimator):
     """A AdaSTEM model class inherited by AdaSTEMClassifier and AdaSTEMRegressor"""
 
@@ -647,7 +644,7 @@ class AdaSTEM(BaseEstimator):
 
         nan_count = np.sum(np.isnan(new_res["pred_mean"].values))
         nan_frac = nan_count / len(new_res["pred_mean"].values)
-        warnings.warn(f"There are {nan_frac}% points ({nan_count} points) fell out of predictable range.")
+        warnings.warn(f"There are {nan_frac}% points ({nan_count} points) falling out of predictable range.")
 
         if return_std:
             return new_res["pred_mean"].values, new_res["pred_std"].values
@@ -921,12 +918,7 @@ class AdaSTEM(BaseEstimator):
             DataFrame with feature importance assigned.
         """
         #
-        if verbosity is None:
-            verbosity = self.verbosity
-        elif verbosity == 0:
-            verbosity = 0
-        else:
-            verbosity = 1
+        verbosity = check_verbosity(self, verbosity=verbosity)
 
         #
         if "feature_importances_" not in dir(self):
@@ -961,7 +953,10 @@ class AdaSTEM(BaseEstimator):
 
         # assign input spatio-temporal points to stixels
 
-        if not njobs > 1:
+        if njobs > 1:
+            raise NotImplementedError("Multi-threading is not implemented yet")
+
+        else:
             # Single processing
             round_res_list = []
             iter_func_ = (
@@ -980,25 +975,6 @@ class AdaSTEM(BaseEstimator):
                     self.feature_importances_,
                 )
                 round_res_list.append(res_list)
-
-        else:
-            # multi-processing
-            with Pool(njobs) as p:
-                plain_args_iterator = zip(
-                    repeat(self.ensemble_df),
-                    list(self.ensemble_df.ensemble_index.unique()),
-                    repeat(Sample_ST_df),
-                    repeat(self.Temporal1),
-                    repeat(self.Spatio1),
-                    repeat(self.Spatio2),
-                    repeat(self.feature_importances_),
-                )
-                if verbosity > 0:
-                    args_iterator = tqdm(plain_args_iterator, total=len(list(self.ensemble_df.ensemble_index.unique())))
-                else:
-                    args_iterator = plain_args_iterator
-
-                round_res_list = p.starmap(assign_points_to_one_ensemble, args_iterator)
 
         round_res_df = pd.concat(round_res_list, axis=0)
         ensemble_available_count = round_res_df.groupby("sample_index").count().iloc[:, 0]
