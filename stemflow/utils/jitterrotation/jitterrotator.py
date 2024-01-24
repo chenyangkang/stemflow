@@ -2,64 +2,12 @@ from typing import Tuple, Union
 
 import numpy as np
 
-# import geopandas as gpd
-
 
 class JitterRotator:
+    """2D jitter rotator."""
+
     def __init__():
         pass
-
-    # @classmethod
-    # def rotate_jitter_gpd(cls,
-    #                       df: gpd.geodataframe.GeoDataFrame,
-    #                       rotation_angle: Union[int, float],
-    #                       calibration_point_x_jitter: Union[int, float],
-    #                       calibration_point_y_jitter: Union[int, float]
-    #                       ) -> gpd.geodataframe.GeoDataFrame:
-    #     """Rotate Normal lng, lat to jittered, rotated space
-
-    #     Args:
-    #         x_array (np.ndarray): input lng/x
-    #         y_array (np.ndarray): input lat/y
-    #         rotation_angle (Union[int, float]): rotation angle
-    #         calibration_point_x_jitter (Union[int, float]): calibration_point_x_jitter
-    #         calibration_point_y_jitter (Union[int, float]): calibration_point_y_jitter
-
-    #     Returns:
-    #         tuple(np.ndarray, np.ndarray): newx, newy
-    #     """
-    #     transformed_series = df.rotate(
-    #         rotation_angle, origin=(0,0)
-    #     ).affine_transform(
-    #         [1,0,0,1,calibration_point_x_jitter,calibration_point_y_jitter]
-    #     )
-
-    #     df1 = gpd.GeoDataFrame(df, geometry=transformed_series)
-
-    #     return df1
-
-    # @classmethod
-    # def inverse_jitter_rotate_gpd(cls,
-    #                       df_rotated: gpd.geodataframe.GeoDataFrame,
-    #                       rotation_angle: Union[int, float],
-    #                       calibration_point_x_jitter: Union[int, float],
-    #                       calibration_point_y_jitter: Union[int, float]
-    #                       ) -> gpd.geodataframe.GeoDataFrame:
-    #     """reverse jitter and rotation
-
-    #     Args:
-    #         x_array_rotated (np.ndarray): input lng/x
-    #         y_array_rotated (np.ndarray): input lng/x
-    #         rotation_angle (Union[int, float]): rotation angle
-    #         calibration_point_x_jitter (Union[int, float]): calibration_point_x_jitter
-    #         calibration_point_y_jitter (Union[int, float]): calibration_point_y_jitter
-    #     """
-
-    #     return df_rotated.affine_transform(
-    #         [1,0,0,1,-calibration_point_x_jitter,-calibration_point_y_jitter]
-    #     ).rotate(
-    #         -rotation_angle, origin=(0,0)
-    #     )
 
     @classmethod
     def rotate_jitter(
@@ -124,10 +72,12 @@ class JitterRotator:
 
 
 class Sphere_Jitterrotator:
+    """3D jitter rotator"""
+
     def __init__(self) -> None:
         pass
 
-    def rotate_jitter(point: np.ndarray, axis: np.ndarray, angle: Union[float, int]):
+    def rotate_jitter(point: np.ndarray, axis: np.ndarray, angle: Union[float, int]) -> np.ndarray:
         """_summary_
 
         Args:
@@ -136,7 +86,7 @@ class Sphere_Jitterrotator:
             angle (Union[float, int]): angle in degree
 
         Returns:
-            _type_: _description_
+            np.ndarray: _description_
         """
         u = np.array(axis)
         u = u / np.linalg.norm(u)

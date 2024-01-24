@@ -1,9 +1,16 @@
+"Functions for the initial icosahedron in spherical indexing system"
+
 import numpy as np
 
 from .coordinate_transform import lonlat_cartesian_3D_transformer
 
 
-def get_Icosahedron_vertices():
+def get_Icosahedron_vertices() -> np.ndarray:
+    """Return the 12 vertices of icosahedron
+
+    Returns:
+        np.ndarray: (n_vertices, 3D_coordinates)
+    """
     phi = (1 + np.sqrt(5)) / 2
     vertices = np.array(
         [
@@ -24,7 +31,17 @@ def get_Icosahedron_vertices():
     return vertices
 
 
-def calc_and_judge_distance(v1, v2, v3):
+def calc_and_judge_distance(v1: np.ndarray, v2: np.ndarray, v3: np.ndarray) -> bool:
+    """Determine if the three points have same distance with each other
+
+    Args:
+        v1 (np.ndarray): point 1
+        v2 (np.ndarray): point 1
+        v3 (np.ndarray): point 1
+
+    Returns:
+        bool: Whether have same pair-wise distance
+    """
     d1 = np.sum((np.array(v1) - np.array(v2)) ** 2) ** (1 / 2)
     d2 = np.sum((np.array(v1) - np.array(v3)) ** 2) ** (1 / 2)
     d3 = np.sum((np.array(v2) - np.array(v3)) ** 2) ** (1 / 2)
@@ -34,7 +51,12 @@ def calc_and_judge_distance(v1, v2, v3):
         return False
 
 
-def get_Icosahedron_faces():
+def get_Icosahedron_faces() -> np.ndarray:
+    """Get icosahedron faces
+
+    Returns:
+        np.ndarray: shape (20,3,3). (faces, point, 3d_dimension)
+    """
     vertices = get_Icosahedron_vertices()
 
     face_list = []
@@ -51,7 +73,12 @@ def get_Icosahedron_faces():
     return face_list
 
 
-def get_earth_Icosahedron_vertices_and_faces_lonlat():
+def get_earth_Icosahedron_vertices_and_faces_lonlat() -> [np.ndarray, np.ndarray]:
+    """Get vertices and faces in lon, lat
+
+    Returns:
+        [np.ndarray, np.ndarray]: vertices, faces
+    """
     # earth_radius_km=6371.0
     # get Icosahedron vertices and faces
     vertices = get_Icosahedron_vertices()
@@ -68,7 +95,16 @@ def get_earth_Icosahedron_vertices_and_faces_lonlat():
     return np.stack([vertices_lng, vertices_lat], axis=-1), np.stack([faces_lng, faces_lat], axis=-1)
 
 
-def get_earth_Icosahedron_vertices_and_faces_3D(radius=1):
+def get_earth_Icosahedron_vertices_and_faces_3D(radius=1) -> [np.ndarray, np.ndarray]:
+    """Get vertices and faces in lon, lat
+
+    Args:
+        radius (Union[int, float]): radius of earth in km.
+
+    Returns:
+        [np.ndarray, np.ndarray]: vertices, faces
+    """
+
     # earth_radius_km=6371.0
     # get Icosahedron vertices and faces
     vertices = get_Icosahedron_vertices()

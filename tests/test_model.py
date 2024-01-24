@@ -14,7 +14,7 @@ from .make_models import (
 )
 from .set_up_data import set_up_data
 
-x_names, (X, y) = set_up_data(delet_tmp_files=False, tmp_dir="./stemflow_test")
+x_names, (X, y) = set_up_data()
 X_train, X_test, y_train, y_test = ST_train_test_split(
     X, y, Spatio_blocks_count=100, Temporal_blocks_count=100, random_state=42, test_size=0.3
 )
