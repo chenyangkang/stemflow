@@ -644,7 +644,7 @@ class AdaSTEM(BaseEstimator):
 
         nan_count = np.sum(np.isnan(new_res["pred_mean"].values))
         nan_frac = nan_count / len(new_res["pred_mean"].values)
-        warnings.warn(f"There are {nan_frac}% points ({nan_count} points) fell out of predictable range.")
+        warnings.warn(f"There are {nan_frac}% points ({nan_count} points) falling out of predictable range.")
 
         if return_std:
             return new_res["pred_mean"].values, new_res["pred_std"].values
