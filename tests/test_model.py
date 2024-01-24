@@ -120,7 +120,7 @@ def test_AdaSTEMRegressor():
 
     pred = model.predict(X_test)
     assert len(pred) == len(X_test)
-    assert np.isnan(pred) / len(pred) <= 0.3
+    assert np.sum(np.isnan(pred)) / len(pred) <= 0.3
 
     pred_df = pd.DataFrame(
         {"y_true": y_test.flatten(), "y_pred": np.where(pred.flatten() < 0, 0, pred.flatten())}
