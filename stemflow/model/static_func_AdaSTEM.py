@@ -222,9 +222,9 @@ def assign_points_to_one_ensemble_sphere(
 
     def find_belonged_points(df, df_a):
         P0 = np.array([0, 0, 0]).reshape(1, -1)
-        A = np.array(df[["p1x", "p1y", "p1z"]].values)
-        B = np.array(df[["p2x", "p2y", "p2z"]].values)
-        C = np.array(df[["p3x", "p3y", "p3z"]].values)
+        A = np.array(df[["p1x", "p1y", "p1z"]].values.astype("float"))
+        B = np.array(df[["p2x", "p2y", "p2z"]].values.astype("float"))
+        C = np.array(df[["p3x", "p3y", "p3z"]].values.astype("float"))
 
         intersect = intersect_triangle_plane(
             P0=P0, V=df_a[["x_3D_transformed", "y_3D_transformed", "z_3D_transformed"]].values, A=A, B=B, C=C
