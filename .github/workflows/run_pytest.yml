@@ -33,7 +33,7 @@ jobs:
 
     - name: Run pytest
       run: |
-        pytest -n auto --cov --no-cov-on-fail --cov-report=term-missing:skip-covered --cov-report xml:coverage.xml
+        pytest -n 2 --cov --no-cov-on-fail --cov-report=term-missing:skip-covered --cov-report xml:coverage.xml
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v3
