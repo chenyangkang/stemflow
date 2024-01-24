@@ -1,4 +1,5 @@
 import os
+import shutil
 
 import numpy as np
 import pandas as pd
@@ -7,10 +8,7 @@ from stemflow.utils.plot_gif import make_sample_gif
 
 from .make_models import make_STEMClassifier
 
-tmp_dir = "./stemflow_test"
-
 size = 1000
-
 fake_data = pd.DataFrame(
     {
         "x": np.random.uniform(low=-180, high=180, size=size),
@@ -22,6 +20,10 @@ fake_data = pd.DataFrame(
 
 
 def test_make_gif():
+    tmp_dir = "./stemflow_test_make_gif"
+    if not os.path.exists(tmp_dir):
+        os.mkdir(tmp_dir)
+
     make_sample_gif(
         fake_data,
         os.path.join(tmp_dir, "FTR_IPT_dat.gif"),
@@ -41,3 +43,5 @@ def test_make_gif():
         dpi=100,
         fps=10,
     )
+
+    shutil.rmtree(tmp_dir)

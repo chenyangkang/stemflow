@@ -1,31 +1,20 @@
-# import libraries
+"A function module to get quadtree results for spherical indexing system. Twins to `quadtree.py`, Returns ensemble_df and plotting axes."
+
 import os
 import warnings
-
-# from collections.abc import Sequence
-# from functools import partial
-# from itertools import repeat
-# from multiprocessing import Pool
 from typing import Tuple, Union
 
 import matplotlib
-
-# import matplotlib.patches as patches
 import matplotlib.pyplot as plt  # plotting libraries
 import numpy as np
 import pandas
 import pandas as pd
 from tqdm import tqdm
 
-from ..gridding.QuadGrid import QuadGrid
 from ..gridding.Sphere_QTree import Sphere_QTree
 from .quadtree import generate_temporal_bins
 from .sphere.coordinate_transform import lonlat_cartesian_3D_transformer
-from .validation import (
-    check_njobs,
-    check_transform_spatio_bin_jitter_magnitude,
-    check_transform_temporal_bin_start_jitter,
-)
+from .validation import check_njobs
 
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
@@ -39,7 +28,7 @@ def get_ensemble_sphere_quadtree(
     Temporal1: str = "DOY",
     size: str = 1,
     grid_len_upper_threshold: Union[float, int] = 8000,
-    grid_len_lower_threshold: Union[float, int] = 100,
+    grid_len_lower_threshold: Union[float, int] = 500,
     points_lower_threshold: int = 50,
     temporal_start: Union[float, int] = 1,
     temporal_end: Union[float, int] = 366,
@@ -55,9 +44,10 @@ def get_ensemble_sphere_quadtree(
     plot_ylims: Tuple[Union[float, int]] = (-90, 90),
     save_path: str = "",
     ax=None,
-    radius=6371.0,
+    radius: Union[int, float] = 6371.0,
 ) -> Tuple[pandas.core.frame.DataFrame, Union[matplotlib.figure.Figure, float]]:
     """Generate QuadTree gridding based on the input dataframe
+    A function to get quadtree results for spherical indexing system. Twins to `get_ensemble_quadtree` in `quadtree.py`, Returns ensemble_df and plotting axes.
 
     Args:
         data:
@@ -87,6 +77,8 @@ def get_ensemble_sphere_quadtree(
             for the start.
         spatio_bin_jitter_magnitude:
             jitter of the spatial gridding.
+        save_gridding_plotly:
+            Whether to save the plotly interactive gridding plot.
         save_gridding_plot:
             Whether ot save gridding plots
         njobs:
@@ -99,6 +91,8 @@ def get_ensemble_sphere_quadtree(
             If not '', save the ensemble dataframe to this path
         ax:
             Matplotlib Axes to add to.
+        radius (Union[int, float]):
+            The radius of earth in km. Defaults to 6371.0.
 
     Returns:
         A tuple of <br>

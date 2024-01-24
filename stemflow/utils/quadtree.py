@@ -1,16 +1,10 @@
-# import libraries
+"A function module to get quadtree results for 2D indexing system. Returns ensemble_df and plotting axes."
+
 import os
 import warnings
-
-# from collections.abc import Sequence
-# from functools import partial
-# from itertools import repeat
-# from multiprocessing import Pool
 from typing import Tuple, Union
 
 import matplotlib
-
-# import matplotlib.patches as patches
 import matplotlib.pyplot as plt  # plotting libraries
 import numpy as np
 import pandas
@@ -20,11 +14,6 @@ from tqdm import tqdm
 from ..gridding.QTree import QTree
 from ..gridding.QuadGrid import QuadGrid
 from .validation import check_transform_spatio_bin_jitter_magnitude, check_transform_temporal_bin_start_jitter
-
-# from tqdm.contrib.concurrent import process_map
-# from .generate_soft_colors import generate_soft_color
-# from .validation import check_random_state
-
 
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"

@@ -1,3 +1,4 @@
+"Wrapping the model. For example, monkey patching."
 import warnings
 from typing import Union
 
@@ -12,11 +13,11 @@ def _monkey_patched_predict_proba(
     """the monkey patching predict_proba method
 
     Args:
-        model: the input model
-        X_train: input training data
+        model (BaseEstimator): the input model
+        X_train (Union[pd.core.frame.DataFrame, np.ndarray]): input training data
 
     Returns:
-        predicted proba
+        predicted proba (np.ndarray)
     """
     pred = model.predict(X_train)
     pred = np.array(pred).reshape(-1, 1)
@@ -27,11 +28,11 @@ def model_wrapper(model: BaseEstimator) -> BaseEstimator:
     """wrap a predict_proba function for those models who don't have
 
     Args:
-        model:
+        model (BaseEstimator):
             Input model
 
     Returns:
-        Wrapped model that has a `predict_proba` method
+        Wrapped model that has a `predict_proba` method (BaseEstimator)
 
     """
     if "predict_proba" in dir(model):
