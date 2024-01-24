@@ -1,3 +1,5 @@
+"Validation module. Most of these functions are plain checking and easy to understand."
+
 import warnings
 from typing import Union
 

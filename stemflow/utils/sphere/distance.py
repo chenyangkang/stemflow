@@ -1,9 +1,28 @@
+from typing import Tuple, Union
+
 import numpy as np
 
 from .coordinate_transform import lonlat_cartesian_3D_transformer
 
 
-def distance_from_3D_point(x1, y1, z1, x2, y2, z2, radius=6371.0):
+def distance_from_3D_point(
+    x1: float, y1: float, z1: float, x2: float, y2: float, z2: float, radius: float = 6371.0
+) -> float:
+    """Calculate the distance (km) between two 3D points
+
+    Args:
+        x1 (float): x1
+        y1 (float): y1
+        z1 (float): z1
+        x2 (float): x2
+        y2 (float): y2
+        z2 (float): z2
+        radius (float, optional): radius of earth. Defaults to 6371.0.
+
+    Returns:
+        float: distance in km.
+    """
+
     # Convert Cartesian coordinates to spherical coordinates (latitude and longitude)
     lon1, lat1 = lonlat_cartesian_3D_transformer.inverse_transform(x1, y1, z1)
     lon2, lat2 = lonlat_cartesian_3D_transformer.inverse_transform(x2, y2, z2)
@@ -41,7 +60,7 @@ def spherical_distance_from_coordinates(inclination1, azimuth1, inclination2, az
     return distance
 
 
-def haversine_distance(coord1, coord2, radius_earth):
+def haversine_distance(coord1: Tuple[float, float], coord2: Tuple[float, float], radius_earth: float = 6371.0):
     """
     Calculate the Haversine distance between two sets of coordinates.
 
@@ -63,38 +82,7 @@ def haversine_distance(coord1, coord2, radius_earth):
     c = 2 * np.arcsin(np.sqrt(a))
 
     # Radius of the Earth in kilometers (mean value)
-    radius_earth = 6371.0
-
     # Calculate the distance
     distance = radius_earth * c
 
     return distance
-
-
-# def haversine_distance(lon1, lat1, lon2, lat2, radius=6371.0):
-#     """
-#     Calculate the spherical distance between two points on the Earth's surface.
-
-#     Args:
-#         lat1 (float): Latitude of the first point in Radius.
-#         lon1 (float): Longitude of the first point in Radius.
-#         lat2 (float): Latitude of the second point in Radius.
-#         lon2 (float): Longitude of the second point in Radius.
-#         radius (float, optional): Radius of the Earth in kilometers (default is 6371.0).
-
-#     Returns:
-#         float: Spherical distance between the two points in kilometers.
-
-#     """
-#     # Calculate differences in coordinates
-#     dlat = lat2 - lat1
-#     dlon = lon2 - lon1
-
-#     # Haversine formula
-#     a = np.sin(dlat / 2) ** 2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2) ** 2
-#     c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
-
-#     # Calculate distance
-#     distance = radius * c
-
-#     return distance
