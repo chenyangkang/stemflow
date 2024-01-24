@@ -86,22 +86,35 @@ nav:
     - 'Tips for different tasks': Tips/Tips_for_different_tasks.md
   - API Documentation:
     - stemflow.model:
-      - 'AdaSTEM': API_Documentation/stemflow.model.AdaSTEM.md
-      - 'STEM': API_Documentation/stemflow.model.STEM.md
-      - 'static_func_AdaSTEM': API_Documentation/stemflow.model.static_func_AdaSTEM.md
-      - 'Hurdle': API_Documentation/stemflow.model.Hurdle.md
-      - 'dummy_model': API_Documentation/stemflow.model.dummy_model.md
-      - 'special_hurdle': API_Documentation/stemflow.model.special_hurdle.md
+      - 'AdaSTEM': API_Documentation/model/stemflow.model.AdaSTEM.md
+      - 'SphereAdaSTEM': API_Documentation/model/stemflow.model.SphereAdaSTEM.md
+      - 'STEM': API_Documentation/model/stemflow.model.STEM.md
+      - 'static_func_AdaSTEM': API_Documentation/model/stemflow.model.static_func_AdaSTEM.md
+      - 'Hurdle': API_Documentation/model/stemflow.model.Hurdle.md
+      - 'dummy_model': API_Documentation/model/stemflow.model.dummy_model.md
+      - 'special_hurdle': API_Documentation/model/stemflow.model.special_hurdle.md
     - stemflow.gridding:
-      - 'Q_blocks': API_Documentation/stemflow.gridding.Q_blocks.md
-      - 'QTree': API_Documentation/stemflow.gridding.QTree.md
-      - 'QuadGrid': API_Documentation/stemflow.gridding.QuadGrid.md
+      - 'Q_blocks': API_Documentation/gridding/stemflow.gridding.Q_blocks.md
+      - 'QTree': API_Documentation/gridding/stemflow.gridding.QTree.md
+      - 'Sphere_QTree': API_Documentation/gridding/stemflow.gridding.Sphere_QTree.md
+      - 'QuadGrid': API_Documentation/gridding/stemflow.gridding.QuadGrid.md
     - stemflow.utils:
-      - 'quadtree': API_Documentation/stemflow.utils.quadtree.md
-      - 'plot_gif': API_Documentation/stemflow.utils.plot_gif.md
-      - 'generate_soft_colors': API_Documentation/stemflow.utils.generate_soft_colors.md
+      - 'jitterrotation':
+        - 'jitterrotator': API_Documentation/utils/jitterrotation/stemflow.utils.jitterrotation.jitterrotator.md
+      - 'sphere':
+        - 'coordinate_transform': API_Documentation/utils/sphere/stemflow.utils.sphere.coordinate_transform.md
+        - 'discriminant_formula': API_Documentation/utils/sphere/stemflow.utils.sphere.discriminant_formula.md
+        - 'distance': API_Documentation/utils/sphere/stemflow.utils.sphere.distance.md
+        - 'Icosahedron': API_Documentation/utils/sphere/stemflow.utils.sphere.Icosahedron.md
+      - 'quadtree': API_Documentation/utils/stemflow.utils.quadtree.md
+      - 'sphere_quadtree': API_Documentation/utils/stemflow.utils.sphere_quadtree.md
+      - 'plot_gif': API_Documentation/utils/stemflow.utils.plot_gif.md
+      - 'generate_soft_colors': API_Documentation/utils/stemflow.utils.generate_soft_colors.md
+      - 'validation': API_Documentation/utils/stemflow.utils.validation.md
+      - 'wrapper': API_Documentation/utils/stemflow.utils.wrapper.md
     - stemflow.model_selection: API_Documentation/stemflow.model_selection.md
     - stemflow.manually_testing: API_Documentation/stemflow.manually_testing.md
+
   - Fun Visualization:
     - 'Global Bird Diversity': Fun_Visualization/Global_Bird_Shannon_H_Index.md
     - 'Ruby-crowned_Kinglet': Fun_Visualization/Ruby-crowned_Kinglet_2020.md

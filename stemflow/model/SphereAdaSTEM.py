@@ -43,6 +43,7 @@ class SphereAdaSTEM(AdaSTEM):
 
     Children:
         stemflow.model.SphereAdaSTEM.SphereAdaSTEMClassifier
+
         stemflow.model.SphereAdaSTEM.SphereAdaSTEMRegressor
 
     """
