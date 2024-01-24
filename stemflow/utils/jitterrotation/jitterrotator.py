@@ -17,7 +17,7 @@ class JitterRotator:
         rotation_angle: Union[int, float],
         calibration_point_x_jitter: Union[int, float],
         calibration_point_y_jitter: Union[int, float],
-    ):
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """Rotate Normal lng, lat to jittered, rotated space
 
         Args:
@@ -28,7 +28,7 @@ class JitterRotator:
             calibration_point_y_jitter (Union[int, float]): calibration_point_y_jitter
 
         Returns:
-            tuple(np.ndarray, np.ndarray): newx, newy
+            Tuple[np.ndarray, np.ndarray]: newx, newy
         """
         data = np.array([x_array, y_array]).T
         angle = rotation_angle
@@ -48,7 +48,7 @@ class JitterRotator:
         rotation_angle: Union[int, float],
         calibration_point_x_jitter: Union[int, float],
         calibration_point_y_jitter: Union[int, float],
-    ):
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """reverse jitter and rotation
 
         Args:
@@ -57,6 +57,10 @@ class JitterRotator:
             rotation_angle (Union[int, float]): rotation angle
             calibration_point_x_jitter (Union[int, float]): calibration_point_x_jitter
             calibration_point_y_jitter (Union[int, float]): calibration_point_y_jitter
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]: newx, newy
+
         """
         theta = -(rotation_angle / 360) * np.pi * 2
         rotation_matrix = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
@@ -78,7 +82,7 @@ class Sphere_Jitterrotator:
         pass
 
     def rotate_jitter(point: np.ndarray, axis: np.ndarray, angle: Union[float, int]) -> np.ndarray:
-        """_summary_
+        """rotate_jitter 3d points
 
         Args:
             point (np.ndarray): shape of (X, 3)
@@ -86,7 +90,7 @@ class Sphere_Jitterrotator:
             angle (Union[float, int]): angle in degree
 
         Returns:
-            np.ndarray: _description_
+            np.ndarray: rotated_point
         """
         u = np.array(axis)
         u = u / np.linalg.norm(u)
@@ -118,8 +122,8 @@ class Sphere_Jitterrotator:
         rotated_point = np.dot(point, rotation_matrix)
         return rotated_point
 
-    def inverse_rotate_jitter(point: np.ndarray, axis: np.ndarray, angle: Union[float, int]):
-        """_summary_
+    def inverse_rotate_jitter(point: np.ndarray, axis: np.ndarray, angle: Union[float, int]) -> np.ndarray:
+        """inverse rotate_jitter 3d points
 
         Args:
             point (np.ndarray): shape of (X, 3)
@@ -127,7 +131,7 @@ class Sphere_Jitterrotator:
             angle (Union[float, int]): angle in degree
 
         Returns:
-            _type_: _description_
+            np.ndarray: inverse rotated point
         """
         u = np.array(axis)
         u = u / np.linalg.norm(u)

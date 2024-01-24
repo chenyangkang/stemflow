@@ -6,7 +6,7 @@ import pandas as pd
 from numpy import ndarray
 from pandas.core.frame import DataFrame
 
-from .utils import check_random_state
+from .utils.validation import check_random_state
 
 
 def ST_train_test_split(
