@@ -17,7 +17,9 @@ from pandas.core.frame import DataFrame
 from sklearn.base import BaseEstimator
 from sklearn.utils import class_weight
 
-from ..utils.jitterrotation.jitterrotator import JitterRotator
+from ..utils.jitterrotation.jitterrotator import JitterRotator, Sphere_Jitterrotator
+from ..utils.sphere.coordinate_transform import lonlat_cartesian_3D_transformer
+from ..utils.sphere.discriminant_formula import intersect_triangle_plane
 from .dummy_model import dummy_model1
 
 # warnings.filterwarnings("ignore")
@@ -188,6 +190,93 @@ def assign_points_to_one_ensemble(
     return res_list
 
 
+def assign_points_to_one_ensemble_sphere(
+    ensemble_df: pd.core.frame.DataFrame,
+    ensemble: str,
+    Sample_ST_df: pd.core.frame.DataFrame,
+    Temporal1: str,
+    Spatio1: str,
+    Spatio2: str,
+    feature_importances_: pd.core.frame.DataFrame,
+    radius: Union[int, float] = 6371,
+) -> pd.core.frame.DataFrame:
+    """assign points to one ensemble, for spherical indexing
+
+    Args:
+        ensemble_df (pd.core.frame.DataFrame): ensemble_df
+        ensemble (str): name of the ensemble
+        Sample_ST_df (pd.core.frame.DataFrame): input sample spatio-temporal points of interest
+        Temporal1 (str): Temporal variable name 1
+        Spatio1 (str): Spatio variable name 1
+        Spatio2 (str): Spatio variable name 2
+        feature_importances_ (pd.core.frame.DataFrame): feature_importances_ dataframe
+        radius (Union[float, int]): radius of earth in km
+
+    Returns:
+        A DataFrame containing the aggregated feature importance
+    """
+    this_ensemble = ensemble_df[ensemble_df.ensemble_index == ensemble]
+    Sample_ST_df_ = transform_pred_set_to_Sphere_STEM_quad(
+        Spatio1, Spatio2, Sample_ST_df.reset_index(drop=True), this_ensemble, radius
+    )
+
+    def find_belonged_points(df, df_a):
+        P0 = np.array([0, 0, 0]).reshape(1, -1)
+        A = np.array(df[["p1x", "p1y", "p1z"]].values.astype("float"))
+        B = np.array(df[["p2x", "p2y", "p2z"]].values.astype("float"))
+        C = np.array(df[["p3x", "p3y", "p3z"]].values.astype("float"))
+
+        intersect = intersect_triangle_plane(
+            P0=P0, V=df_a[["x_3D_transformed", "y_3D_transformed", "z_3D_transformed"]].values, A=A, B=B, C=C
+        )
+
+        return df_a.iloc[np.where(intersect)[0], :]
+
+    # pred each stixel
+    res_list = []
+
+    unique_starts = sorted(this_ensemble[f"{Temporal1}_start"].unique())
+    for start in unique_starts:
+        this_slice = this_ensemble[this_ensemble[f"{Temporal1}_start"] == start]
+        end_ = this_slice[f"{Temporal1}_end"].iloc[0]
+        this_slice_sub_Sample_ST_df = Sample_ST_df_[
+            (Sample_ST_df_[Temporal1] >= start) & (Sample_ST_df_[Temporal1] < end_)
+        ]
+        if len(this_slice_sub_Sample_ST_df) == 0:
+            continue
+
+        for index, line in this_slice.iterrows():
+            stixel_index = line["unique_stixel_id"]
+            sub_Sample_ST_df = find_belonged_points(line, this_slice_sub_Sample_ST_df)
+
+            if len(sub_Sample_ST_df) == 0:
+                continue
+
+            # load feature_importances
+            try:
+                this_feature_importance = feature_importances_[feature_importances_["stixel_index"] == stixel_index]
+                if len(this_feature_importance) == 0:
+                    continue
+                this_feature_importance = dict(this_feature_importance.iloc[0, :])
+                res_list.append(
+                    {
+                        "sample_index": list(sub_Sample_ST_df.index),
+                        **{
+                            a: [b] * len(sub_Sample_ST_df)
+                            for a, b in zip(this_feature_importance.keys(), this_feature_importance.values())
+                        },
+                    }
+                )
+
+            except Exception as e:
+                print(e)
+                continue
+
+    res_list = pd.concat([pd.DataFrame(i) for i in res_list], axis=0).drop("stixel_index", axis=1)
+    res_list = res_list.groupby("sample_index").mean().reset_index(drop=False)
+    return res_list
+
+
 def transform_pred_set_to_STEM_quad(
     Spatio1: str, Spatio2: str, X_train: pd.core.frame.DataFrame, ensemble_info: pd.core.frame.DataFrame
 ) -> pd.core.frame.DataFrame:
@@ -222,6 +311,59 @@ def transform_pred_set_to_STEM_quad(
     return X_train_
 
 
+def transform_pred_set_to_Sphere_STEM_quad(
+    Spatio1: str,
+    Spatio2: str,
+    X_train: pd.core.frame.DataFrame,
+    ensemble_info: pd.core.frame.DataFrame,
+    radius: Union[float, int] = 6371.0,
+) -> pd.core.frame.DataFrame:
+    """Project the input data points to the space of quadtree stixels.
+
+    Args:
+        Spatio1 (str):
+            Name of the spatio column 1
+        Spatio2 (str):
+            Name of the spatio column 2
+        X_train (pd.core.frame.DataFrame):
+            Training/Testing variables
+        ensemble_info (pd.core.frame.DataFrame):
+            the DataFrame with information of the stixel.
+
+    Returns:
+        Projected X_train
+
+    """
+
+    angle = float(ensemble_info["rotation_angle"].iloc[0])
+    axis = np.array(
+        [
+            float(ensemble_info["rotaton_axis_x"].iloc[0]),
+            float(ensemble_info["rotaton_axis_y"].iloc[0]),
+            float(ensemble_info["rotaton_axis_z"].iloc[0]),
+        ]
+    )
+
+    X_train_ = X_train.copy()
+    x, y, z = lonlat_cartesian_3D_transformer.transform(
+        X_train_[Spatio1].values, X_train_[Spatio2].values, radius=radius
+    )
+    X_train_["x_3D"] = x
+    X_train_["y_3D"] = y
+    X_train_["z_3D"] = z
+
+    rotated_point = Sphere_Jitterrotator.rotate_jitter(
+        np.column_stack([x, y, z]),
+        axis,
+        angle,
+    )
+    X_train_["x_3D_transformed"] = rotated_point[:, 0]
+    X_train_["y_3D_transformed"] = rotated_point[:, 1]
+    X_train_["z_3D_transformed"] = rotated_point[:, 2]
+
+    return X_train_
+
+
 def get_model_by_name(model_dict: dict, ensemble: str, grid_index: str) -> Union[None, BaseEstimator]:
     """get_model_by_name
 
@@ -237,7 +379,8 @@ def get_model_by_name(model_dict: dict, ensemble: str, grid_index: str) -> Union
         model = model_dict[f"{ensemble}_{grid_index}_model"]
         return model
     except Exception as e:
-        warnings.warn(f"Cannot find model: {e}")
+        if not isinstance(e, KeyError):
+            warnings.warn(f"Cannot find model: {e}")
         return None
 
 
@@ -297,7 +440,7 @@ def predict_one_stixel(
     """predict_one_stixel
 
     Args:
-        X_test_copy (pd.core.frame.DataFrame): Input testing variables
+        X_test_stixel (pd.core.frame.DataFrame): Input testing variables
         task (str): One of 'regression', 'classification' and 'hurdle'
         model_x_names_tuple (tuple[Union[None, BaseEstimator], list]): A tuple of (model, stixel_specific_x_names)
 

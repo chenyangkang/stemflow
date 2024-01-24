@@ -15,7 +15,7 @@ class STEM(AdaSTEM):
 
     Children:
         stemflow.model.STEM.STEMClassifier
-        stemflow.model.AdaSTEM.STEMRegressor
+        stemflow.model.STEM.STEMRegressor
 
     """
 

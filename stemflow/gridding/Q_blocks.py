@@ -3,8 +3,8 @@
 from collections.abc import Sequence
 from typing import List, Tuple, Union
 
-from ..utils.sphere.coordinate_transform import lonlat_spherical_transformer
-from ..utils.sphere.distance import spherical_distance_from_coordinates
+# from ..utils.sphere.coordinate_transform import lonlat_spherical_transformer
+# from ..utils.sphere.distance import distance_from_3D_point
 
 
 class QPoint:
@@ -55,44 +55,29 @@ class QGrid:
         self.points = []
 
 
-class Sphere_Point:
-    """A Point class for recording data points"""
+class QPoint_3D:
+    """A 3D Point class for recording data points"""
 
-    def __init__(self, index, inclination, azimuth):
-        self.inclination = inclination
-        self.azimuth = azimuth
+    def __init__(self, index, x, y, z):
+        self.x = x
+        self.y = y
+        self.z = z
         self.index = index
 
 
-class Sphere_Face:
+class Sphere_QTriangle:
     """A tree-like division triangle node class for Sphere Quadtree"""
 
     def __init__(
-        self,
-        x0: Union[float, int],
-        y0: Union[float, int],
-        azimuth1: Union[float, int],
-        inclination1: Union[float, int],
-        azimuth2: Union[float, int],
-        inclination2: Union[float, int],
-        azimuth3: Union[float, int],
-        inclination3: Union[float, int],
-        points: Sequence,
+        self, p1: QPoint_3D, p2: QPoint_3D, p3: QPoint_3D, points: Sequence, length: Union[float, int], radius=6371.0
     ):
-        self.x0 = x0
-        self.y0 = y0
+        self.p1 = p1
+        self.p2 = p2
+        self.p3 = p3
+        self.length = length
 
-        self.distance = spherical_distance_from_coordinates(
-            inclination1, azimuth1, inclination2, azimuth2, radius=6371.0
-        )
         self.points = points
         self.children = []
-
-    def get_width(self):
-        return self.width
-
-    def get_height(self):
-        return self.height
 
     def get_points(self):
         return self.points
