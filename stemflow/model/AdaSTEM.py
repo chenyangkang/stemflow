@@ -94,6 +94,7 @@ class AdaSTEM(BaseEstimator):
         plot_xlims: Tuple[Union[float, int], Union[float, int]] = (-180, 180),
         plot_ylims: Tuple[Union[float, int], Union[float, int]] = (-90, 90),
         verbosity: int = 0,
+        plot_empty: bool = False,
     ):
         """Make an AdaSTEM object
 
@@ -163,7 +164,8 @@ class AdaSTEM(BaseEstimator):
                 If save_gridding_plot=true, what is the ylims of the plot. Defaults to (-90,90).
             verbosity:
                 0 to output nothing and everything otherwise.
-
+            plot_empty:
+                Whether to plot the empty grid
 
         Raises:
             AttributeError: Base model do not have method 'fit' or 'predict'
@@ -241,6 +243,7 @@ class AdaSTEM(BaseEstimator):
         self.save_tmp = save_tmp
         self.save_dir = save_dir
         self.save_gridding_plot = save_gridding_plot
+        self.plot_empty = plot_empty
 
         # X. miscellaneous
         self.ensemble_models_disk_saver = ensemble_models_disk_saver
@@ -302,6 +305,7 @@ class AdaSTEM(BaseEstimator):
             plot_ylims=self.plot_ylims,
             save_path=save_path,
             ax=ax,
+            plot_empty=self.plot_empty,
         )
 
     def store_x_names(self, X_train: pd.core.frame.DataFrame):
@@ -516,11 +520,8 @@ class AdaSTEM(BaseEstimator):
             pd.core.frame.DataFrame: Prediction result of one ensemble.
         """
 
-        temp_start = index_df[f"{self.Temporal1}_start"].min()
-        temp_end = index_df[f"{self.Temporal1}_end"].max()
-
         # Calculate the start indices for the sliding window
-        start_indices = np.arange(temp_start, temp_end, self.temporal_step)
+        start_indices = sorted(index_df[f"{self.Temporal1}_start"].unique())
 
         # prediction, window by window
         window_prediction_list = []
@@ -568,9 +569,15 @@ class AdaSTEM(BaseEstimator):
 
             window_prediction_list.append(window_prediction)
 
-        ensemble_prediction = pd.concat(window_prediction_list, axis=0)
-        ensemble_prediction = ensemble_prediction.droplevel(0, axis=0)
-        ensemble_prediction = ensemble_prediction.groupby("index").mean().reset_index(drop=False)
+        if any([i is not None for i in window_prediction_list]):
+            ensemble_prediction = pd.concat(window_prediction_list, axis=0)
+            ensemble_prediction = ensemble_prediction.droplevel(0, axis=0)
+            ensemble_prediction = ensemble_prediction.groupby("index").mean().reset_index(drop=False)
+        else:
+            ensmeble_index = list(window_index_df["ensemble_index"])[0]
+            warnings.warn(f"No prediction for this ensemble: {ensmeble_index}")
+            ensemble_prediction = None
+
         return ensemble_prediction
 
     def SAC_predict(
@@ -1088,6 +1095,7 @@ class AdaSTEMClassifier(AdaSTEM):
         plot_xlims=(-180, 180),
         plot_ylims=(-90, 90),
         verbosity=0,
+        plot_empty=False,
     ):
         super().__init__(
             base_model,
@@ -1119,6 +1127,7 @@ class AdaSTEMClassifier(AdaSTEM):
             plot_xlims,
             plot_ylims,
             verbosity,
+            plot_empty,
         )
 
     def predict(
@@ -1131,7 +1140,7 @@ class AdaSTEMClassifier(AdaSTEM):
         aggregation: str = "mean",
         return_by_separate_ensembles: bool = False,
     ) -> Union[np.ndarray, Tuple[np.ndarray]]:
-        """A rewrite of predict_proba
+        """A rewrite of predict_proba adapted for Classifier
 
         Args:
             X_test (pd.core.frame.DataFrame):
@@ -1247,6 +1256,7 @@ class AdaSTEMRegressor(AdaSTEM):
         plot_xlims=(-180, 180),
         plot_ylims=(-90, 90),
         verbosity=0,
+        plot_empty=False,
     ):
         super().__init__(
             base_model,
@@ -1278,4 +1288,5 @@ class AdaSTEMRegressor(AdaSTEM):
             plot_xlims,
             plot_ylims,
             verbosity,
+            plot_empty,
         )

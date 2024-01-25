@@ -139,6 +139,7 @@ class QTree:
         rotation_angle: Union[float, int] = 0,
         calibration_point_x_jitter: Union[float, int] = 0,
         calibration_point_y_jitter: Union[float, int] = 0,
+        plot_empty: bool = False,
     ):
         """Create a QuadTree object
 
@@ -161,6 +162,8 @@ class QTree:
                 jittering the gridding on longitude.
             calibration_point_y_jitter:
                 jittering the gridding on latitude.
+            plot_empty:
+                Whether to plot the empty grid
 
         Example:
             ```py
@@ -192,6 +195,7 @@ class QTree:
         self.rotation_angle = rotation_angle
         self.calibration_point_x_jitter = calibration_point_x_jitter
         self.calibration_point_y_jitter = calibration_point_y_jitter
+        self.plot_empty = plot_empty
 
     def add_lon_lat_data(self, indexes: Sequence, x_array: Sequence, y_array: Sequence):
         """Store input lng lat data and transform to **Point** object
@@ -336,5 +340,8 @@ class QTree:
             }
         )
 
-        result = result[result["stixel_checklist_count"] != 0]
+        if self.plot_empty:
+            pass
+        else:
+            result = result[result["stixel_checklist_count"] >= self.points_lower_threshold]
         return result
