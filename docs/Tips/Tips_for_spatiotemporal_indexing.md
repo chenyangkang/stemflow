@@ -207,7 +207,9 @@ model = SphereAdaSTEMRegressor(
 
 See [SphereAdaSTEM demo](https://chenyangkang.github.io/stemflow/Examples/04.SphereAdaSTEM_demo.html) and [Interactive spherical gridding plot](https://chenyangkang.github.io/stemflow/assets/Sphere_gridding.html).
 
-![Sphere Gridding](https://chenyangkang.github.io/stemflow/assets/Sphere_gridding.png){: style="display: block; margin: auto; width: 50%;"}
+<p align="center">
+  <img src="https://chenyangkang.github.io/stemflow/assets/Sphere_gridding.png" width="500"/>
+</p>
 
 -----
 ## References:
