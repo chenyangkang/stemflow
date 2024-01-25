@@ -148,9 +148,9 @@ def get_ensemble_sphere_quadtree(
                 x, y, z = lonlat_cartesian_3D_transformer.transform(
                     sub_data["longitude"], sub_data["latitude"], radius=radius
                 )
-                sub_data["x_3D"] = x
-                sub_data["y_3D"] = y
-                sub_data["z_3D"] = z
+                sub_data.loc[:, "x_3D"] = x
+                sub_data.loc[:, "y_3D"] = y
+                sub_data.loc[:, "z_3D"] = z
 
                 QT_obj = Sphere_QTree(
                     grid_len_upper_threshold=grid_len_upper_threshold,
