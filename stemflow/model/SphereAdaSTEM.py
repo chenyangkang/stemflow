@@ -425,7 +425,9 @@ class SphereAdaSTEM(AdaSTEM):
         njobs: Union[int, None] = 1,
         assign_function: Callable = assign_points_to_one_ensemble_sphere,
     ) -> pd.core.frame.DataFrame:
-        super().assign_feature_importances_by_points(Sample_ST_df, verbosity, aggregation, njobs, assign_function)
+        return super().assign_feature_importances_by_points(
+            Sample_ST_df, verbosity, aggregation, njobs, assign_function
+        )
 
 
 class SphereAdaSTEMClassifier(SphereAdaSTEM):
@@ -485,7 +487,7 @@ class SphereAdaSTEMClassifier(SphereAdaSTEM):
         verbosity=0,
         plot_empty=False,
     ):
-        super().__init__(
+        SphereAdaSTEM().__init__(
             base_model,
             task,
             ensemble_fold,
@@ -518,7 +520,8 @@ class SphereAdaSTEMClassifier(SphereAdaSTEM):
             plot_empty,
         )
 
-        self.predict = MethodType(AdaSTEMClassifier.predict, self)
+    def predict(self, *args, **kwargs):
+        return AdaSTEMClassifier().predict(*args, **kwargs)
 
 
 class SphereAdaSTEMRegressor(SphereAdaSTEM):
