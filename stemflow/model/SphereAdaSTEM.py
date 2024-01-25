@@ -520,8 +520,7 @@ class SphereAdaSTEMClassifier(SphereAdaSTEM):
             plot_empty,
         )
 
-    def predict(self, *args, **kwargs):
-        return AdaSTEMClassifier().predict(*args, **kwargs)
+        self.predict = MethodType(AdaSTEMClassifier.predict, self)
 
 
 class SphereAdaSTEMRegressor(SphereAdaSTEM):
