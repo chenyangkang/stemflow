@@ -42,7 +42,7 @@ bibliography: "paper.bib"
 
 # Summary
 
-Stemflow is a user-friendly Python package for Adaptive Spatio-Temporal Exploratory Model (AdaSTEM [@fink_adaptive_2013]) that follows the style of scikit-learn BaseEstimator class [@pedregosa2011scikit]. It provides one-line model creation, fitting, prediction, and evaluation. It implements spatio-temporal train-test-split and cross-validation functions. After model training, feature importance could be evaluated with spatio-temporal dynamics. Stemflow also provides functions for visualizing ensembles structured in model training and generating GIF file for predicted results to animate the spatio-temporal movement of animal population.
+Stemflow is a user-friendly Python package for Adaptive Spatio-Temporal Exploratory Model (AdaSTEM [@fink_adaptive_2013]). AdaSTEM is a modeling framework that adopts "split-apply-combine" methodology [], which splits data into spatiotemporal grids, train models for each grid, and combines the model for ensemble prediction. Models in stemflow follow the style of scikit-learn BaseEstimator class [@pedregosa2011scikit]. It provides one-line model creation, fitting, prediction, and evaluation. It implements spatio-temporal train-test-split and cross-validation functions. After model training, feature importance could be evaluated with spatio-temporal dynamics. Stemflow also provides functions for visualizing ensembles structured in model training and generating GIF file for predicted results to animate the spatio-temporal movement of animal population.
 
 # Statement of need
 

@@ -213,5 +213,4 @@ See [SphereAdaSTEM demo](https://chenyangkang.github.io/stemflow/Examples/04.Sph
 ## References:
 
 1. [Samet, H. (1984). The quadtree and related hierarchical data structures. ACM Computing Surveys (CSUR), 16(2), 187-260.](https://dl.acm.org/doi/abs/10.1145/356924.356930)
-
 1. [Gyorgy, F. (1990, October). Rendering and managing spherical data with sphere quadtrees. In Proceedings of the First IEEE Conference on Visualization: Visualization90 (pp. 176-186). IEEE.](https://ieeexplore.ieee.org/abstract/document/146380)
