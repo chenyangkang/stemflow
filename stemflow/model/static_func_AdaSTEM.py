@@ -318,7 +318,7 @@ def transform_pred_set_to_Sphere_STEM_quad(
     ensemble_info: pd.core.frame.DataFrame,
     radius: Union[float, int] = 6371.0,
 ) -> pd.core.frame.DataFrame:
-    """Project the input data points to the space of quadtree stixels.
+    """Project the input data points to the space of quadtree stixels. For spherical indexing.
 
     Args:
         Spatio1 (str):

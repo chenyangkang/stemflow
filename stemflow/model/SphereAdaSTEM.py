@@ -1,36 +1,18 @@
 import os
-import pickle
 import warnings
-from itertools import repeat
-
-#
-from multiprocessing import Pool, cpu_count
-from typing import Tuple, Union
+from functools import partial
+from types import MethodType
+from typing import Callable, Tuple, Union
 
 import numpy as np
 import pandas as pd
 from numpy import ndarray
 
 # validation check
-from pandas.core.frame import DataFrame
-from scipy.stats import pearsonr, spearmanr
 from sklearn.base import BaseEstimator
-from sklearn.metrics import (
-    average_precision_score,
-    cohen_kappa_score,
-    d2_tweedie_score,
-    f1_score,
-    mean_absolute_error,
-    mean_squared_error,
-    precision_score,
-    r2_score,
-    recall_score,
-    roc_auc_score,
-)
 from tqdm import tqdm
 from tqdm.auto import tqdm as tqdm_auto
 
-from ..utils.sphere.coordinate_transform import lonlat_cartesian_3D_transformer
 from ..utils.sphere.discriminant_formula import intersect_triangle_plane
 
 #
@@ -39,25 +21,15 @@ from ..utils.validation import (
     check_base_model,
     check_njobs,
     check_prediciton_aggregation,
-    check_prediction_return,
-    check_random_state,
     check_spatio_bin_jitter_magnitude,
     check_task,
     check_temporal_bin_start_jitter,
     check_verbosity,
-    check_X_test,
-    check_X_train,
-    check_y_train,
 )
 from ..utils.wrapper import model_wrapper
 from .AdaSTEM import AdaSTEM, AdaSTEMClassifier, AdaSTEMRegressor
-from .dummy_model import dummy_model1
-from .Hurdle import Hurdle
 from .static_func_AdaSTEM import (  # predict_one_ensemble
     assign_points_to_one_ensemble_sphere,
-    get_model_and_stixel_specific_x_names,
-    predict_one_stixel,
-    train_one_stixel,
     transform_pred_set_to_Sphere_STEM_quad,
 )
 
@@ -72,6 +44,7 @@ class SphereAdaSTEM(AdaSTEM):
 
     Children:
         stemflow.model.SphereAdaSTEM.SphereAdaSTEMClassifier
+
         stemflow.model.SphereAdaSTEM.SphereAdaSTEMRegressor
 
     """
@@ -107,8 +80,9 @@ class SphereAdaSTEM(AdaSTEM):
         plot_xlims: Tuple[Union[float, int], Union[float, int]] = (-180, 180),
         plot_ylims: Tuple[Union[float, int], Union[float, int]] = (-90, 90),
         verbosity: int = 0,
+        plot_empty: bool = False,
     ):
-        """Make an AdaSTEM object
+        """Make a Spherical AdaSTEM object
 
         Args:
             base_model:
@@ -122,9 +96,9 @@ class SphereAdaSTEM(AdaSTEM):
                 In the training phase, if stixels contain less than `points_lower_threshold` of data records,
                 the results are set to np.nan, making them `unpredictable`. Defaults to 7.
             grid_len_upper_threshold:
-                force divide if grid length larger than the threshold. Defaults to 25.
+                force divide if grid length (km) larger than the threshold. Defaults to 8000 km.
             grid_len_lower_threshold:
-                stop divide if grid length **will** be below than the threshold. Defaults to 5.
+                stop divide if grid length (km) **will** be below than the threshold. Defaults to 500 km.
             points_lower_threshold:
                 Do not further split the gird if split results in less samples than this threshold.
                 Overriden by grid_len_*_upper_threshold parameters. Defaults to 50.
@@ -176,7 +150,8 @@ class SphereAdaSTEM(AdaSTEM):
                 If save_gridding_plot=true, what is the ylims of the plot. Defaults to (-90,90).
             verbosity:
                 0 to output nothing and everything otherwise.
-
+            plot_empty:
+                Whether to plot the empty grid
 
         Raises:
             AttributeError: Base model do not have method 'fit' or 'predict'
@@ -203,70 +178,46 @@ class SphereAdaSTEM(AdaSTEM):
                 feature importance dataframe for each stixel.
 
         """
-        # 1. Base model
-        check_base_model(base_model)
-        base_model = model_wrapper(base_model)
-        self.base_model = base_model
+        # Init parent class
+        super().__init__(
+            base_model,
+            task,
+            ensemble_fold,
+            min_ensemble_required,
+            grid_len_upper_threshold,
+            grid_len_lower_threshold,
+            points_lower_threshold,
+            stixel_training_size_threshold,
+            temporal_start,
+            temporal_end,
+            temporal_step,
+            temporal_bin_interval,
+            temporal_bin_start_jitter,
+            spatio_bin_jitter_magnitude,
+            save_gridding_plot,
+            save_tmp,
+            save_dir,
+            sample_weights_for_classifier,
+            Spatio1,
+            Spatio2,
+            Temporal1,
+            use_temporal_to_train,
+            njobs,
+            subset_x_names,
+            ensemble_models_disk_saver,
+            ensemble_models_disk_saving_dir,
+            plot_xlims,
+            plot_ylims,
+            verbosity,
+            plot_empty,
+        )
 
-        # 2. Model params
-        check_task(task)
-        self.task = task
-        self.Temporal1 = Temporal1
-        self.Spatio1 = Spatio1
-        self.Spatio2 = Spatio2
-        if not ((self.Spatio1 == "longitude") and (self.Spatio2 == "latitude")):
-            raise ValueError("Spatio1 and Spatio2 must be longitude and latitude!")
-
-        # 3. Gridding params
-        self.ensemble_fold = ensemble_fold
-        self.min_ensemble_required = min_ensemble_required
-        self.grid_len_upper_threshold = (
-            self.grid_len_lon_upper_threshold
-        ) = self.grid_len_lat_upper_threshold = grid_len_upper_threshold
-        self.grid_len_lower_threshold = (
-            self.grid_len_lon_lower_threshold
-        ) = self.grid_len_lat_lower_threshold = grid_len_lower_threshold
-        self.points_lower_threshold = points_lower_threshold
-        self.temporal_start = temporal_start
-        self.temporal_end = temporal_end
-        self.temporal_step = temporal_step
-        self.temporal_bin_interval = temporal_bin_interval
-
-        check_spatio_bin_jitter_magnitude(spatio_bin_jitter_magnitude)
-        self.spatio_bin_jitter_magnitude = spatio_bin_jitter_magnitude
-        check_temporal_bin_start_jitter(temporal_bin_start_jitter)
-        self.temporal_bin_start_jitter = temporal_bin_start_jitter
-
-        # 4. Training params
-        if stixel_training_size_threshold is None:
-            self.stixel_training_size_threshold = points_lower_threshold
-        else:
-            self.stixel_training_size_threshold = stixel_training_size_threshold
-        self.use_temporal_to_train = use_temporal_to_train
-        self.subset_x_names = subset_x_names
-        self.sample_weights_for_classifier = sample_weights_for_classifier
-
-        # 5. Multi-threading params (not implemented yet)
-        check_njobs(njobs)
-        self.njobs = njobs
-
-        # 6. Plotting params
-        self.plot_xlims = plot_xlims
-        self.plot_ylims = plot_ylims
-        self.save_tmp = save_tmp
-        self.save_dir = save_dir
-        self.save_gridding_plot = save_gridding_plot  # Actually means plotly
-
-        # X. miscellaneous
-        self.ensemble_models_disk_saver = ensemble_models_disk_saver
-        self.ensemble_models_disk_saving_dir = ensemble_models_disk_saving_dir
-        if self.ensemble_models_disk_saver:
-            self.saving_code = np.random.randint(1, 1e8, 1)
-
-        if not verbosity == 0:
-            self.verbosity = 1
-        else:
-            self.verbosity = 0
+        if not self.Spatio1 == "longitude":
+            warnings.warn('the input Spatio1 is not "longitude"! Set to "longitude"')
+            self.Spatio1 = "longitude"
+        if not self.Spatio2 == "latitude":
+            warnings.warn('the input Spatio1 is not "latitude"! Set to "latitude"')
+            self.Spatio2 = "latitude"
 
     def split(self, X_train: pd.core.frame.DataFrame, verbosity: Union[None, int] = None, ax=None) -> dict:
         """QuadTree indexing the input data
@@ -313,9 +264,18 @@ class SphereAdaSTEM(AdaSTEM):
             plot_ylims=self.plot_ylims,
             save_path=save_path,
             ax=ax,
+            plot_empty=self.plot_empty,
         )
 
-    def SAC_ensemble_training(self, index_df, data):
+    def SAC_ensemble_training(self, index_df: pd.core.frame.DataFrame, data: pd.core.frame.DataFrame):
+        """A sub-module of SAC training function.
+        Train only one ensemble.
+
+        Args:
+            index_df (pd.core.frame.DataFrame): ensemble data (model.ensemble_df)
+            data (pd.core.frame.DataFrame): input covariates to train
+        """
+
         # Calculate the start indices for the sliding window
         unique_start_indices = np.sort(index_df[f"{self.Temporal1}_start"].unique())
         # training, window by window
@@ -373,19 +333,21 @@ class SphereAdaSTEM(AdaSTEM):
                 .apply(lambda stixel: self.stixel_fitting(stixel))
             )
 
-    def SAC_ensemble_predict(self, index_df, data):
-        """Predict one ensemble
+    def SAC_ensemble_predict(
+        self, index_df: pd.core.frame.DataFrame, data: pd.core.frame.DataFrame
+    ) -> pd.core.frame.DataFrame:
+        """A sub-module of SAC prediction function.
+        Predict only one ensemble.
 
         Args:
             index_df (pd.core.frame.DataFrame): ensemble data (model.ensemble_df)
             data (pd.core.frame.DataFrame): input covariates to predict
+        Returns:
+            pd.core.frame.DataFrame: Prediction result of one ensemble.
         """
 
-        temp_start = index_df[f"{self.Temporal1}_start"].min()
-        temp_end = index_df[f"{self.Temporal1}_end"].max()
-
         # Calculate the start indices for the sliding window
-        start_indices = np.arange(temp_start, temp_end, self.temporal_step)
+        start_indices = sorted(index_df[f"{self.Temporal1}_start"].unique())
 
         # prediction, window by window
         window_prediction_list = []
@@ -441,12 +403,18 @@ class SphereAdaSTEM(AdaSTEM):
                 .groupby("unique_stixel_id")
                 .apply(lambda stixel: self.stixel_predict(stixel))
             )
-
+            # print('window_prediction:',window_prediction)
             window_prediction_list.append(window_prediction)
 
-        ensemble_prediction = pd.concat(window_prediction_list, axis=0)
-        ensemble_prediction = ensemble_prediction.droplevel(0, axis=0)
-        ensemble_prediction = ensemble_prediction.groupby("index").mean().reset_index(drop=False)
+        if any([i is not None for i in window_prediction_list]):
+            ensemble_prediction = pd.concat(window_prediction_list, axis=0)
+            ensemble_prediction = ensemble_prediction.droplevel(0, axis=0)
+            ensemble_prediction = ensemble_prediction.groupby("index").mean().reset_index(drop=False)
+        else:
+            ensmeble_index = list(window_index_df["ensemble_index"])[0]
+            warnings.warn(f"No prediction for this ensemble: {ensmeble_index}")
+            ensemble_prediction = None
+
         return ensemble_prediction
 
     def assign_feature_importances_by_points(
@@ -455,133 +423,26 @@ class SphereAdaSTEM(AdaSTEM):
         verbosity: Union[None, int] = None,
         aggregation: str = "mean",
         njobs: Union[int, None] = 1,
+        assign_function: Callable = assign_points_to_one_ensemble_sphere,
     ) -> pd.core.frame.DataFrame:
-        """Assign feature importance to the input spatio-temporal points
-
-        Args:
-            Sample_ST_df (Union[pd.core.frame.DataFrame, None], optional):
-                Dataframe that indicate the spatio-temporal points of interest.
-                Must contain `self.Spatio1`, `self.Spatio2`, and `self.Temporal1` in columns.
-                If None, the resolution will be:
-
-                | variable|values|
-                |---------|--------|
-                |Spatio_var1|np.arange(-180,180,1)|
-                |Spatio_var2|np.arange(-90,90,1)|
-                |Temporal_var1|np.arange(1,366,7)|
-
-                Defaults to None.
-            verbosity (Union[None, int], optional):
-                0 to output nothing, everything other wise. Default None set it to the verbosity of AdaSTEM model class.
-            aggregation (str, optional):
-                One of 'mean' and 'median' to aggregate feature importance across ensembles.
-            njobs (Union[int, None], optional):
-                Number of processes used in this task. If None, use the self.njobs. Default to 1.
-
-        Raises:
-            NameError:
-                feature_importances_ attribute is not calculated. Try model.calculate_feature_importances() first.
-            ValueError:
-                f'aggregation not one of [\'mean\',\'median\'].'
-            KeyError:
-                One of [`self.Spatio1`, `self.Spatio2`, `self.Temporal1`] not found in `Sample_ST_df.columns`
-
-        Returns:
-            DataFrame with feature importance assigned.
-        """
-        #
-        verbosity = check_verbosity(self, verbosity)
-
-        #
-        if "feature_importances_" not in dir(self):
-            raise NameError(
-                "feature_importances_ attribute is not calculated. Try model.calculate_feature_importances() first."
-            )
-        #
-        if aggregation not in ["mean", "median"]:
-            raise ValueError("aggregation not one of ['mean','median'].")
-        #
-        if njobs is None:
-            njobs = self.njobs
-
-        #
-        if Sample_ST_df is not None:
-            for var_name in [self.Spatio1, self.Spatio2, self.Temporal1]:
-                if var_name not in Sample_ST_df.columns:
-                    raise KeyError(f"{var_name} not found in Sample_ST_df.columns")
-        else:
-            Spatio_var1 = np.arange(-180, 180, 1)
-            Spatio_var2 = np.arange(-90, 90, 1)
-            Temporal_var1 = np.arange(1, 366, 7)
-            new_Spatio_var1, new_Spatio_var2, new_Temporal_var1 = np.meshgrid(Spatio_var1, Spatio_var2, Temporal_var1)
-
-            Sample_ST_df = pd.DataFrame(
-                {
-                    self.Temporal1: new_Temporal_var1.flatten(),
-                    self.Spatio1: new_Spatio_var1.flatten(),
-                    self.Spatio2: new_Spatio_var2.flatten(),
-                }
-            )
-
-        # assign input spatio-temporal points to stixels
-
-        if not njobs > 1:
-            # Single processing
-            round_res_list = []
-            iter_func_ = (
-                tqdm(list(self.ensemble_df.ensemble_index.unique()))
-                if verbosity > 0
-                else list(self.ensemble_df.ensemble_index.unique())
-            )
-            for ensemble in iter_func_:
-                res_list = assign_points_to_one_ensemble_sphere(
-                    self.ensemble_df,
-                    ensemble,
-                    Sample_ST_df,
-                    self.Temporal1,
-                    self.Spatio1,
-                    self.Spatio2,
-                    self.feature_importances_,
-                )
-                round_res_list.append(res_list)
-
-        else:
-            raise NotImplementedError("Multi-threading not implemented")
-
-        round_res_df = pd.concat(round_res_list, axis=0)
-        ensemble_available_count = round_res_df.groupby("sample_index").count().iloc[:, 0]
-
-        # Only points with more than self.min_ensemble_required ensembles available are used
-        usable_sample = ensemble_available_count[ensemble_available_count >= self.min_ensemble_required]  #
-        round_res_df = round_res_df[round_res_df["sample_index"].isin(list(usable_sample.index))]
-
-        # aggregate across ensembles
-        if aggregation == "mean":
-            mean_feature_importances_across_ensembles = round_res_df.groupby("sample_index").mean()
-        elif aggregation == "median":
-            mean_feature_importances_across_ensembles = round_res_df.groupby("sample_index").median()
-
-        if self.use_temporal_to_train:
-            mean_feature_importances_across_ensembles = mean_feature_importances_across_ensembles.rename(
-                columns={self.Temporal1: f"{self.Temporal1}_predictor"}
-            )
-        out_ = pd.concat([Sample_ST_df, mean_feature_importances_across_ensembles], axis=1).dropna()
-        return out_
+        return super().assign_feature_importances_by_points(
+            Sample_ST_df, verbosity, aggregation, njobs, assign_function
+        )
 
 
 class SphereAdaSTEMClassifier(SphereAdaSTEM):
-    """AdaSTEM model Classifier interface
+    """SphereAdaSTEM model Classifier interface
 
     Example:
         ```
-        >>> from stemflow.model.AdaSTEM import AdaSTEMClassifier
+        >>> from stemflow.model.SphereAdaSTEM import SphereAdaSTEMClassifier
         >>> from xgboost import XGBClassifier
-        >>> model = AdaSTEMClassifier(base_model=XGBClassifier(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1),
+        >>> model = SphereAdaSTEMClassifier(base_model=XGBClassifier(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1),
                                 save_gridding_plot = True,
                                 ensemble_fold=10,
                                 min_ensemble_required=7,
-                                grid_len_upper_threshold=25,
-                                grid_len_lower_threshold=5,
+                                grid_len_upper_threshold=8000,
+                                grid_len_lower_threshold=500,
                                 points_lower_threshold=50,
                                 Spatio1='longitude',
                                 Spatio2 = 'latitude',
@@ -624,6 +485,7 @@ class SphereAdaSTEMClassifier(SphereAdaSTEM):
         plot_xlims=(-180, 180),
         plot_ylims=(-90, 90),
         verbosity=0,
+        plot_empty=False,
     ):
         super().__init__(
             base_model,
@@ -655,92 +517,26 @@ class SphereAdaSTEMClassifier(SphereAdaSTEM):
             plot_xlims,
             plot_ylims,
             verbosity,
+            plot_empty,
         )
 
-    def predict(
-        self,
-        X_test: pd.core.frame.DataFrame,
-        verbosity: Union[None, int] = None,
-        return_std: bool = False,
-        cls_threshold: float = 0.5,
-        njobs: Union[int, None] = 1,
-        aggregation: str = "mean",
-        return_by_separate_ensembles: bool = False,
-    ) -> Union[np.ndarray, Tuple[np.ndarray]]:
-        """A rewrite of predict_proba
-
-        Args:
-            X_test (pd.core.frame.DataFrame):
-                Testing variables.
-            verbosity (int, optional):
-                0 to output nothing, everything other wise. Default None set it to the verbosity of AdaSTEM model class.
-            return_std (bool, optional):
-                Whether return the standard deviation among ensembles. Defaults to False.
-            cls_threshold (float, optional):
-                Cutting threshold for the classification.
-                Values above cls_threshold will be labeled as 1 and 0 otherwise.
-                Defaults to 0.5.
-            njobs (Union[int, None], optional):
-                Number of processes used in this task. If None, use the self.njobs. Default to 1.
-                I do not recommend setting value larger than 1.
-                In practice, multi-processing seems to slow down the process instead of speeding up.
-                Could be more practical with large amount of data.
-                Still in experiment.
-            aggregation (str, optional):
-                'mean' or 'median' for aggregation method across ensembles.
-            return_by_separate_ensembles (bool, optional):
-                Experimental function. return not by aggregation, but by separate ensembles.
-
-        Raises:
-            TypeError:
-                X_test is not of type pd.core.frame.DataFrame.
-            ValueError:
-                aggregation is not in ['mean','median'].
-
-        Returns:
-            predicted results. (pred_mean, pred_std) if return_std==true, and pred_mean if return_std==False.
-
-        """
-
-        if return_std:
-            mean, std = self.predict_proba(
-                X_test,
-                verbosity=verbosity,
-                return_std=True,
-                njobs=njobs,
-                aggregation=aggregation,
-                return_by_separate_ensembles=return_by_separate_ensembles,
-            )
-            mean = np.where(mean < cls_threshold, 0, mean)
-            mean = np.where(mean >= cls_threshold, 1, mean)
-            return mean, std
-        else:
-            mean = self.predict_proba(
-                X_test,
-                verbosity=verbosity,
-                return_std=False,
-                njobs=njobs,
-                aggregation=aggregation,
-                return_by_separate_ensembles=return_by_separate_ensembles,
-            )
-            mean = np.where(mean < cls_threshold, 0, mean)
-            mean = np.where(mean >= cls_threshold, 1, mean)
-            return mean
+    def predict(self, *args, **kwargs):
+        return AdaSTEMClassifier().predict(*args, **kwargs)
 
 
 class SphereAdaSTEMRegressor(SphereAdaSTEM):
-    """AdaSTEM model Regressor interface
+    """SphereAdaSTEM model Regressor interface
 
     Example:
     ```
-    >>> from stemflow.model.AdaSTEM import AdaSTEMRegressor
+    >>> from stemflow.model.SphereAdaSTEM import SphereAdaSTEMRegressor
     >>> from xgboost import XGBRegressor
-    >>> model = AdaSTEMRegressor(base_model=XGBRegressor(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1),
+    >>> model = SphereAdaSTEMRegressor(base_model=XGBRegressor(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1),
                             save_gridding_plot = True,
                             ensemble_fold=10,
                             min_ensemble_required=7,
-                            grid_len_upper_threshold=25,
-                            grid_len_lower_threshold=5,
+                            grid_len_upper_threshold=8000,
+                            grid_len_lower_threshold=500,
                             points_lower_threshold=50,
                             Spatio1='longitude',
                             Spatio2 = 'latitude',
@@ -783,6 +579,7 @@ class SphereAdaSTEMRegressor(SphereAdaSTEM):
         plot_xlims=(-180, 180),
         plot_ylims=(-90, 90),
         verbosity=0,
+        plot_empty=False,
     ):
         super().__init__(
             base_model,
@@ -814,4 +611,5 @@ class SphereAdaSTEMRegressor(SphereAdaSTEM):
             plot_xlims,
             plot_ylims,
             verbosity,
+            plot_empty,
         )

@@ -132,7 +132,7 @@ Hurdle model is designed to solve the [zero-inflation problems](https://en.wikip
 ### Hurdle model workflow
 Hurdle model, as its name indicates, uses two-step modeling method to solve the zero-inflation problems:
 
-![Hurdle model workflow](../Hurdle_workflow.png)
+![Hurdle model workflow](../assets/Hurdle_workflow.png)
 
 As shown in this figure, zero-inflated input data was first used to train a classifier, with labels being binary transformed. Then, the samples with positive labels are used to train a regressor. Together these two compose a hurdle model. When new data comes in, classifier and regressor make prediction independently, and the results are combined/masked to yield the final prediction (only those samples classified as positive will be assigned continuous prediction from the regressor).
 
