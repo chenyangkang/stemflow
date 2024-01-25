@@ -190,6 +190,7 @@ class Sphere_QTree:
         rotation_angle: Union[float, int] = None,
         rotation_axis: np.ndarray = None,
         radius: Union[float, int] = 6371,
+        plot_empty: bool = False,
     ):
         """Create a Spherical QuadTree object
 
@@ -205,7 +206,9 @@ class Sphere_QTree:
             rotation_axis:
                 rotation_axis
             radius:
-            radius of earth in km
+                radius of earth in km
+            plot_empty:
+                Whether to plot the empty grid
 
         Example:
             ```py
@@ -235,6 +238,7 @@ class Sphere_QTree:
             rotation_axis = np.random.uniform(-1, 1, 3)
         self.rotation_axis = rotation_axis
         self.radius = radius
+        self.plot_empty = plot_empty
 
     def add_3D_data(self, indexes: Sequence, x_array: Sequence, y_array: Sequence, z_array: Sequence):
         """Store input x,y,z data and transform to **QPoint_3D** object
@@ -365,7 +369,10 @@ class Sphere_QTree:
             }
         )
 
-        # result = result[result["stixel_checklist_count"] != 0]
+        if self.plot_empty:
+            pass
+        else:
+            result = result[result["stixel_checklist_count"] >= self.points_lower_threshold]
         return result
 
     def graph(self, scatter: bool = True, ax=None, line_kwgs={}):
@@ -462,7 +469,8 @@ class Sphere_QTree:
         from stemflow.utils.sphere.coordinate_transform import continuous_interpolation_3D_plotting
 
         for index, grid in this_slice.iterrows():
-            stixel_indexes = int(grid["stixel_indexes"])
+            # stixel_indexes = int(grid["stixel_indexes"])
+            stixel_length = int(grid["stixel_length"])
 
             old_points = Sphere_Jitterrotator.inverse_rotate_jitter(
                 np.array(
@@ -482,7 +490,7 @@ class Sphere_QTree:
                 )
                 lons = np.append(lons, the_lon)
                 lats = np.append(lats, the_lat)
-                names = np.append(names, [stixel_indexes] * len(the_lon))
+                names = np.append(names, [f"{stixel_length}km"] * len(the_lon))
                 lons = np.append(lons, None)
                 lats = np.append(lats, None)
                 names = np.append(names, None)
@@ -509,7 +517,7 @@ class Sphere_QTree:
             )
             lons_scatter = np.append(lons_scatter, the_lon)
             lats_scatter = np.append(lats_scatter, the_lat)
-            names_scatter = np.append(names_scatter, [stixel_indexes] * len(the_lon))
+            names_scatter = np.append(names_scatter, [f"{stixel_length}km"] * len(the_lon))
 
         if ax is None:
             ax = px.line_geo(

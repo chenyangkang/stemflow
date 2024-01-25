@@ -1,6 +1,7 @@
 import os
 import warnings
 from functools import partial
+from types import MethodType
 from typing import Callable, Tuple, Union
 
 import numpy as np
@@ -26,7 +27,7 @@ from ..utils.validation import (
     check_verbosity,
 )
 from ..utils.wrapper import model_wrapper
-from .AdaSTEM import AdaSTEM
+from .AdaSTEM import AdaSTEM, AdaSTEMClassifier, AdaSTEMRegressor
 from .static_func_AdaSTEM import (  # predict_one_ensemble
     assign_points_to_one_ensemble_sphere,
     transform_pred_set_to_Sphere_STEM_quad,
@@ -79,6 +80,7 @@ class SphereAdaSTEM(AdaSTEM):
         plot_xlims: Tuple[Union[float, int], Union[float, int]] = (-180, 180),
         plot_ylims: Tuple[Union[float, int], Union[float, int]] = (-90, 90),
         verbosity: int = 0,
+        plot_empty: bool = False,
     ):
         """Make a Spherical AdaSTEM object
 
@@ -148,7 +150,8 @@ class SphereAdaSTEM(AdaSTEM):
                 If save_gridding_plot=true, what is the ylims of the plot. Defaults to (-90,90).
             verbosity:
                 0 to output nothing and everything otherwise.
-
+            plot_empty:
+                Whether to plot the empty grid
 
         Raises:
             AttributeError: Base model do not have method 'fit' or 'predict'
@@ -175,70 +178,46 @@ class SphereAdaSTEM(AdaSTEM):
                 feature importance dataframe for each stixel.
 
         """
-        # 1. Base model
-        check_base_model(base_model)
-        base_model = model_wrapper(base_model)
-        self.base_model = base_model
+        # Init parent class
+        super().__init__(
+            base_model,
+            task,
+            ensemble_fold,
+            min_ensemble_required,
+            grid_len_upper_threshold,
+            grid_len_lower_threshold,
+            points_lower_threshold,
+            stixel_training_size_threshold,
+            temporal_start,
+            temporal_end,
+            temporal_step,
+            temporal_bin_interval,
+            temporal_bin_start_jitter,
+            spatio_bin_jitter_magnitude,
+            save_gridding_plot,
+            save_tmp,
+            save_dir,
+            sample_weights_for_classifier,
+            Spatio1,
+            Spatio2,
+            Temporal1,
+            use_temporal_to_train,
+            njobs,
+            subset_x_names,
+            ensemble_models_disk_saver,
+            ensemble_models_disk_saving_dir,
+            plot_xlims,
+            plot_ylims,
+            verbosity,
+            plot_empty,
+        )
 
-        # 2. Model params
-        check_task(task)
-        self.task = task
-        self.Temporal1 = Temporal1
-        self.Spatio1 = Spatio1
-        self.Spatio2 = Spatio2
-        if not ((self.Spatio1 == "longitude") and (self.Spatio2 == "latitude")):
-            raise ValueError("Spatio1 and Spatio2 must be longitude and latitude!")
-
-        # 3. Gridding params
-        self.ensemble_fold = ensemble_fold
-        self.min_ensemble_required = min_ensemble_required
-        self.grid_len_upper_threshold = (
-            self.grid_len_lon_upper_threshold
-        ) = self.grid_len_lat_upper_threshold = grid_len_upper_threshold
-        self.grid_len_lower_threshold = (
-            self.grid_len_lon_lower_threshold
-        ) = self.grid_len_lat_lower_threshold = grid_len_lower_threshold
-        self.points_lower_threshold = points_lower_threshold
-        self.temporal_start = temporal_start
-        self.temporal_end = temporal_end
-        self.temporal_step = temporal_step
-        self.temporal_bin_interval = temporal_bin_interval
-
-        check_spatio_bin_jitter_magnitude(spatio_bin_jitter_magnitude)
-        self.spatio_bin_jitter_magnitude = spatio_bin_jitter_magnitude
-        check_temporal_bin_start_jitter(temporal_bin_start_jitter)
-        self.temporal_bin_start_jitter = temporal_bin_start_jitter
-
-        # 4. Training params
-        if stixel_training_size_threshold is None:
-            self.stixel_training_size_threshold = points_lower_threshold
-        else:
-            self.stixel_training_size_threshold = stixel_training_size_threshold
-        self.use_temporal_to_train = use_temporal_to_train
-        self.subset_x_names = subset_x_names
-        self.sample_weights_for_classifier = sample_weights_for_classifier
-
-        # 5. Multi-threading params (not implemented yet)
-        check_njobs(njobs)
-        self.njobs = njobs
-
-        # 6. Plotting params
-        self.plot_xlims = plot_xlims
-        self.plot_ylims = plot_ylims
-        self.save_tmp = save_tmp
-        self.save_dir = save_dir
-        self.save_gridding_plot = save_gridding_plot  # Actually means plotly
-
-        # X. miscellaneous
-        self.ensemble_models_disk_saver = ensemble_models_disk_saver
-        self.ensemble_models_disk_saving_dir = ensemble_models_disk_saving_dir
-        if self.ensemble_models_disk_saver:
-            self.saving_code = np.random.randint(1, 1e8, 1)
-
-        if not verbosity == 0:
-            self.verbosity = 1
-        else:
-            self.verbosity = 0
+        if not self.Spatio1 == "longitude":
+            warnings.warn('the input Spatio1 is not "longitude"! Set to "longitude"')
+            self.Spatio1 = "longitude"
+        if not self.Spatio2 == "latitude":
+            warnings.warn('the input Spatio1 is not "latitude"! Set to "latitude"')
+            self.Spatio2 = "latitude"
 
     def split(self, X_train: pd.core.frame.DataFrame, verbosity: Union[None, int] = None, ax=None) -> dict:
         """QuadTree indexing the input data
@@ -285,6 +264,7 @@ class SphereAdaSTEM(AdaSTEM):
             plot_ylims=self.plot_ylims,
             save_path=save_path,
             ax=ax,
+            plot_empty=self.plot_empty,
         )
 
     def SAC_ensemble_training(self, index_df: pd.core.frame.DataFrame, data: pd.core.frame.DataFrame):
@@ -366,11 +346,8 @@ class SphereAdaSTEM(AdaSTEM):
             pd.core.frame.DataFrame: Prediction result of one ensemble.
         """
 
-        temp_start = index_df[f"{self.Temporal1}_start"].min()
-        temp_end = index_df[f"{self.Temporal1}_end"].max()
-
         # Calculate the start indices for the sliding window
-        start_indices = np.arange(temp_start, temp_end, self.temporal_step)
+        start_indices = sorted(index_df[f"{self.Temporal1}_start"].unique())
 
         # prediction, window by window
         window_prediction_list = []
@@ -426,12 +403,18 @@ class SphereAdaSTEM(AdaSTEM):
                 .groupby("unique_stixel_id")
                 .apply(lambda stixel: self.stixel_predict(stixel))
             )
-
+            # print('window_prediction:',window_prediction)
             window_prediction_list.append(window_prediction)
 
-        ensemble_prediction = pd.concat(window_prediction_list, axis=0)
-        ensemble_prediction = ensemble_prediction.droplevel(0, axis=0)
-        ensemble_prediction = ensemble_prediction.groupby("index").mean().reset_index(drop=False)
+        if any([i is not None for i in window_prediction_list]):
+            ensemble_prediction = pd.concat(window_prediction_list, axis=0)
+            ensemble_prediction = ensemble_prediction.droplevel(0, axis=0)
+            ensemble_prediction = ensemble_prediction.groupby("index").mean().reset_index(drop=False)
+        else:
+            ensmeble_index = list(window_index_df["ensemble_index"])[0]
+            warnings.warn(f"No prediction for this ensemble: {ensmeble_index}")
+            ensemble_prediction = None
+
         return ensemble_prediction
 
     def assign_feature_importances_by_points(
@@ -500,6 +483,7 @@ class SphereAdaSTEMClassifier(SphereAdaSTEM):
         plot_xlims=(-180, 180),
         plot_ylims=(-90, 90),
         verbosity=0,
+        plot_empty=False,
     ):
         super().__init__(
             base_model,
@@ -531,77 +515,10 @@ class SphereAdaSTEMClassifier(SphereAdaSTEM):
             plot_xlims,
             plot_ylims,
             verbosity,
+            plot_empty,
         )
 
-    def predict(
-        self,
-        X_test: pd.core.frame.DataFrame,
-        verbosity: Union[None, int] = None,
-        return_std: bool = False,
-        cls_threshold: float = 0.5,
-        njobs: Union[int, None] = 1,
-        aggregation: str = "mean",
-        return_by_separate_ensembles: bool = False,
-    ) -> Union[np.ndarray, Tuple[np.ndarray]]:
-        """A rewrite of predict_proba
-
-        Args:
-            X_test (pd.core.frame.DataFrame):
-                Testing variables.
-            verbosity (int, optional):
-                0 to output nothing, everything other wise. Default None set it to the verbosity of AdaSTEM model class.
-            return_std (bool, optional):
-                Whether return the standard deviation among ensembles. Defaults to False.
-            cls_threshold (float, optional):
-                Cutting threshold for the classification.
-                Values above cls_threshold will be labeled as 1 and 0 otherwise.
-                Defaults to 0.5.
-            njobs (Union[int, None], optional):
-                Number of processes used in this task. If None, use the self.njobs. Default to 1.
-                I do not recommend setting value larger than 1.
-                In practice, multi-processing seems to slow down the process instead of speeding up.
-                Could be more practical with large amount of data.
-                Still in experiment.
-            aggregation (str, optional):
-                'mean' or 'median' for aggregation method across ensembles.
-            return_by_separate_ensembles (bool, optional):
-                Experimental function. return not by aggregation, but by separate ensembles.
-
-        Raises:
-            TypeError:
-                X_test is not of type pd.core.frame.DataFrame.
-            ValueError:
-                aggregation is not in ['mean','median'].
-
-        Returns:
-            predicted results. (pred_mean, pred_std) if return_std==true, and pred_mean if return_std==False.
-
-        """
-
-        if return_std:
-            mean, std = self.predict_proba(
-                X_test,
-                verbosity=verbosity,
-                return_std=True,
-                njobs=njobs,
-                aggregation=aggregation,
-                return_by_separate_ensembles=return_by_separate_ensembles,
-            )
-            mean = np.where(mean < cls_threshold, 0, mean)
-            mean = np.where(mean >= cls_threshold, 1, mean)
-            return mean, std
-        else:
-            mean = self.predict_proba(
-                X_test,
-                verbosity=verbosity,
-                return_std=False,
-                njobs=njobs,
-                aggregation=aggregation,
-                return_by_separate_ensembles=return_by_separate_ensembles,
-            )
-            mean = np.where(mean < cls_threshold, 0, mean)
-            mean = np.where(mean >= cls_threshold, 1, mean)
-            return mean
+        self.predict = MethodType(AdaSTEMClassifier.predict, self)
 
 
 class SphereAdaSTEMRegressor(SphereAdaSTEM):
@@ -659,6 +576,7 @@ class SphereAdaSTEMRegressor(SphereAdaSTEM):
         plot_xlims=(-180, 180),
         plot_ylims=(-90, 90),
         verbosity=0,
+        plot_empty=False,
     ):
         super().__init__(
             base_model,
@@ -690,4 +608,5 @@ class SphereAdaSTEMRegressor(SphereAdaSTEM):
             plot_xlims,
             plot_ylims,
             verbosity,
+            plot_empty,
         )
