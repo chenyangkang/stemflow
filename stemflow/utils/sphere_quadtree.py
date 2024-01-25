@@ -45,6 +45,7 @@ def get_ensemble_sphere_quadtree(
     save_path: str = "",
     ax=None,
     radius: Union[int, float] = 6371.0,
+    plot_empty: bool = False,
 ) -> Tuple[pandas.core.frame.DataFrame, Union[matplotlib.figure.Figure, float]]:
     """Generate QuadTree gridding based on the input dataframe
     A function to get quadtree results for spherical indexing system. Twins to `get_ensemble_quadtree` in `quadtree.py`, Returns ensemble_df and plotting axes.
@@ -158,6 +159,7 @@ def get_ensemble_sphere_quadtree(
                     rotation_angle=rotation_angle,
                     rotation_axis=rotation_axis,
                     radius=radius,
+                    plot_empty=plot_empty,
                 )
 
                 # Give the data and indexes. The indexes should be used to assign points data so that base model can run on those points,

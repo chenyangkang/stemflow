@@ -94,6 +94,7 @@ def get_ensemble_quadtree(
     plot_ylims: Tuple[Union[float, int]] = (-90, 90),
     save_path: str = "",
     ax=None,
+    plot_empty: bool = False,
 ) -> Tuple[pandas.core.frame.DataFrame, Union[matplotlib.figure.Figure, float]]:
     """Generate QuadTree gridding based on the input dataframe
 
@@ -148,6 +149,8 @@ def get_ensemble_quadtree(
             If not '', save the ensemble dataframe to this path
         ax:
             Matplotlib Axes to add to.
+        plot_empty:
+            Whether to plot the empty grid
 
     Returns:
         A tuple of <br>
@@ -211,6 +214,7 @@ def get_ensemble_quadtree(
                         rotation_angle=rotation_angle,
                         calibration_point_x_jitter=calibration_point_x_jitter,
                         calibration_point_y_jitter=calibration_point_y_jitter,
+                        plot_empty=plot_empty,
                     )
                 elif isinstance(grid_len, float) or isinstance(grid_len, int):
                     QT_obj = QuadGrid(
@@ -220,6 +224,7 @@ def get_ensemble_quadtree(
                         rotation_angle=rotation_angle,
                         calibration_point_x_jitter=calibration_point_x_jitter,
                         calibration_point_y_jitter=calibration_point_y_jitter,
+                        plot_empty=plot_empty,
                     )
                 else:
                     raise TypeError("grid_len passed is not int or float.")

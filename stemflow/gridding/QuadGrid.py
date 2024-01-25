@@ -34,7 +34,42 @@ class QuadGrid:
         rotation_angle: Union[float, int] = 0,
         calibration_point_x_jitter: Union[float, int] = 0,
         calibration_point_y_jitter: Union[float, int] = 0,
+        plot_empty: bool = False,
     ):
+        """Create a QuadTree object
+
+        Args:
+            grid_len:
+                grid length
+            points_lower_threshold:
+                skip the grid if less samples are contained
+            lon_lat_equal_grid:
+                whether to split the longitude and latitude equally.
+            rotation_angle:
+                angles to rotate the gridding.
+            calibration_point_x_jitter:
+                jittering the gridding on longitude.
+            calibration_point_y_jitter:
+                jittering the gridding on latitude.
+            plot_empty:
+                Whether to plot the empty grid
+
+        Example:
+            ```py
+            >> QT_obj = QuadGrid(grid_len=20,
+                            points_lower_threshold=50,
+                            lon_lat_equal_grid = True,
+                            rotation_angle = 15.5,
+                            calibration_point_x_jitter = 10,
+                            calibration_point_y_jitter = 10)
+            >> QT_obj.add_lon_lat_data(sub_data.index, sub_data['longitude'].values, sub_data['latitude'].values)
+            >> QT_obj.generate_gridding_params()
+            >> QT_obj.subdivide() # Call subdivide to process
+            >> gridding_info = QT_obj.get_final_result()  # gridding_info is a dataframe
+            ```
+
+        """
+
         self.points_lower_threshold = points_lower_threshold
         self.grid_len = grid_len
         self.lon_lat_equal_grid = lon_lat_equal_grid  # Not used anyway
@@ -42,6 +77,7 @@ class QuadGrid:
         self.rotation_angle = rotation_angle
         self.calibration_point_x_jitter = calibration_point_x_jitter
         self.calibration_point_y_jitter = calibration_point_y_jitter
+        self.plot_empty = plot_empty
 
     def add_lon_lat_data(self, indexes: Sequence, x_array: Sequence, y_array: Sequence):
         """Store input lng lat data and transform to **Point** object
@@ -204,5 +240,8 @@ class QuadGrid:
             }
         )
 
-        result = result[result["stixel_checklist_count"] != 0]
+        if self.plot_empty:
+            pass
+        else:
+            result = result[result["stixel_checklist_count"] >= self.points_lower_threshold]
         return result

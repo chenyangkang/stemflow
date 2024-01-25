@@ -11,11 +11,10 @@ class STEM(AdaSTEM):
     """A STEM model class (allow fixed grid size)
 
     Parents:
-        stemflow.model.AdaSTEM
+        stemflow.model.AdaSTEM.AdaSTEM
 
     Children:
-        stemflow.model.STEM.STEMClassifier
-        stemflow.model.STEM.STEMRegressor
+        None
 
     """
 
@@ -49,6 +48,7 @@ class STEM(AdaSTEM):
         plot_xlims: Tuple[Union[float, int], Union[float, int]] = (-180, 180),
         plot_ylims: Tuple[Union[float, int], Union[float, int]] = (-90, 90),
         verbosity: int = 0,
+        plot_empty: bool = False,
     ):
         """Make a STEM object
 
@@ -116,7 +116,8 @@ class STEM(AdaSTEM):
                 If save_gridding_plot=true, what is the ylims of the plot. Defaults to (-90,90).
             verbosity:
                 0 to output nothing and everything otherwise.
-
+            plot_empty:
+                Whether to plot the empty grid
 
         Raises:
             AttributeError: Base model do not have method 'fit' or 'predict'
@@ -174,6 +175,7 @@ class STEM(AdaSTEM):
             plot_xlims,
             plot_ylims,
             verbosity,
+            plot_empty,
         )
 
         self.grid_len = grid_len
@@ -181,6 +183,12 @@ class STEM(AdaSTEM):
 
 class STEMClassifier(AdaSTEMClassifier):
     """STEM model Classifier interface (allow fixed grid size)
+
+    Parents:
+        stemflow.model.AdaSTEM.AdaSTEMClassifier
+
+    Children:
+        None
 
     Example:
         ```
@@ -232,6 +240,7 @@ class STEMClassifier(AdaSTEMClassifier):
         plot_xlims=(-180, 180),
         plot_ylims=(-90, 90),
         verbosity=0,
+        plot_empty=False,
     ):
         super().__init__(
             base_model,
@@ -263,6 +272,7 @@ class STEMClassifier(AdaSTEMClassifier):
             plot_xlims,
             plot_ylims,
             verbosity,
+            plot_empty,
         )
 
         self.grid_len = grid_len
@@ -270,6 +280,12 @@ class STEMClassifier(AdaSTEMClassifier):
 
 class STEMRegressor(AdaSTEMRegressor):
     """STEM model Regressor interface (allow fixed grid size)
+
+    Parents:
+        stemflow.model.AdaSTEM.AdaSTEMRegressor
+
+    Children:
+        None
 
     Example:
     ```
@@ -321,6 +337,7 @@ class STEMRegressor(AdaSTEMRegressor):
         plot_xlims=(-180, 180),
         plot_ylims=(-90, 90),
         verbosity=0,
+        plot_empty=False,
     ):
         super().__init__(
             base_model,
@@ -352,6 +369,7 @@ class STEMRegressor(AdaSTEMRegressor):
             plot_xlims,
             plot_ylims,
             verbosity,
+            plot_empty,
         )
 
         self.grid_len = grid_len

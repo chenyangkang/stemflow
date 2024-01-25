@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt  # plotting libraries
 import numpy as np
 import pandas
 import pandas as pd
+import plotly.express as px
 from tqdm import tqdm
 
 from ..utils.generate_soft_colors import generate_soft_color
@@ -36,7 +37,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 warnings.filterwarnings("ignore")
 
 
-def recursive_subdivide(
+def Sphere_recursive_subdivide(
     node: Sphere_QTriangle,
     grid_len_upper_threshold: Union[float, int],
     grid_len_lower_threshold: Union[float, int],
@@ -55,7 +56,7 @@ def recursive_subdivide(
         points_lower_threshold:
             Stop splitting if fall short
         radius:
-            radius
+            radius of earth.
 
     """
 
@@ -74,7 +75,7 @@ def recursive_subdivide(
     pm23 = get_midpoint_3D(node.p2, node.p3, radius)
 
     # 1.
-    points_contained = contains(node.points, pm12, pm23, node.p2)
+    points_contained = Sphere_contains(node.points, pm12, pm23, node.p2)
     x1 = Sphere_QTriangle(
         pm12,
         pm23,
@@ -83,7 +84,7 @@ def recursive_subdivide(
         distance_from_3D_point(pm12.x, pm12.y, pm12.z, pm23.x, pm23.y, pm23.z, radius),
         radius,
     )
-    recursive_subdivide(
+    Sphere_recursive_subdivide(
         x1,
         grid_len_upper_threshold,
         grid_len_lower_threshold,
@@ -91,7 +92,7 @@ def recursive_subdivide(
     )
 
     # 2.
-    points_contained = contains(node.points, pm12, pm13, node.p1)
+    points_contained = Sphere_contains(node.points, pm12, pm13, node.p1)
     x2 = Sphere_QTriangle(
         pm12,
         pm13,
@@ -100,7 +101,7 @@ def recursive_subdivide(
         distance_from_3D_point(pm12.x, pm12.y, pm12.z, pm13.x, pm13.y, pm13.z, radius),
         radius,
     )
-    recursive_subdivide(
+    Sphere_recursive_subdivide(
         x2,
         grid_len_upper_threshold,
         grid_len_lower_threshold,
@@ -108,7 +109,7 @@ def recursive_subdivide(
     )
 
     # 3.
-    points_contained = contains(node.points, pm23, pm13, node.p3)
+    points_contained = Sphere_contains(node.points, pm23, pm13, node.p3)
     x3 = Sphere_QTriangle(
         pm23,
         pm13,
@@ -117,7 +118,7 @@ def recursive_subdivide(
         distance_from_3D_point(pm13.x, pm13.y, pm13.z, pm23.x, pm23.y, pm23.z, radius),
         radius,
     )
-    recursive_subdivide(
+    Sphere_recursive_subdivide(
         x3,
         grid_len_upper_threshold,
         grid_len_lower_threshold,
@@ -125,7 +126,7 @@ def recursive_subdivide(
     )
 
     # 3.
-    points_contained = contains(node.points, pm12, pm13, pm23)
+    points_contained = Sphere_contains(node.points, pm12, pm13, pm23)
     x4 = Sphere_QTriangle(
         pm12,
         pm13,
@@ -134,7 +135,7 @@ def recursive_subdivide(
         distance_from_3D_point(pm12.x, pm12.y, pm12.z, pm13.x, pm13.y, pm13.z, radius),
         radius,
     )
-    recursive_subdivide(
+    Sphere_recursive_subdivide(
         x4,
         grid_len_upper_threshold,
         grid_len_lower_threshold,
@@ -149,7 +150,7 @@ def recursive_subdivide(
     node.children = [x1, x2, x3, x4]
 
 
-def contains(points, p1, p2, p3):
+def Sphere_contains(points, p1, p2, p3):
     """return list of points within the grid"""
     pts = []
     P0 = np.array([0, 0, 0]).reshape(1, -1)
@@ -167,14 +168,14 @@ def contains(points, p1, p2, p3):
     return pts
 
 
-def find_children(node):
+def Sphere_find_children(node):
     """return children nodes of this node"""
     if not node.children:
         return [node]
     else:
         children = []
         for child in node.children:
-            children += find_children(child)
+            children += Sphere_find_children(child)
     return children
 
 
@@ -189,8 +190,9 @@ class Sphere_QTree:
         rotation_angle: Union[float, int] = None,
         rotation_axis: np.ndarray = None,
         radius: Union[float, int] = 6371,
+        plot_empty: bool = False,
     ):
-        """Create a QuadTree object
+        """Create a Spherical QuadTree object
 
         Args:
             grid_len_upper_threshold:
@@ -204,17 +206,18 @@ class Sphere_QTree:
             rotation_axis:
                 rotation_axis
             radius:
-            radius of earth in km
+                radius of earth in km
+            plot_empty:
+                Whether to plot the empty grid
 
         Example:
             ```py
-            >> QT_obj = Sphere_QTree(grid_len_upper_threshold=25,
-                            grid_len_lower_threshold=5,
+            >> QT_obj = Sphere_QTree(grid_len_upper_threshold=5000,
+                            grid_len_lower_threshold=500,
                             points_lower_threshold=50,
-                            lon_lat_equal_grid = True,
                             rotation_angle = 15.5,
-                            calibration_point_x_jitter = 10,
-                            calibration_point_y_jitter = 10)
+                            rotation_axis = np.array([-1,0,1]),
+                            radius = 6371)
             >> QT_obj.add_lon_lat_data(sub_data.index, sub_data['longitude'].values, sub_data['latitude'].values)
             >> QT_obj.generate_gridding_params()
             >> QT_obj.subdivide() # Call subdivide to process
@@ -235,6 +238,7 @@ class Sphere_QTree:
             rotation_axis = np.random.uniform(-1, 1, 3)
         self.rotation_axis = rotation_axis
         self.radius = radius
+        self.plot_empty = plot_empty
 
     def add_3D_data(self, indexes: Sequence, x_array: Sequence, y_array: Sequence, z_array: Sequence):
         """Store input x,y,z data and transform to **QPoint_3D** object
@@ -284,7 +288,7 @@ class Sphere_QTree:
                 radius=self.radius,
             )
 
-            face_obj.points = contains(self.points, face_obj.p1, face_obj.p2, face_obj.p3)
+            face_obj.points = Sphere_contains(self.points, face_obj.p1, face_obj.p2, face_obj.p3)
             self.root_list.append(face_obj)
 
     def get_points(self):
@@ -296,7 +300,7 @@ class Sphere_QTree:
 
         if verbosity > 0:
             for root_face in tqdm(self.root_list):
-                recursive_subdivide(
+                Sphere_recursive_subdivide(
                     root_face,
                     self.grid_len_upper_threshold,
                     self.grid_len_lower_threshold,
@@ -305,7 +309,7 @@ class Sphere_QTree:
                 )
         else:
             for root_face in self.root_list:
-                recursive_subdivide(
+                Sphere_recursive_subdivide(
                     root_face,
                     self.grid_len_upper_threshold,
                     self.grid_len_lower_threshold,
@@ -321,7 +325,7 @@ class Sphere_QTree:
         """
         all_grids = []
         for root_face in self.root_list:
-            c = find_children(root_face)
+            c = Sphere_find_children(root_face)
             all_grids += c
 
         # point_indexes_list = []
@@ -365,7 +369,10 @@ class Sphere_QTree:
             }
         )
 
-        # result = result[result["stixel_checklist_count"] != 0]
+        if self.plot_empty:
+            pass
+        else:
+            result = result[result["stixel_checklist_count"] >= self.points_lower_threshold]
         return result
 
     def graph(self, scatter: bool = True, ax=None, line_kwgs={}):
@@ -378,7 +385,7 @@ class Sphere_QTree:
 
         c = []
         for root_face in self.root_list:
-            c += find_children(root_face)
+            c += Sphere_find_children(root_face)
 
         for n in c:
             old_points = Sphere_Jitterrotator.inverse_rotate_jitter(
@@ -442,6 +449,16 @@ class Sphere_QTree:
         return
 
     def plotly_graph(self, scatter: bool = False, ax=None, line_kwgs={}):
+        """Get plotly interactive plots
+
+        Args:
+            scatter (bool, optional): Whether to plot scatters. Defaults to False.
+            ax (_type_, optional): Axes to plot on. Defaults to None.
+            line_kwgs (dict, optional): line key words to pass to px.ling_geo. Defaults to {}.
+
+        Returns:
+            a plotly chart
+        """
         the_color = generate_soft_color()
         this_slice = self.get_final_result()
 
@@ -452,7 +469,8 @@ class Sphere_QTree:
         from stemflow.utils.sphere.coordinate_transform import continuous_interpolation_3D_plotting
 
         for index, grid in this_slice.iterrows():
-            stixel_indexes = int(grid["stixel_indexes"])
+            # stixel_indexes = int(grid["stixel_indexes"])
+            stixel_length = int(grid["stixel_length"])
 
             old_points = Sphere_Jitterrotator.inverse_rotate_jitter(
                 np.array(
@@ -472,7 +490,7 @@ class Sphere_QTree:
                 )
                 lons = np.append(lons, the_lon)
                 lats = np.append(lats, the_lat)
-                names = np.append(names, [stixel_indexes] * len(the_lon))
+                names = np.append(names, [f"{stixel_length}km"] * len(the_lon))
                 lons = np.append(lons, None)
                 lats = np.append(lats, None)
                 names = np.append(names, None)
@@ -499,9 +517,7 @@ class Sphere_QTree:
             )
             lons_scatter = np.append(lons_scatter, the_lon)
             lats_scatter = np.append(lats_scatter, the_lat)
-            names_scatter = np.append(names_scatter, [stixel_indexes] * len(the_lon))
-
-        import plotly.express as px
+            names_scatter = np.append(names_scatter, [f"{stixel_length}km"] * len(the_lon))
 
         if ax is None:
             ax = px.line_geo(
