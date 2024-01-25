@@ -487,7 +487,7 @@ class SphereAdaSTEMClassifier(SphereAdaSTEM):
         verbosity=0,
         plot_empty=False,
     ):
-        SphereAdaSTEM().__init__(
+        super().__init__(
             base_model,
             task,
             ensemble_fold,
