@@ -188,8 +188,9 @@ If you use `SphereAdaSTEM` module, the gridding plot is a `plotly` generated int
 
 
 <p align="center">
-  <img src="[http://some_place.com/image.png](https://chenyangkang.github.io/stemflow/assets/Sphere_gridding.png)" width="300"/>
+  <img src="https://chenyangkang.github.io/stemflow/assets/Sphere_gridding.png" width="500"/>
 </p>
+
 
 
 See [SphereAdaSTEM demo](https://chenyangkang.github.io/stemflow/Examples/04.SphereAdaSTEM_demo.html) and [Interactive spherical gridding plot](https://chenyangkang.github.io/stemflow/assets/Sphere_gridding.html).
