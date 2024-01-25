@@ -186,7 +186,7 @@ Here, each color shows an ensemble generated during model fitting. In each of th
 
 If you use `SphereAdaSTEM` module, the gridding plot is a `plotly` generated interactive object by default:
 
-![Sphere Gridding](https://chenyangkang.github.io/stemflow/assets/Sphere_gridding.png)
+![Sphere Gridding](https://chenyangkang.github.io/stemflow/assets/Sphere_gridding.png){: style="display: block; margin: auto; width: 50%;"}
 
 See [SphereAdaSTEM demo](https://chenyangkang.github.io/stemflow/Examples/04.SphereAdaSTEM_demo.html) and [Interactive spherical gridding plot](https://chenyangkang.github.io/stemflow/assets/Sphere_gridding.html).
 
