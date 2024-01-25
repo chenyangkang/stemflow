@@ -48,7 +48,7 @@ Dynamic features:
 
 ### Use of static and dynamic features
 
-Although all features except `DOY` in our [mini test](https://chenyangkang.github.io/stemflow/Examples/00.Mini_test.html) and [AdaSTEM Demo](https://chenyangkang.github.io/stemflow/Examples/01.AdaSTEM_demo.html) are static features, the model fully support dynamic feature input.
+Although all features except `DOY` in our [AdaSTEM Demo](https://chenyangkang.github.io/stemflow/Examples/01.AdaSTEM_demo.html) are static features, the model fully support dynamic feature input.
 
 Noteworthy, the choice of static or dynamic features depends on some aspects:
 

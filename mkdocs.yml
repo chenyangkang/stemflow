@@ -114,7 +114,6 @@ nav:
       - 'validation': API_Documentation/utils/stemflow.utils.validation.md
       - 'wrapper': API_Documentation/utils/stemflow.utils.wrapper.md
     - stemflow.model_selection: API_Documentation/stemflow.model_selection.md
-    - stemflow.manually_testing: API_Documentation/stemflow.manually_testing.md
 
   - Fun Visualization:
     - 'Global Bird Diversity': Fun_Visualization/Global_Bird_Shannon_H_Index.md
