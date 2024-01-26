@@ -7,6 +7,8 @@ from itertools import repeat
 from multiprocessing import Pool, cpu_count
 from typing import Callable, Tuple, Union
 
+#
+import dask.dataframe as dd
 import numpy as np
 import pandas as pd
 from numpy import ndarray
@@ -57,7 +59,9 @@ from .static_func_AdaSTEM import (  # predict_one_ensemble
     transform_pred_set_to_STEM_quad,
 )
 
-#
+
+def mp_training_func(ensemble, instance, data):
+    return instance.SAC_ensemble_training(index_df=ensemble[1], data=data)
 
 
 class AdaSTEM(BaseEstimator):
@@ -354,8 +358,9 @@ class AdaSTEM(BaseEstimator):
             pass
 
         else:
-            self.model_dict[f"{name}_model"] = model
-            self.stixel_specific_x_names[name] = stixel_specific_x_names
+            # self.model_dict[f"{name}_model"] = model
+            # self.stixel_specific_x_names[name] = stixel_specific_x_names
+            return (name, model, stixel_specific_x_names)
 
     def SAC_ensemble_training(self, index_df: pd.core.frame.DataFrame, data: pd.core.frame.DataFrame):
         """A sub-module of SAC training function.
@@ -367,8 +372,11 @@ class AdaSTEM(BaseEstimator):
         """
 
         # Calculate the start indices for the sliding window
+
         unique_start_indices = np.sort(index_df[f"{self.Temporal1}_start"].unique())
         # training, window by window
+
+        res_list = []
         for start in unique_start_indices:
             window_data_df = data[
                 (data[self.Temporal1] >= start) & (data[self.Temporal1] < start + self.temporal_bin_interval)
@@ -405,14 +413,20 @@ class AdaSTEM(BaseEstimator):
                 continue
 
             # train
-            (
+            res = (
                 query_results.reset_index(drop=False, level=[0, 1])
                 .dropna(subset="unique_stixel_id")
                 .groupby("unique_stixel_id")
                 .apply(lambda stixel: self.stixel_fitting(stixel))
-            )
+            ).values
 
-    def SAC_training(self, ensemble_df: pd.core.frame.DataFrame, data: pd.core.frame.DataFrame, verbosity: int = 0):
+            res_list.append(list(res))
+
+        return res_list
+
+    def SAC_training(
+        self, ensemble_df: pd.core.frame.DataFrame, data: pd.core.frame.DataFrame, verbosity: int = 0, njobs: int = 1
+    ):
         """This function is a training function with SAC strategy:
         Split (S), Apply(A), Combine (C). At ensemble level.
         It is built on pandas `apply` method.
@@ -423,12 +437,40 @@ class AdaSTEM(BaseEstimator):
             verbosity (int, optional): Defaults to 0.
 
         """
+        assert isinstance(njobs, int)
 
         if verbosity > 0:
-            tqdm_auto.pandas(desc="training", postfix=None)
-            ensemble_df.groupby("ensemble_index").progress_apply(
-                lambda ensemble: self.SAC_ensemble_training(index_df=ensemble, data=data)
-            )
+            groups = ensemble_df.groupby("ensemble_index")
+
+            from functools import partial
+
+            process_func_partial = partial(mp_training_func, instance=self, data=data)
+
+            import multiprocessing as mp
+
+            with mp.Pool(njobs) as pool:
+                mapper = tqdm(
+                    pool.imap(process_func_partial, groups),
+                    total=len(ensemble_df["ensemble_index"].unique()),
+                    desc="Training",
+                )
+
+                for ensemble in mapper:
+                    for _ in range(len(ensemble)):
+                        time_block = ensemble.pop()
+                        for _ in range(len(time_block)):
+                            feature_tuple = time_block.pop()
+                            if feature_tuple is None:
+                                continue
+                            name = feature_tuple[0]
+                            model = feature_tuple[1]
+                            stixel_specific_x_names = feature_tuple[2]
+
+                            self.model_dict[f"{name}_model"] = model
+                            self.stixel_specific_x_names[name] = stixel_specific_x_names
+
+            return self
+
         else:
             ensemble_df.groupby("ensemble_index").apply(
                 lambda ensemble: self.SAC_ensemble_training(index_df=ensemble, data=data)
@@ -440,6 +482,7 @@ class AdaSTEM(BaseEstimator):
         y_train: Union[pd.core.frame.DataFrame, np.ndarray],
         verbosity: Union[None, int] = None,
         ax=None,
+        njobs: int = 1,
     ):
         """Fitting method
 
@@ -472,7 +515,7 @@ class AdaSTEM(BaseEstimator):
             raise NotImplementedError("Multi-threading not implemented yet.")
         else:
             # single processing
-            self.SAC_training(self.ensemble_df, X_train, verbosity)
+            self.SAC_training(self.ensemble_df, X_train, verbosity, njobs)
 
         return self
 
