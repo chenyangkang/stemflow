@@ -254,7 +254,11 @@ def get_ensemble_quadtree(
                 ]
                 ensemble_all_df_list.append(this_slice)
 
+    # concat
     ensemble_df = pd.concat(ensemble_all_df_list).reset_index(drop=True)
+    del ensemble_all_df_list
+
+    # processing
     ensemble_df.loc[:, "stixel_calibration_point_transformed_left_bound"] = [
         i[0] for i in ensemble_df["stixel_calibration_point(transformed)"]
     ]
@@ -267,9 +271,15 @@ def get_ensemble_quadtree(
     ensemble_df.loc[:, "stixel_calibration_point_transformed_upper_bound"] = (
         ensemble_df["stixel_calibration_point_transformed_lower_bound"] + ensemble_df["stixel_height"]
     )
-    ensemble_df = ensemble_df.reset_index(drop=True)
+    ensemble_df["calibration_point_x_jitter"] = [
+        i[0] for i in ensemble_df["space_jitter(first rotate by zero then add this)"].values
+    ]
+    ensemble_df["calibration_point_y_jitter"] = [
+        i[1] for i in ensemble_df["space_jitter(first rotate by zero then add this)"].values
+    ]
+    del ensemble_df["space_jitter(first rotate by zero then add this)"]
 
-    del ensemble_all_df_list
+    ensemble_df = ensemble_df.reset_index(drop=True)
 
     if not save_path == "":
         ensemble_df.to_csv(save_path, index=False)
