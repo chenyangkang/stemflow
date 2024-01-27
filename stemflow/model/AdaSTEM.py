@@ -1,6 +1,8 @@
+import multiprocessing as mp
 import os
 import pickle
 import warnings
+from functools import partial
 from itertools import repeat
 
 #
@@ -32,6 +34,8 @@ from sklearn.metrics import (
 from tqdm import tqdm
 from tqdm.auto import tqdm as tqdm_auto
 
+from ..multiprocessing.utils import mp_predict_func, mp_training_func
+
 #
 from ..utils.quadtree import get_ensemble_quadtree
 from ..utils.validation import (
@@ -58,10 +62,6 @@ from .static_func_AdaSTEM import (  # predict_one_ensemble
     train_one_stixel,
     transform_pred_set_to_STEM_quad,
 )
-
-
-def mp_training_func(ensemble, instance, data):
-    return instance.SAC_ensemble_training(index_df=ensemble[1], data=data)
 
 
 class AdaSTEM(BaseEstimator):
@@ -439,42 +439,38 @@ class AdaSTEM(BaseEstimator):
         """
         assert isinstance(njobs, int)
 
-        if verbosity > 0:
-            groups = ensemble_df.groupby("ensemble_index")
+        groups = ensemble_df.groupby("ensemble_index")
+        process_func_partial = partial(mp_training_func, instance=self, data=data)
 
-            from functools import partial
+        model_dict = {}
+        stixel_specific_x_names = {}
 
-            process_func_partial = partial(mp_training_func, instance=self, data=data)
-
-            import multiprocessing as mp
-
-            with mp.Pool(njobs) as pool:
-                mapper = tqdm(
-                    pool.imap(process_func_partial, groups),
+        with mp.Pool(njobs) as pool:
+            mapper = pool.imap(process_func_partial, groups)
+            if verbosity > 0:
+                mapper_tqdm = tqdm(
+                    mapper,  # an imap iterator
                     total=len(ensemble_df["ensemble_index"].unique()),
                     desc="Training",
                 )
+            else:
+                mapper_tqdm = mapper
 
-                for ensemble in mapper:
-                    for _ in range(len(ensemble)):
-                        time_block = ensemble.pop()
-                        for _ in range(len(time_block)):
-                            feature_tuple = time_block.pop()
-                            if feature_tuple is None:
-                                continue
-                            name = feature_tuple[0]
-                            model = feature_tuple[1]
-                            stixel_specific_x_names = feature_tuple[2]
+            # iterate through
+            for ensemble in mapper_tqdm:
+                for time_block in ensemble:
+                    for feature_tuple in time_block:
+                        if feature_tuple is None:
+                            continue
+                        name = feature_tuple[0]
+                        model = feature_tuple[1]
+                        x_names = feature_tuple[2]
+                        model_dict[f"{name}_model"] = model
+                        stixel_specific_x_names[name] = x_names
 
-                            self.model_dict[f"{name}_model"] = model
-                            self.stixel_specific_x_names[name] = stixel_specific_x_names
-
-            return self
-
-        else:
-            ensemble_df.groupby("ensemble_index").apply(
-                lambda ensemble: self.SAC_ensemble_training(index_df=ensemble, data=data)
-            )
+        self.model_dict = model_dict
+        self.stixel_specific_x_names = stixel_specific_x_names
+        return self
 
     def fit(
         self,
@@ -624,7 +620,7 @@ class AdaSTEM(BaseEstimator):
         return ensemble_prediction
 
     def SAC_predict(
-        self, ensemble_df: pd.core.frame.DataFrame, data: pd.core.frame.DataFrame, verbosity: int = 0
+        self, ensemble_df: pd.core.frame.DataFrame, data: pd.core.frame.DataFrame, verbosity: int = 0, njobs: int = 1
     ) -> pd.core.frame.DataFrame:
         """This function is a prediction function with SAC strategy:
         Split (S), Apply(A), Combine (C). At ensemble level.
@@ -638,21 +634,45 @@ class AdaSTEM(BaseEstimator):
         Returns:
             pd.core.frame.DataFrame: prediction results.
         """
+        assert isinstance(njobs, int)
 
-        if verbosity > 0:
-            tqdm_auto.pandas(desc="predicting", postfix=None)
-            pred = ensemble_df.groupby("ensemble_index").progress_apply(
-                lambda ensemble: self.SAC_ensemble_predict(index_df=ensemble, data=data)
-            )
+        if njobs == 1:
+            if verbosity > 0:
+                tqdm_auto.pandas(desc="predicting", postfix=None)
+                pred = ensemble_df.groupby("ensemble_index").progress_apply(
+                    lambda ensemble: self.SAC_ensemble_predict(index_df=ensemble, data=data)
+                )
+            else:
+                pred = ensemble_df.groupby("ensemble_index").apply(
+                    lambda ensemble: self.SAC_ensemble_predict(index_df=ensemble, data=data)
+                )
+
+            # pred = pred.reset_index(drop=False)
+            pred = pred.droplevel(1, axis=0).reset_index(drop=False)
+            pred = pred.pivot_table(index="index", columns="ensemble_index", values="pred")
+            return pred
+
         else:
-            pred = ensemble_df.groupby("ensemble_index").apply(
-                lambda ensemble: self.SAC_ensemble_predict(index_df=ensemble, data=data)
-            )
+            groups = ensemble_df.groupby("ensemble_index")
+            process_func_partial = partial(mp_predict_func, instance=self, data=data)
 
-        # pred = pred.reset_index(drop=False)
-        pred = pred.droplevel(1, axis=0).reset_index(drop=False)
-        pred = pred.pivot_table(index="index", columns="ensemble_index", values="pred")
-        return pred
+            with mp.Pool(njobs) as pool:
+                mapper = pool.imap(process_func_partial, groups)
+                if verbosity > 0:
+                    mapper_tqdm = tqdm(
+                        mapper,  # an imap iterator
+                        total=len(ensemble_df["ensemble_index"].unique()),
+                        desc="Predicting",
+                    )
+                else:
+                    mapper_tqdm = mapper
+
+                # iterate through
+                res = [i.reset_index("index") for i in list(mapper_tqdm)]
+                cont_res = pd.concat(res, axis=1)
+                cont_res.columns = list(range(self.ensemble_fold))
+
+                return cont_res
 
     def predict_proba(
         self,
@@ -700,9 +720,9 @@ class AdaSTEM(BaseEstimator):
         check_prediciton_aggregation(aggregation)
         return_by_separate_ensembles, return_std = check_prediction_return(return_by_separate_ensembles, return_std)
         verbosity = check_verbosity(self, verbosity)
-        check_njobs(njobs)
+        # check_njobs(njobs)
 
-        res = self.SAC_predict(self.ensemble_df, X_test, verbosity=verbosity)
+        res = self.SAC_predict(self.ensemble_df, X_test, verbosity=verbosity, njobs=njobs)
 
         # Experimental Function
         if return_by_separate_ensembles:

@@ -298,8 +298,8 @@ def transform_pred_set_to_STEM_quad(
     """
 
     angle = float(ensemble_info["rotation"].iloc[0])
-    calibration_point_x_jitter = float(ensemble_info["space_jitter(first rotate by zero then add this)"].iloc[0][0])
-    calibration_point_y_jitter = float(ensemble_info["space_jitter(first rotate by zero then add this)"].iloc[0][1])
+    calibration_point_x_jitter = float(ensemble_info["calibration_point_x_jitter"].iloc[0])
+    calibration_point_y_jitter = float(ensemble_info["calibration_point_y_jitter"].iloc[0])
 
     X_train_ = X_train.copy()
     a, b = JitterRotator.rotate_jitter(
