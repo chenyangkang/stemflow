@@ -59,6 +59,6 @@ While there exists many open source packages for species distribution modeling (
 
 # Acknowledgements
 
-This project was based upon work supported by National Natural Science Foundation of China grants 32125005 (to X.Z.), CAS Project for Young Scientists in Basic Research (YSBR-097 to X.Z.). We thank Dr. Daniel Fink at Cornell Lab of Ornithology for the R scripts of STEM model and QuadTree which inspired our implementation in Python. We thank Dr. Taxing Zhang for advice and software test.
+This project was based upon work supported by National Natural Science Foundation of China grants 32125005 (to X.Z.), CAS Project for Young Scientists in Basic Research (YSBR-097 to X.Z.). We thank Dr. Zhongru Gu for advise on paper revision, and Dr. Taxing Zhang for advice on features and software test. We thank Dr. Daniel Fink at Cornell Lab of Ornithology for the R scripts of STEM model and QuadTree which inspired our implementation in Python. 
 
 # References
