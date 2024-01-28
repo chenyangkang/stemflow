@@ -12,6 +12,10 @@ authors:
    surname: Chen
    orchid: 0000-0003-4996-0881
    affiliation: "1, 2"
+ - given-names: Zhongru
+   surname: Gu
+   orchid: 0000-0002-0178-1107
+   affiliation: "1, 3"
  - given-names: Xiangjiang
    surname: Zhan
    corresponding: true
@@ -59,6 +63,6 @@ While there exists many open source packages for species distribution modeling (
 
 # Acknowledgements
 
-This project was based upon work supported by National Natural Science Foundation of China grants 32125005 (to X.Z.), CAS Project for Young Scientists in Basic Research (YSBR-097 to X.Z.). We thank Dr. Daniel Fink at Cornell Lab of Ornithology for the R scripts of STEM model and QuadTree which inspired our implementation in Python. We thank Dr. Taxing Zhang for advice and software test.
+This project was based upon work supported by National Natural Science Foundation of China grants 32125005 (to X.Z.), 32270455 (to Z.G.), CAS Project for Young Scientists in Basic Research (YSBR-097 to X.Z. and Z.G.). We thank Dr. Daniel Fink at Cornell Lab of Ornithology for the R scripts of STEM model and QuadTree which inspired our implementation in Python. We thank Dr. Taxing Zhang for advice and software test.
 
 # References
