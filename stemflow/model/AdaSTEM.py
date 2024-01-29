@@ -205,8 +205,8 @@ class AdaSTEM(BaseEstimator):
         self.Spatio2 = Spatio2
 
         # 3. Gridding params
-        # if min_ensemble_required > ensemble_fold:
-        #     raise ValueError("Not satisfied: min_ensemble_required <= ensemble_fold")
+        if min_ensemble_required > ensemble_fold:
+            raise ValueError("Not satisfied: min_ensemble_required <= ensemble_fold")
 
         self.ensemble_fold = ensemble_fold
         self.min_ensemble_required = min_ensemble_required
