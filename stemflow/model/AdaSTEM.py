@@ -205,8 +205,8 @@ class AdaSTEM(BaseEstimator):
         self.Spatio2 = Spatio2
 
         # 3. Gridding params
-        if min_ensemble_required > ensemble_fold:
-            raise ValueError("Not satisfied: min_ensemble_required <= ensemble_fold")
+        # if min_ensemble_required > ensemble_fold:
+        #     raise ValueError("Not satisfied: min_ensemble_required <= ensemble_fold")
 
         self.ensemble_fold = ensemble_fold
         self.min_ensemble_required = min_ensemble_required
@@ -684,9 +684,12 @@ class AdaSTEM(BaseEstimator):
 
         # Nan count
         res_nan_count = res.isnull().sum(axis=1)
-
-        pred_mean = np.where(res_nan_count.values >= self.min_ensemble_required, np.nan, res_mean.values)
-        pred_std = np.where(res_nan_count.values >= self.min_ensemble_required, np.nan, res_std.values)
+        pred_mean = np.where(
+            self.ensemble_fold - res_nan_count.values >= self.min_ensemble_required, res_mean.values, np.nan
+        )
+        pred_std = np.where(
+            self.ensemble_fold - res_nan_count.values >= self.min_ensemble_required, res_std.values, np.nan
+        )
 
         res = pd.DataFrame({"index": list(res_mean.index), "pred_mean": pred_mean, "pred_std": pred_std}).set_index(
             "index"
