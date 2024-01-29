@@ -662,7 +662,7 @@ class AdaSTEM(BaseEstimator):
 
             lock = Lock()
             # create shared memory
-            shm, np_array = mp_make_shared_mem(data)
+            shr, np_array = mp_make_shared_mem(data)
 
             process_func_partial = partial(
                 mp_predict_func_shr_mem,
@@ -670,28 +670,49 @@ class AdaSTEM(BaseEstimator):
                 X_names=list(data.columns),
                 X_shape=data.shape,
                 lock=lock,
-                shr_name=shm.name,
+                shr_name=shr.name,
             )
 
             # process_func_partial = partial(mp_predict_func, instance=self, data=data)
 
-            with mp.Pool(njobs) as pool:
-                mapper = pool.imap(process_func_partial, groups)
-                if verbosity > 0:
-                    mapper_tqdm = tqdm(
-                        mapper,  # an imap iterator
-                        total=len(ensemble_df["ensemble_index"].unique()),
-                        desc="Predicting",
-                    )
-                else:
-                    mapper_tqdm = mapper
+            processes = []
+            res_list = []
+            for i in range(njobs):
+                _process = Process(target=process_func_partial, args=(groups,))
+                processes.append(_process)
+                _process.start()
 
-                # iterate through
-                res = [i.reset_index("index") for i in list(mapper_tqdm)]
-                cont_res = pd.concat(res, axis=1)
-                cont_res.columns = list(range(self.ensemble_fold))
+            for _process in processes:
+                res = _process.join()
+                res_list.append(res)
 
-                return cont_res
+            shr.close()
+            shr.unlink()
+
+            print(res_list)
+
+            # with mp.Pool(njobs) as pool:
+            #     mapper = pool.imap(process_func_partial, groups)
+            #     if verbosity > 0:
+            #         mapper_tqdm = tqdm(
+            #             mapper,  # an imap iterator
+            #             total=len(ensemble_df["ensemble_index"].unique()),
+            #             desc="Predicting",
+            #         )
+            #     else:
+            #         mapper_tqdm = mapper
+
+            #     # iterate through
+            #     res = [i.reset_index("index") for i in list(mapper_tqdm)]
+            #     cont_res = pd.concat(res, axis=1)
+
+            #     if len(cont_res) == 0:
+            #         raise ValueError(
+            #             "All samples are not predictable based on current settings!\nTry adjusting the 'points_lower_threshold', increase the grid size, or increase sample size!"
+            #         )
+
+            #     cont_res.columns = list(range(self.ensemble_fold))
+            #     return cont_res
 
     def predict_proba(
         self,

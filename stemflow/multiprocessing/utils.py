@@ -24,6 +24,7 @@ def mp_predict_func_shr_mem(ensemble, instance, X_names, X_shape, lock, shr_name
     existing_shm = shared_memory.SharedMemory(name=shr_name)
     np_array = np.ndarray(X_shape, dtype=np.float32, buffer=existing_shm.buf)
     data = pd.DataFrame(np_array, columns=X_names)
+    print(data)
 
     lock.acquire()
     res = instance.SAC_ensemble_predict(index_df=ensemble[1], data=data)
