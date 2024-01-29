@@ -324,9 +324,6 @@ class AdaSTEM(BaseEstimator):
             if self.Temporal1 in list(self.x_names):
                 del self.x_names[self.x_names.index(self.Temporal1)]
 
-        # if 'geometry' in self.x_names:
-        #     del self.x_names[self.x_names.index('geometry')]
-
         for i in [self.Spatio1, self.Spatio2]:
             if i in self.x_names:
                 del self.x_names[self.x_names.index(i)]
