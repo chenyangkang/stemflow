@@ -6,7 +6,7 @@ from functools import partial
 from itertools import repeat
 
 #
-from multiprocessing import Pool, cpu_count
+from multiprocessing import Lock, Pool, Process, cpu_count, shared_memory
 from typing import Callable, Tuple, Union
 
 #
@@ -34,7 +34,7 @@ from sklearn.metrics import (
 from tqdm import tqdm
 from tqdm.auto import tqdm as tqdm_auto
 
-from ..multiprocessing.utils import mp_predict_func, mp_training_func
+from ..multiprocessing.utils import mp_make_shared_mem, mp_predict_func, mp_predict_func_shr_mem, mp_training_func
 
 #
 from ..utils.quadtree import get_ensemble_quadtree
@@ -440,6 +440,7 @@ class AdaSTEM(BaseEstimator):
         assert isinstance(njobs, int)
 
         groups = ensemble_df.groupby("ensemble_index")
+
         process_func_partial = partial(mp_training_func, instance=self, data=data)
 
         model_dict = {}
@@ -654,7 +655,21 @@ class AdaSTEM(BaseEstimator):
 
         else:
             groups = ensemble_df.groupby("ensemble_index")
-            process_func_partial = partial(mp_predict_func, instance=self, data=data)
+
+            lock = Lock()
+            # create shared memory
+            shm, np_array = mp_make_shared_mem(data)
+
+            process_func_partial = partial(
+                mp_predict_func_shr_mem,
+                instance=self,
+                X_names=list(data.columns),
+                X_shape=data.shape,
+                lock=lock,
+                shr_name=shm.name,
+            )
+
+            # process_func_partial = partial(mp_predict_func, instance=self, data=data)
 
             with mp.Pool(njobs) as pool:
                 mapper = pool.imap(process_func_partial, groups)
