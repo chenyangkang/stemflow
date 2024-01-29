@@ -205,6 +205,9 @@ class AdaSTEM(BaseEstimator):
         self.Spatio2 = Spatio2
 
         # 3. Gridding params
+        if min_ensemble_required > ensemble_fold:
+            raise ValueError("Not satisfied: min_ensemble_required <= ensemble_fold")
+
         self.ensemble_fold = ensemble_fold
         self.min_ensemble_required = min_ensemble_required
         self.grid_len_upper_threshold = (
@@ -607,6 +610,11 @@ class AdaSTEM(BaseEstimator):
             )
 
         # pred = pred.reset_index(drop=False)
+        if len(pred) == 0:
+            raise ValueError(
+                "All samples are not predictable based on current settings!\nTry adjusting the 'points_lower_threshold', increase the grid size, or increase sample size!"
+            )
+
         pred = pred.droplevel(1, axis=0).reset_index(drop=False)
         pred = pred.pivot_table(index="index", columns="ensemble_index", values="pred")
         return pred

@@ -135,7 +135,7 @@ model = AdaSTEMRegressor(
     ),                                      # hurdel model for zero-inflated problem (e.g., count)
     save_gridding_plot = True,
     ensemble_fold=10,                       # data are modeled 10 times, each time with jitter and rotation in Quadtree algo
-    min_ensemble_required=7,                # Only points covered by > 7 stixels will be predicted
+    min_ensemble_required=7,                # Only points covered by > 7 ensembles will be predicted
     grid_len_upper_threshold=25,            # force splitting if the grid length exceeds 25
     grid_len_lower_threshold=5,             # stop splitting if the grid length fall short 5         
     temporal_start=1,                       # The next 4 params define the temporal sliding window
