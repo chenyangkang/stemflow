@@ -1,7 +1,9 @@
 "A function module to get quadtree results for 2D indexing system. Returns ensemble_df and plotting axes."
 
+import multiprocessing as mp
 import os
 import warnings
+from functools import partial
 from typing import Tuple, Union
 
 import matplotlib
@@ -10,11 +12,13 @@ import numpy as np
 import pandas
 import pandas as pd
 from tqdm import tqdm
+from tqdm.contrib.concurrent import process_map
 
 from ..gridding.QTree import QTree
 from ..gridding.QuadGrid import QuadGrid
 from .validation import check_transform_spatio_bin_jitter_magnitude, check_transform_temporal_bin_start_jitter
 
+# from ..multiprocessing.utils import load_data_from_shr_mem, load_data_to_shr_mem, mp_split_func_shr_mem
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -67,6 +71,129 @@ def generate_temporal_bins(
         i += 1
 
     return bin_list
+
+
+def get_one_ensemble_quadtree(
+    ensemble_count,
+    size,
+    spatio_bin_jitter_magnitude,
+    temporal_start,
+    temporal_end,
+    temporal_step,
+    temporal_bin_interval,
+    temporal_bin_start_jitter,
+    data,
+    Temporal1,
+    grid_len,
+    grid_len_lon_upper_threshold,
+    grid_len_lon_lower_threshold,
+    grid_len_lat_upper_threshold,
+    grid_len_lat_lower_threshold,
+    points_lower_threshold,
+    plot_empty,
+    Spatio1,
+    Spatio2,
+    save_gridding_plot,
+    ax,
+):
+    rotation_angle = (90 / size) * ensemble_count
+    calibration_point_x_jitter = np.random.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
+    calibration_point_y_jitter = np.random.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
+
+    # print(f'ensemble_count: {ensemble_count}')
+    temporal_bins = generate_temporal_bins(
+        start=temporal_start,
+        end=temporal_end,
+        step=temporal_step,
+        bin_interval=temporal_bin_interval,
+        temporal_bin_start_jitter=temporal_bin_start_jitter,
+    )
+
+    ensemble_all_df_list = []
+
+    for time_block_index, bin_ in enumerate(temporal_bins):
+        time_start = bin_[0]
+        time_end = bin_[1]
+        sub_data = data[(data[Temporal1] >= time_start) & (data[Temporal1] < time_end)]
+
+        if len(sub_data) == 0:
+            continue
+
+        if grid_len is None:
+            QT_obj = QTree(
+                grid_len_lon_upper_threshold=grid_len_lon_upper_threshold,
+                grid_len_lon_lower_threshold=grid_len_lon_lower_threshold,
+                grid_len_lat_upper_threshold=grid_len_lat_upper_threshold,
+                grid_len_lat_lower_threshold=grid_len_lat_lower_threshold,
+                points_lower_threshold=points_lower_threshold,
+                lon_lat_equal_grid=True,
+                rotation_angle=rotation_angle,
+                calibration_point_x_jitter=calibration_point_x_jitter,
+                calibration_point_y_jitter=calibration_point_y_jitter,
+                plot_empty=plot_empty,
+            )
+        elif isinstance(grid_len, float) or isinstance(grid_len, int):
+            QT_obj = QuadGrid(
+                grid_len=grid_len,
+                points_lower_threshold=points_lower_threshold,
+                lon_lat_equal_grid=True,
+                rotation_angle=rotation_angle,
+                calibration_point_x_jitter=calibration_point_x_jitter,
+                calibration_point_y_jitter=calibration_point_y_jitter,
+                plot_empty=plot_empty,
+            )
+        else:
+            raise TypeError("grid_len passed is not int or float.")
+
+        # Give the data and indexes. The indexes should be used to assign points data so that base model can run on those points,
+        # You need to generate the splitting parameters once giving the data. Like the calibration point and min,max.
+
+        QT_obj.add_lon_lat_data(sub_data.index, sub_data[Spatio1].values, sub_data[Spatio2].values)
+        QT_obj.generate_gridding_params()
+
+        # Call subdivide to precess
+        QT_obj.subdivide()
+        this_slice = QT_obj.get_final_result()
+
+        if save_gridding_plot:
+            if time_block_index == int(len(temporal_bins) / 2):
+                QT_obj.graph(scatter=False, ax=ax)
+
+        this_slice["ensemble_index"] = ensemble_count
+        this_slice[f"{Temporal1}_start"] = time_start
+        this_slice[f"{Temporal1}_end"] = time_end
+        this_slice[f"{Temporal1}_start"] = round(this_slice[f"{Temporal1}_start"], 1)
+        this_slice[f"{Temporal1}_end"] = round(this_slice[f"{Temporal1}_end"], 1)
+        this_slice["unique_stixel_id"] = [
+            str(time_block_index) + "_" + str(i) + "_" + str(k)
+            for i, k in zip(this_slice["ensemble_index"].values, this_slice["stixel_indexes"].values)
+        ]
+
+        # Post process
+        this_slice.loc[:, "stixel_calibration_point_transformed_left_bound"] = [
+            i[0] for i in this_slice["stixel_calibration_point(transformed)"]
+        ]
+        this_slice.loc[:, "stixel_calibration_point_transformed_lower_bound"] = [
+            i[1] for i in this_slice["stixel_calibration_point(transformed)"]
+        ]
+        this_slice.loc[:, "stixel_calibration_point_transformed_right_bound"] = (
+            this_slice["stixel_calibration_point_transformed_left_bound"] + this_slice["stixel_width"]
+        )
+        this_slice.loc[:, "stixel_calibration_point_transformed_upper_bound"] = (
+            this_slice["stixel_calibration_point_transformed_lower_bound"] + this_slice["stixel_height"]
+        )
+        this_slice["calibration_point_x_jitter"] = [
+            i[0] for i in this_slice["space_jitter(first rotate by zero then add this)"].values
+        ]
+        this_slice["calibration_point_y_jitter"] = [
+            i[1] for i in this_slice["space_jitter(first rotate by zero then add this)"].values
+        ]
+        del this_slice["space_jitter(first rotate by zero then add this)"]
+
+        ensemble_all_df_list.append(this_slice)
+
+    this_ensemble_df = pd.concat(ensemble_all_df_list).reset_index(drop=True)
+    return this_ensemble_df
 
 
 def get_ensemble_quadtree(
@@ -171,114 +298,94 @@ def get_ensemble_quadtree(
             plt.ylim([plot_ylims[0], plot_ylims[1]])
             plt.title("Quadtree", fontsize=20)
         else:
-            # ax.set_xlim([plot_xlims[0],plot_xlims[1]])
             pass
 
+    partial_get_one_ensemble_quadtree = partial(
+        get_one_ensemble_quadtree,
+        size=size,
+        spatio_bin_jitter_magnitude=spatio_bin_jitter_magnitude,
+        temporal_start=temporal_start,
+        temporal_end=temporal_end,
+        temporal_step=temporal_step,
+        temporal_bin_interval=temporal_bin_interval,
+        temporal_bin_start_jitter=temporal_bin_start_jitter,
+        data=data,
+        Temporal1=Temporal1,
+        grid_len=grid_len,
+        grid_len_lon_upper_threshold=grid_len_lon_upper_threshold,
+        grid_len_lon_lower_threshold=grid_len_lon_lower_threshold,
+        grid_len_lat_upper_threshold=grid_len_lat_upper_threshold,
+        grid_len_lat_lower_threshold=grid_len_lat_lower_threshold,
+        points_lower_threshold=points_lower_threshold,
+        plot_empty=plot_empty,
+        Spatio1=Spatio1,
+        Spatio2=Spatio2,
+        save_gridding_plot=save_gridding_plot,
+        ax=ax,
+    )
+
     if njobs > 1 and isinstance(njobs, int):
-        raise NotImplementedError("Multi-threading for ensemble generation is not implemented yet.")
+        # data_bytes, data_shm = load_data_to_shr_mem(data)
+        # partial_get_one_ensemble_quadtree = mp_split_func_shr_mem(
+        #     data_bytes,
+        #     data_shm,
+        #     partial_get_one_ensemble_quadtree)
+
+        # partial_get_one_ensemble_quadtree = partial(
+        #     partial_get_one_ensemble_quadtree,
+        #     data=data)
+
+        # with mp.Pool(njobs) as pool:
+        #     mapper = pool.imap(partial_get_one_ensemble_quadtree, range(size))
+
+        # if verbosity>0:
+        #     mapper = tqdm(mapper, total=size, desc='Generating Ensemble: ')
+        # ensemble_all_df_list = list(mapper)
+
+        ensemble_all_df_list = process_map(
+            partial_get_one_ensemble_quadtree,
+            list(range(size)),
+            max_workers=njobs,
+            tqdm_class=tqdm,
+            total=size,
+            desc="Generating Ensemble: ",
+        )
 
     else:
         iter_func_ = tqdm(range(size), total=size, desc="Generating Ensemble: ") if verbosity > 0 else range(size)
-
         for ensemble_count in iter_func_:
             # rotation_angle = np.random.uniform(0,90)
-            rotation_angle = (90 / len(iter_func_)) * ensemble_count
-            calibration_point_x_jitter = np.random.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
-            calibration_point_y_jitter = np.random.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
-
-            # print(f'ensemble_count: {ensemble_count}')
-            temporal_bins = generate_temporal_bins(
-                start=temporal_start,
-                end=temporal_end,
-                step=temporal_step,
-                bin_interval=temporal_bin_interval,
-                temporal_bin_start_jitter=temporal_bin_start_jitter,
+            this_ensemble = get_one_ensemble_quadtree(
+                ensemble_count,
+                size,
+                spatio_bin_jitter_magnitude,
+                temporal_start,
+                temporal_end,
+                temporal_step,
+                temporal_bin_interval,
+                temporal_bin_start_jitter,
+                data,
+                Temporal1,
+                grid_len,
+                grid_len_lon_upper_threshold,
+                grid_len_lon_lower_threshold,
+                grid_len_lat_upper_threshold,
+                grid_len_lat_lower_threshold,
+                points_lower_threshold,
+                plot_empty,
+                Spatio1,
+                Spatio2,
+                save_gridding_plot,
+                ax,
             )
 
-            for time_block_index, bin_ in enumerate(temporal_bins):
-                time_start = bin_[0]
-                time_end = bin_[1]
-                sub_data = data[(data[Temporal1] >= time_start) & (data[Temporal1] < time_end)]
-
-                if len(sub_data) == 0:
-                    continue
-
-                if grid_len is None:
-                    QT_obj = QTree(
-                        grid_len_lon_upper_threshold=grid_len_lon_upper_threshold,
-                        grid_len_lon_lower_threshold=grid_len_lon_lower_threshold,
-                        grid_len_lat_upper_threshold=grid_len_lat_upper_threshold,
-                        grid_len_lat_lower_threshold=grid_len_lat_lower_threshold,
-                        points_lower_threshold=points_lower_threshold,
-                        lon_lat_equal_grid=True,
-                        rotation_angle=rotation_angle,
-                        calibration_point_x_jitter=calibration_point_x_jitter,
-                        calibration_point_y_jitter=calibration_point_y_jitter,
-                        plot_empty=plot_empty,
-                    )
-                elif isinstance(grid_len, float) or isinstance(grid_len, int):
-                    QT_obj = QuadGrid(
-                        grid_len=grid_len,
-                        points_lower_threshold=points_lower_threshold,
-                        lon_lat_equal_grid=True,
-                        rotation_angle=rotation_angle,
-                        calibration_point_x_jitter=calibration_point_x_jitter,
-                        calibration_point_y_jitter=calibration_point_y_jitter,
-                        plot_empty=plot_empty,
-                    )
-                else:
-                    raise TypeError("grid_len passed is not int or float.")
-
-                # Give the data and indexes. The indexes should be used to assign points data so that base model can run on those points,
-                # You need to generate the splitting parameters once giving the data. Like the calibration point and min,max.
-
-                QT_obj.add_lon_lat_data(sub_data.index, sub_data[Spatio1].values, sub_data[Spatio2].values)
-                QT_obj.generate_gridding_params()
-
-                # Call subdivide to precess
-                QT_obj.subdivide()
-                this_slice = QT_obj.get_final_result()
-
-                if save_gridding_plot:
-                    if time_block_index == int(len(temporal_bins) / 2):
-                        QT_obj.graph(scatter=False, ax=ax)
-
-                this_slice["ensemble_index"] = ensemble_count
-                this_slice[f"{Temporal1}_start"] = time_start
-                this_slice[f"{Temporal1}_end"] = time_end
-                this_slice[f"{Temporal1}_start"] = round(this_slice[f"{Temporal1}_start"], 1)
-                this_slice[f"{Temporal1}_end"] = round(this_slice[f"{Temporal1}_end"], 1)
-                this_slice["unique_stixel_id"] = [
-                    str(time_block_index) + "_" + str(i) + "_" + str(k)
-                    for i, k in zip(this_slice["ensemble_index"].values, this_slice["stixel_indexes"].values)
-                ]
-                ensemble_all_df_list.append(this_slice)
+            ensemble_all_df_list.append(this_ensemble)
 
     # concat
     ensemble_df = pd.concat(ensemble_all_df_list).reset_index(drop=True)
     del ensemble_all_df_list
 
     # processing
-    ensemble_df.loc[:, "stixel_calibration_point_transformed_left_bound"] = [
-        i[0] for i in ensemble_df["stixel_calibration_point(transformed)"]
-    ]
-    ensemble_df.loc[:, "stixel_calibration_point_transformed_lower_bound"] = [
-        i[1] for i in ensemble_df["stixel_calibration_point(transformed)"]
-    ]
-    ensemble_df.loc[:, "stixel_calibration_point_transformed_right_bound"] = (
-        ensemble_df["stixel_calibration_point_transformed_left_bound"] + ensemble_df["stixel_width"]
-    )
-    ensemble_df.loc[:, "stixel_calibration_point_transformed_upper_bound"] = (
-        ensemble_df["stixel_calibration_point_transformed_lower_bound"] + ensemble_df["stixel_height"]
-    )
-    ensemble_df["calibration_point_x_jitter"] = [
-        i[0] for i in ensemble_df["space_jitter(first rotate by zero then add this)"].values
-    ]
-    ensemble_df["calibration_point_y_jitter"] = [
-        i[1] for i in ensemble_df["space_jitter(first rotate by zero then add this)"].values
-    ]
-    del ensemble_df["space_jitter(first rotate by zero then add this)"]
-
     ensemble_df = ensemble_df.reset_index(drop=True)
 
     if not save_path == "":
