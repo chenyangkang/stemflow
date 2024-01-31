@@ -1,12 +1,20 @@
+import multiprocessing as mp
 import os
 import pickle
+import time
 import warnings
+from functools import partial
 from itertools import repeat
 
 #
-from multiprocessing import Pool, cpu_count
+from multiprocessing import Lock, Pool, Process, cpu_count, shared_memory
 from typing import Callable, Tuple, Union
 
+import joblib
+import matplotlib.pyplot as plt
+
+#
+# import dask.dataframe as dd
 import numpy as np
 import pandas as pd
 from numpy import ndarray
@@ -31,16 +39,17 @@ from tqdm import tqdm
 from tqdm.auto import tqdm as tqdm_auto
 
 #
-from ..utils.quadtree import get_ensemble_quadtree
+from ..utils.quadtree import get_one_ensemble_quadtree
 from ..utils.validation import (
     check_base_model,
-    check_njobs,
     check_prediciton_aggregation,
     check_prediction_return,
     check_random_state,
     check_spatio_bin_jitter_magnitude,
     check_task,
     check_temporal_bin_start_jitter,
+    check_transform_njobs,
+    check_transform_spatio_bin_jitter_magnitude,
     check_verbosity,
     check_X_test,
     check_X_train,
@@ -56,8 +65,6 @@ from .static_func_AdaSTEM import (  # predict_one_ensemble
     train_one_stixel,
     transform_pred_set_to_STEM_quad,
 )
-
-#
 
 
 class AdaSTEM(BaseEstimator):
@@ -237,7 +244,7 @@ class AdaSTEM(BaseEstimator):
         self.sample_weights_for_classifier = sample_weights_for_classifier
 
         # 5. Multi-threading params (not implemented yet)
-        check_njobs(njobs)
+        njobs = check_transform_njobs(self, njobs)
         self.njobs = njobs
 
         # 6. Plotting params
@@ -259,7 +266,9 @@ class AdaSTEM(BaseEstimator):
         else:
             self.verbosity = 0
 
-    def split(self, X_train: pd.core.frame.DataFrame, verbosity: Union[None, int] = None, ax=None) -> dict:
+    def split(
+        self, X_train: pd.core.frame.DataFrame, verbosity: Union[None, int] = None, ax=None, njobs: int = 1
+    ) -> dict:
         """QuadTree indexing the input data
 
         Args:
@@ -270,10 +279,12 @@ class AdaSTEM(BaseEstimator):
         Returns:
             self.grid_dict, a dictionary of one DataFrame for each grid, containing the gridding information
         """
+        njobs = check_transform_njobs(self, njobs)
+
         if verbosity is None:
             verbosity = self.verbosity
 
-        fold = self.ensemble_fold
+        # fold = self.ensemble_fold
         save_path = os.path.join(self.save_dir, "ensemble_quadtree_df.csv") if self.save_tmp else ""
 
         if "grid_len" not in self.__dir__():
@@ -283,33 +294,86 @@ class AdaSTEM(BaseEstimator):
             # We har using STEM
             pass
 
-        self.ensemble_df, self.gridding_plot = get_ensemble_quadtree(
-            X_train[[self.Spatio1, self.Spatio2, self.Temporal1]],
-            Spatio1=self.Spatio1,
-            Spatio2=self.Spatio2,
+        spatio_bin_jitter_magnitude = check_transform_spatio_bin_jitter_magnitude(
+            X_train, self.Spatio1, self.Spatio2, self.spatio_bin_jitter_magnitude
+        )
+
+        if self.save_gridding_plot:
+            if ax is None:
+                plt.figure(figsize=(20, 20))
+                plt.xlim([self.plot_xlims[0], self.plot_xlims[1]])
+                plt.ylim([self.plot_ylims[0], self.plot_ylims[1]])
+                plt.title("Quadtree", fontsize=20)
+            else:
+                pass
+
+        partial_get_one_ensemble_quadtree = partial(
+            get_one_ensemble_quadtree,
+            size=self.ensemble_fold,
+            spatio_bin_jitter_magnitude=spatio_bin_jitter_magnitude,
+            temporal_start=self.temporal_start,
+            temporal_end=self.temporal_end,
+            temporal_step=self.temporal_step,
+            temporal_bin_interval=self.temporal_bin_interval,
+            temporal_bin_start_jitter=self.temporal_bin_start_jitter,
+            data=X_train,
             Temporal1=self.Temporal1,
-            size=fold,
             grid_len=self.grid_len,
             grid_len_lon_upper_threshold=self.grid_len_lon_upper_threshold,
             grid_len_lon_lower_threshold=self.grid_len_lon_lower_threshold,
             grid_len_lat_upper_threshold=self.grid_len_lat_upper_threshold,
             grid_len_lat_lower_threshold=self.grid_len_lat_lower_threshold,
             points_lower_threshold=self.points_lower_threshold,
-            temporal_start=self.temporal_start,
-            temporal_end=self.temporal_end,
-            temporal_step=self.temporal_step,
-            temporal_bin_interval=self.temporal_bin_interval,
-            temporal_bin_start_jitter=self.temporal_bin_start_jitter,
-            spatio_bin_jitter_magnitude=self.spatio_bin_jitter_magnitude,
-            save_gridding_plot=self.save_gridding_plot,
-            njobs=self.njobs,
-            verbosity=verbosity,
-            plot_xlims=self.plot_xlims,
-            plot_ylims=self.plot_ylims,
-            save_path=save_path,
-            ax=ax,
             plot_empty=self.plot_empty,
+            Spatio1=self.Spatio1,
+            Spatio2=self.Spatio2,
+            save_gridding_plot=self.save_gridding_plot,
+            ax=ax,
         )
+
+        if njobs > 1 and isinstance(njobs, int):
+            parallel = joblib.Parallel(n_jobs=njobs, return_as="generator")
+            output_generator = parallel(
+                joblib.delayed(partial_get_one_ensemble_quadtree)(i) for i in list(range(self.ensemble_fold))
+            )
+            if verbosity > 0:
+                output_generator = tqdm(output_generator, total=self.ensemble_fold, desc="Generating Ensemble: ")
+
+            ensemble_all_df_list = [i for i in output_generator]
+
+        else:
+            iter_func_ = (
+                tqdm(range(self.ensemble_fold), total=self.ensemble_fold, desc="Generating Ensemble: ")
+                if verbosity > 0
+                else range(self.ensemble_fold)
+            )
+            ensemble_all_df_list = [partial_get_one_ensemble_quadtree(ensemble_count) for ensemble_count in iter_func_]
+
+        # concat
+        ensemble_df = pd.concat(ensemble_all_df_list).reset_index(drop=True)
+        del ensemble_all_df_list
+
+        # processing
+        ensemble_df = ensemble_df.reset_index(drop=True)
+
+        if not save_path == "":
+            ensemble_df.to_csv(save_path, index=False)
+            print(f"Saved! {save_path}")
+
+        if self.save_gridding_plot:
+            if ax is None:
+                plt.tight_layout()
+                plt.gca().set_aspect("equal")
+                ax = plt.gcf()
+                plt.close()
+
+            else:
+                pass
+
+            self.ensemble_df, self.gridding_plot = ensemble_df, ax
+
+        else:
+            self.ensemble_df, self.gridding_plot = ensemble_df, np.nan
 
     def store_x_names(self, X_train: pd.core.frame.DataFrame):
         """Store the training variables
@@ -322,9 +386,6 @@ class AdaSTEM(BaseEstimator):
         if not self.use_temporal_to_train:
             if self.Temporal1 in list(self.x_names):
                 del self.x_names[self.x_names.index(self.Temporal1)]
-
-        # if 'geometry' in self.x_names:
-        #     del self.x_names[self.x_names.index('geometry')]
 
         for i in [self.Spatio1, self.Spatio2]:
             if i in self.x_names:
@@ -357,8 +418,9 @@ class AdaSTEM(BaseEstimator):
             pass
 
         else:
-            self.model_dict[f"{name}_model"] = model
-            self.stixel_specific_x_names[name] = stixel_specific_x_names
+            # self.model_dict[f"{name}_model"] = model
+            # self.stixel_specific_x_names[name] = stixel_specific_x_names
+            return (name, model, stixel_specific_x_names)
 
     def SAC_ensemble_training(self, index_df: pd.core.frame.DataFrame, data: pd.core.frame.DataFrame):
         """A sub-module of SAC training function.
@@ -370,8 +432,11 @@ class AdaSTEM(BaseEstimator):
         """
 
         # Calculate the start indices for the sliding window
+
         unique_start_indices = np.sort(index_df[f"{self.Temporal1}_start"].unique())
         # training, window by window
+
+        res_list = []
         for start in unique_start_indices:
             window_data_df = data[
                 (data[self.Temporal1] >= start) & (data[self.Temporal1] < start + self.temporal_bin_interval)
@@ -408,14 +473,20 @@ class AdaSTEM(BaseEstimator):
                 continue
 
             # train
-            (
+            res = (
                 query_results.reset_index(drop=False, level=[0, 1])
                 .dropna(subset="unique_stixel_id")
                 .groupby("unique_stixel_id")
                 .apply(lambda stixel: self.stixel_fitting(stixel))
-            )
+            ).values
 
-    def SAC_training(self, ensemble_df: pd.core.frame.DataFrame, data: pd.core.frame.DataFrame, verbosity: int = 0):
+            res_list.append(list(res))
+
+        return res_list
+
+    def SAC_training(
+        self, ensemble_df: pd.core.frame.DataFrame, data: pd.core.frame.DataFrame, verbosity: int = 0, njobs: int = 1
+    ):
         """This function is a training function with SAC strategy:
         Split (S), Apply(A), Combine (C). At ensemble level.
         It is built on pandas `apply` method.
@@ -426,16 +497,46 @@ class AdaSTEM(BaseEstimator):
             verbosity (int, optional): Defaults to 0.
 
         """
+        assert isinstance(njobs, int)
 
-        if verbosity > 0:
-            tqdm_auto.pandas(desc="training", postfix=None)
-            ensemble_df.groupby("ensemble_index").progress_apply(
-                lambda ensemble: self.SAC_ensemble_training(index_df=ensemble, data=data)
-            )
+        groups = ensemble_df.groupby("ensemble_index")
+
+        # Parallel wrapper
+        if njobs == 1:
+            output_generator = (self.SAC_ensemble_training(index_df=ensemble[1], data=data) for ensemble in groups)
         else:
-            ensemble_df.groupby("ensemble_index").apply(
-                lambda ensemble: self.SAC_ensemble_training(index_df=ensemble, data=data)
+
+            def mp_train(ensemble, self=self, data=data):
+                res = self.SAC_ensemble_training(index_df=ensemble[1], data=data)
+                return res
+
+            parallel = joblib.Parallel(n_jobs=njobs, return_as="generator")
+            output_generator = parallel(joblib.delayed(mp_train)(i) for i in groups)
+
+        # tqdm wrapper
+        if verbosity > 0:
+            output_generator = tqdm(
+                output_generator, total=len(ensemble_df["ensemble_index"].unique()), desc="Training: "
             )
+
+        # iterate through
+        model_dict = {}
+        stixel_specific_x_names = {}
+
+        for ensemble in output_generator:
+            for time_block in ensemble:
+                for feature_tuple in time_block:
+                    if feature_tuple is None:
+                        continue
+                    name = feature_tuple[0]
+                    model = feature_tuple[1]
+                    x_names = feature_tuple[2]
+                    model_dict[f"{name}_model"] = model
+                    stixel_specific_x_names[name] = x_names
+
+        self.model_dict = model_dict
+        self.stixel_specific_x_names = stixel_specific_x_names
+        return self
 
     def fit(
         self,
@@ -443,6 +544,7 @@ class AdaSTEM(BaseEstimator):
         y_train: Union[pd.core.frame.DataFrame, np.ndarray],
         verbosity: Union[None, int] = None,
         ax=None,
+        njobs: int = 1,
     ):
         """Fitting method
 
@@ -459,23 +561,20 @@ class AdaSTEM(BaseEstimator):
         verbosity = check_verbosity(self, verbosity)
         check_X_train(X_train)
         check_y_train(y_train)
+        njobs = check_transform_njobs(self, njobs)
         self.store_x_names(X_train)
 
         # quadtree
         X_train = X_train.reset_index(drop=True)  # I reset index here!! caution!
         X_train["true_y"] = np.array(y_train).flatten()
-        self.split(X_train, verbosity=verbosity, ax=ax)
+        self.split(X_train, verbosity=verbosity, ax=ax, njobs=njobs)
 
         # define model dict
         self.model_dict = {}
         # stixel specific x_names list
         self.stixel_specific_x_names = {}
 
-        if self.njobs > 1:
-            raise NotImplementedError("Multi-threading not implemented yet.")
-        else:
-            # single processing
-            self.SAC_training(self.ensemble_df, X_train, verbosity)
+        self.SAC_training(self.ensemble_df, X_train, verbosity, njobs)
 
         return self
 
@@ -584,7 +683,7 @@ class AdaSTEM(BaseEstimator):
         return ensemble_prediction
 
     def SAC_predict(
-        self, ensemble_df: pd.core.frame.DataFrame, data: pd.core.frame.DataFrame, verbosity: int = 0
+        self, ensemble_df: pd.core.frame.DataFrame, data: pd.core.frame.DataFrame, verbosity: int = 0, njobs: int = 1
     ) -> pd.core.frame.DataFrame:
         """This function is a prediction function with SAC strategy:
         Split (S), Apply(A), Combine (C). At ensemble level.
@@ -598,25 +697,37 @@ class AdaSTEM(BaseEstimator):
         Returns:
             pd.core.frame.DataFrame: prediction results.
         """
+        assert isinstance(njobs, int)
 
-        if verbosity > 0:
-            tqdm_auto.pandas(desc="predicting", postfix=None)
-            pred = ensemble_df.groupby("ensemble_index").progress_apply(
-                lambda ensemble: self.SAC_ensemble_predict(index_df=ensemble, data=data)
-            )
+        groups = ensemble_df.groupby("ensemble_index")
+
+        # Parallel maker
+        if njobs == 1:
+            output_generator = (self.SAC_ensemble_predict(index_df=ensemble[1], data=data) for ensemble in groups)
         else:
-            pred = ensemble_df.groupby("ensemble_index").apply(
-                lambda ensemble: self.SAC_ensemble_predict(index_df=ensemble, data=data)
+
+            def mp_predict(ensemble, self=self, data=data):
+                res = self.SAC_ensemble_predict(index_df=ensemble[1], data=data)
+                return res
+
+            parallel = joblib.Parallel(n_jobs=njobs, return_as="generator")
+            output_generator = parallel(joblib.delayed(mp_predict)(i) for i in groups)
+
+        # tqdm wrapper
+        if verbosity > 0:
+            output_generator = tqdm(
+                output_generator, total=len(ensemble_df["ensemble_index"].unique()), desc="Predicting: "
             )
 
-        # pred = pred.reset_index(drop=False)
+        # Prediction
+        pred = [i.set_index("index") for i in output_generator]
+        pred = pd.concat(pred, axis=1)
         if len(pred) == 0:
             raise ValueError(
                 "All samples are not predictable based on current settings!\nTry adjusting the 'points_lower_threshold', increase the grid size, or increase sample size!"
             )
 
-        pred = pred.droplevel(1, axis=0).reset_index(drop=False)
-        pred = pred.pivot_table(index="index", columns="ensemble_index", values="pred")
+        pred.columns = list(range(self.ensemble_fold))
         return pred
 
     def predict_proba(
@@ -665,9 +776,10 @@ class AdaSTEM(BaseEstimator):
         check_prediciton_aggregation(aggregation)
         return_by_separate_ensembles, return_std = check_prediction_return(return_by_separate_ensembles, return_std)
         verbosity = check_verbosity(self, verbosity)
-        check_njobs(njobs)
+        njobs = check_transform_njobs(self, njobs)
 
-        res = self.SAC_predict(self.ensemble_df, X_test, verbosity=verbosity)
+        # predict
+        res = self.SAC_predict(self.ensemble_df, X_test, verbosity=verbosity, njobs=njobs)
 
         # Experimental Function
         if return_by_separate_ensembles:
@@ -977,6 +1089,7 @@ class AdaSTEM(BaseEstimator):
         """
         #
         verbosity = check_verbosity(self, verbosity=verbosity)
+        njobs = check_transform_njobs(self, njobs)
         check_prediciton_aggregation(aggregation)
 
         #
@@ -984,9 +1097,6 @@ class AdaSTEM(BaseEstimator):
             raise NameError(
                 "feature_importances_ attribute is not calculated. Try model.calculate_feature_importances() first."
             )
-        #
-        if njobs is None:
-            njobs = self.njobs
 
         #
         if Sample_ST_df is None:
@@ -1007,30 +1117,35 @@ class AdaSTEM(BaseEstimator):
                 if var_name not in Sample_ST_df.columns:
                     raise KeyError(f"{var_name} not found in Sample_ST_df.columns")
 
+        partial_assign_func = partial(
+            assign_function,
+            ensemble_df=self.ensemble_df,
+            Sample_ST_df=Sample_ST_df,
+            Temporal1=self.Temporal1,
+            Spatio1=self.Spatio1,
+            Spatio2=self.Spatio2,
+            feature_importances_=self.feature_importances_,
+        )
+
         # assign input spatio-temporal points to stixels
         if njobs > 1:
-            raise NotImplementedError("Multi-threading is not implemented yet")
+            parallel = joblib.Parallel(n_jobs=njobs, return_as="generator")
+            output_generator = parallel(joblib.delayed(partial_assign_func)(i) for i in list(range(self.ensemble_fold)))
+            if verbosity > 0:
+                output_generator = tqdm(output_generator, total=self.ensemble_fold, desc="Querying ensembles: ")
+            round_res_list = [i for i in output_generator]
+
         else:
-            # Single processing
-            round_res_list = []
             iter_func_ = (
-                tqdm(list(self.ensemble_df.ensemble_index.unique()))
+                tqdm(range(self.ensemble_fold), total=self.ensemble_fold, desc="Querying ensembles: ")
                 if verbosity > 0
-                else list(self.ensemble_df.ensemble_index.unique())
+                else range(self.ensemble_fold)
             )
-            for ensemble in iter_func_:
-                res_list = assign_function(
-                    self.ensemble_df,
-                    ensemble,
-                    Sample_ST_df,
-                    self.Temporal1,
-                    self.Spatio1,
-                    self.Spatio2,
-                    self.feature_importances_,
-                )
-                round_res_list.append(res_list)
+            round_res_list = [partial_assign_func(ensemble_count) for ensemble_count in iter_func_]
 
         round_res_df = pd.concat(round_res_list, axis=0)
+        del round_res_list
+
         ensemble_available_count = round_res_df.groupby("sample_index").count().iloc[:, 0]
 
         # Only points with more than self.min_ensemble_required ensembles available are used
