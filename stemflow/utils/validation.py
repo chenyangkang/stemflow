@@ -44,18 +44,21 @@ def check_base_model(base_model):
             raise AttributeError(f"input base model must have method '{func}'!")
 
 
-def check_njobs(njobs):
-    # validate njobs setting
-    if not isinstance(njobs, int):
-        raise TypeError(f"njobs is not a integer. Got {njobs}.")
-    elif njobs > 1:
-        raise NotImplementedError("Multi-thread processing is not implemented yet.")
-
-        # my_cpu_count = cpu_count()
-        # if njobs > my_cpu_count:
-        #     raise ValueError(f"Setting of njobs ({njobs}) exceed the maximum ({my_cpu_count}).")
+def check_transform_njobs(self, njobs):
+    if njobs is None:
+        if self.njobs is None:
+            warnings.warn("No njobs input. Default to 1.")
+            return 1
+        else:
+            return self.njobs
     else:
-        pass
+        if not isinstance(njobs, int):
+            raise TypeError(f"njobs is not a integer. Got {njobs}.")
+        else:
+            if njobs == 0:
+                raise ValueError("njobs cannot be 0!")
+            else:
+                return njobs
 
 
 def check_verbosity(self, verbosity):

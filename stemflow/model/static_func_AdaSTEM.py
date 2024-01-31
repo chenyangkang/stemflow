@@ -106,8 +106,8 @@ def train_one_stixel(
 
 
 def assign_points_to_one_ensemble(
-    ensemble_df: pd.core.frame.DataFrame,
     ensemble: str,
+    ensemble_df: pd.core.frame.DataFrame,
     Sample_ST_df: pd.core.frame.DataFrame,
     Temporal1: str,
     Spatio1: str,
@@ -191,8 +191,8 @@ def assign_points_to_one_ensemble(
 
 
 def assign_points_to_one_ensemble_sphere(
-    ensemble_df: pd.core.frame.DataFrame,
     ensemble: str,
+    ensemble_df: pd.core.frame.DataFrame,
     Sample_ST_df: pd.core.frame.DataFrame,
     Temporal1: str,
     Spatio1: str,
