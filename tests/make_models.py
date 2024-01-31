@@ -49,6 +49,34 @@ def make_STEMClassifier(fold_=2, min_req=1, ensemble_models_disk_saver=False, en
     return model
 
 
+def make_parallel_STEMClassifier(
+    fold_=2, min_req=1, ensemble_models_disk_saver=False, ensemble_models_disk_saving_dir=""
+):
+    model = STEMClassifier(
+        base_model=XGBClassifier(tree_method="hist", random_state=42, verbosity=0, n_jobs=1),
+        save_gridding_plot=True,
+        ensemble_fold=fold_,
+        min_ensemble_required=min_req,
+        grid_len=30,
+        temporal_start=1,
+        temporal_end=366,
+        temporal_step=30,
+        temporal_bin_interval=60,
+        points_lower_threshold=30,
+        Spatio1="longitude",
+        Spatio2="latitude",
+        Temporal1="DOY",
+        temporal_bin_start_jitter="adaptive",
+        spatio_bin_jitter_magnitude="adaptive",
+        use_temporal_to_train=True,
+        ensemble_models_disk_saver=ensemble_models_disk_saver,
+        ensemble_models_disk_saving_dir=ensemble_models_disk_saving_dir,
+        njobs=2,
+    )
+
+    return model
+
+
 def make_STEMRegressor(fold_=2, min_req=1, ensemble_models_disk_saver=False, ensemble_models_disk_saving_dir=""):
     model = STEMRegressor(
         base_model=Hurdle(
@@ -186,5 +214,33 @@ def make_SphereAdaClassifier(fold_=2, min_req=1, ensemble_models_disk_saver=Fals
         ensemble_models_disk_saver=ensemble_models_disk_saver,
         ensemble_models_disk_saving_dir=ensemble_models_disk_saving_dir,
         njobs=1,
+    )
+    return model
+
+
+def make_parallel_SphereAdaClassifier(
+    fold_=2, min_req=1, ensemble_models_disk_saver=False, ensemble_models_disk_saving_dir=""
+):
+    model = SphereAdaSTEMClassifier(
+        base_model=XGBClassifier(tree_method="hist", random_state=42, verbosity=0, n_jobs=1),
+        save_gridding_plot=True,
+        ensemble_fold=fold_,
+        min_ensemble_required=min_req,
+        grid_len_upper_threshold=5000,
+        grid_len_lower_threshold=100,
+        temporal_start=1,
+        temporal_end=366,
+        temporal_step=30,
+        temporal_bin_interval=60,
+        points_lower_threshold=30,
+        Spatio1="longitude",
+        Spatio2="latitude",
+        Temporal1="DOY",
+        temporal_bin_start_jitter="adaptive",
+        spatio_bin_jitter_magnitude="adaptive",
+        use_temporal_to_train=True,
+        ensemble_models_disk_saver=ensemble_models_disk_saver,
+        ensemble_models_disk_saving_dir=ensemble_models_disk_saving_dir,
+        njobs=2,
     )
     return model
