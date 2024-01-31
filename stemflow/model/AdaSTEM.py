@@ -1,6 +1,7 @@
 import multiprocessing as mp
 import os
 import pickle
+import time
 import warnings
 from functools import partial
 from itertools import repeat
@@ -34,7 +35,14 @@ from sklearn.metrics import (
 from tqdm import tqdm
 from tqdm.auto import tqdm as tqdm_auto
 
-from ..multiprocessing.utils import mp_make_shared_mem, mp_predict_func, mp_predict_func_shr_mem, mp_training_func
+from ..multiprocessing.utils import (
+    load_data_from_shr_mem,
+    load_data_to_shr_mem,
+    load_model_from_shr_mem,
+    load_model_to_shr_mem,
+    mp_predict_func_shr_mem,
+    mp_training_func_shr_mem,
+)
 
 #
 from ..utils.quadtree import get_ensemble_quadtree
@@ -263,7 +271,9 @@ class AdaSTEM(BaseEstimator):
         else:
             self.verbosity = 0
 
-    def split(self, X_train: pd.core.frame.DataFrame, verbosity: Union[None, int] = None, ax=None) -> dict:
+    def split(
+        self, X_train: pd.core.frame.DataFrame, verbosity: Union[None, int] = None, ax=None, njobs: int = 1
+    ) -> dict:
         """QuadTree indexing the input data
 
         Args:
@@ -274,6 +284,8 @@ class AdaSTEM(BaseEstimator):
         Returns:
             self.grid_dict, a dictionary of one DataFrame for each grid, containing the gridding information
         """
+        # check_njobs(njobs)
+
         if verbosity is None:
             verbosity = self.verbosity
 
@@ -306,7 +318,7 @@ class AdaSTEM(BaseEstimator):
             temporal_bin_start_jitter=self.temporal_bin_start_jitter,
             spatio_bin_jitter_magnitude=self.spatio_bin_jitter_magnitude,
             save_gridding_plot=self.save_gridding_plot,
-            njobs=self.njobs,
+            njobs=njobs,
             verbosity=verbosity,
             plot_xlims=self.plot_xlims,
             plot_ylims=self.plot_ylims,
@@ -441,8 +453,18 @@ class AdaSTEM(BaseEstimator):
 
         groups = ensemble_df.groupby("ensemble_index")
 
-        process_func_partial = partial(mp_training_func, instance=self, data=data)
+        #
+        model_bytes, model_shm = load_model_to_shr_mem(self)
+        data_bytes, data_shm = load_data_to_shr_mem(data)
 
+        process_func_partial = partial(
+            mp_training_func_shr_mem,
+            model_bytes=model_bytes,
+            model_shm=model_shm,
+            data_bytes=data_bytes,
+            data_shm=data_shm,
+        )
+        #####
         model_dict = {}
         stixel_specific_x_names = {}
 
@@ -468,6 +490,11 @@ class AdaSTEM(BaseEstimator):
                         x_names = feature_tuple[2]
                         model_dict[f"{name}_model"] = model
                         stixel_specific_x_names[name] = x_names
+
+        model_shm.close()
+        model_shm.unlink()
+        data_shm.close()
+        data_shm.unlink()
 
         self.model_dict = model_dict
         self.stixel_specific_x_names = stixel_specific_x_names
@@ -501,7 +528,7 @@ class AdaSTEM(BaseEstimator):
         # quadtree
         X_train = X_train.reset_index(drop=True)  # I reset index here!! caution!
         X_train["true_y"] = np.array(y_train).flatten()
-        self.split(X_train, verbosity=verbosity, ax=ax)
+        self.split(X_train, verbosity=verbosity, ax=ax, njobs=njobs)
 
         # define model dict
         self.model_dict = {}
@@ -658,61 +685,44 @@ class AdaSTEM(BaseEstimator):
             return pred
 
         else:
-            groups = ensemble_df.groupby("ensemble_index")
-
-            lock = Lock()
             # create shared memory
-            shr, np_array = mp_make_shared_mem(data)
+            model_bytes, model_shm = load_model_to_shr_mem(self)
+            data_bytes, data_shm = load_data_to_shr_mem(data)
 
             process_func_partial = partial(
                 mp_predict_func_shr_mem,
-                instance=self,
-                X_names=list(data.columns),
-                X_shape=data.shape,
-                lock=lock,
-                shr_name=shr.name,
+                model_bytes=model_bytes,
+                model_shm=model_shm,
+                data_bytes=data_bytes,
+                data_shm=data_shm,
             )
 
-            # process_func_partial = partial(mp_predict_func, instance=self, data=data)
+            # Process
+            groups = ensemble_df.groupby("ensemble_index")
 
-            processes = []
-            res_list = []
-            for i in range(njobs):
-                _process = Process(target=process_func_partial, args=(groups,))
-                processes.append(_process)
-                _process.start()
+            with mp.Pool(njobs) as pool:
+                mapper = pool.imap(process_func_partial, groups)
 
-            for _process in processes:
-                res = _process.join()
-                res_list.append(res)
+                if verbosity > 0:
+                    mapper = tqdm(mapper, total=len(ensemble_df["ensemble_index"].unique()), desc="Predicting")
 
-            shr.close()
-            shr.unlink()
+                res = [i.set_index("index") for i in mapper]
 
-            print(res_list)
+            model_shm.close()
+            model_shm.unlink()
+            data_shm.close()
+            data_shm.unlink()
 
-            # with mp.Pool(njobs) as pool:
-            #     mapper = pool.imap(process_func_partial, groups)
-            #     if verbosity > 0:
-            #         mapper_tqdm = tqdm(
-            #             mapper,  # an imap iterator
-            #             total=len(ensemble_df["ensemble_index"].unique()),
-            #             desc="Predicting",
-            #         )
-            #     else:
-            #         mapper_tqdm = mapper
+            cont_res = pd.concat(res, axis=1)
 
-            #     # iterate through
-            #     res = [i.reset_index("index") for i in list(mapper_tqdm)]
-            #     cont_res = pd.concat(res, axis=1)
+            if len(cont_res) == 0:
+                raise ValueError(
+                    "All samples are not predictable based on current settings!\nTry adjusting the 'points_lower_threshold', increase the grid size, or increase sample size!"
+                )
 
-            #     if len(cont_res) == 0:
-            #         raise ValueError(
-            #             "All samples are not predictable based on current settings!\nTry adjusting the 'points_lower_threshold', increase the grid size, or increase sample size!"
-            #         )
+            cont_res.columns = list(range(self.ensemble_fold))
 
-            #     cont_res.columns = list(range(self.ensemble_fold))
-            #     return cont_res
+            return cont_res
 
     def predict_proba(
         self,
