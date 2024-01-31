@@ -7,6 +7,8 @@ from stemflow.model_selection import ST_train_test_split
 from .make_models import (
     make_AdaSTEMClassifier,
     make_AdaSTEMRegressor,
+    make_parallel_SphereAdaClassifier,
+    make_parallel_STEMClassifier,
     make_SphereAdaClassifier,
     make_SphereAdaSTEMRegressor,
     make_STEMClassifier,
@@ -46,6 +48,36 @@ def test_STEMClassifier():
     assert model.feature_importances_.shape[0] > 0
 
     importances_by_points = model.assign_feature_importances_by_points(verbosity=0, njobs=1)
+    assert importances_by_points.shape[0] > 0
+    assert importances_by_points.shape[1] == len(x_names) + 3
+
+
+def test_parallel_STEMClassifier():
+    model = make_parallel_STEMClassifier()
+    model = model.fit(X_train, np.where(y_train > 0, 1, 0))
+
+    pred_mean, pred_std = model.predict(X_test.reset_index(drop=True), return_std=True, verbosity=1)
+    assert np.sum(~np.isnan(pred_mean)) > 0
+    assert np.sum(~np.isnan(pred_std)) > 0
+
+    pred = model.predict(X_test)
+    assert len(pred) == len(X_test)
+    assert np.sum(np.isnan(pred)) / len(pred) <= 0.3
+
+    pred_df = pd.DataFrame(
+        {"y_true": y_test.flatten(), "y_pred": np.where(pred.flatten() < 0, 0, pred.flatten())}
+    ).dropna()
+    assert len(pred_df) > 0
+
+    eval = AdaSTEM.eval_STEM_res("classification", pred_df.y_true, pred_df.y_pred)
+    assert eval["AUC"] >= 0.5
+    assert eval["kappa"] >= 0.2
+    # assert eval["Spearman_r"] >= 0.2
+
+    model.calculate_feature_importances()
+    assert model.feature_importances_.shape[0] > 0
+
+    importances_by_points = model.assign_feature_importances_by_points(verbosity=0)
     assert importances_by_points.shape[0] > 0
     assert importances_by_points.shape[1] == len(x_names) + 3
 
@@ -166,6 +198,36 @@ def test_SphereAdaClassifier():
     assert model.feature_importances_.shape[0] > 0
 
     importances_by_points = model.assign_feature_importances_by_points(verbosity=0, njobs=1)
+    assert importances_by_points.shape[0] > 0
+    assert importances_by_points.shape[1] == len(x_names) + 3
+
+
+def test_parallel_SphereAdaClassifier():
+    model = make_parallel_SphereAdaClassifier()
+    model = model.fit(X_train, np.where(y_train > 0, 1, 0))
+
+    pred_mean, pred_std = model.predict(X_test.reset_index(drop=True), return_std=True, verbosity=1)
+    assert np.sum(~np.isnan(pred_mean)) > 0
+    assert np.sum(~np.isnan(pred_std)) > 0
+
+    pred = model.predict(X_test)
+    assert len(pred) == len(X_test)
+    assert np.sum(np.isnan(pred)) / len(pred) <= 0.3
+
+    pred_df = pd.DataFrame(
+        {"y_true": y_test.flatten(), "y_pred": np.where(pred.flatten() < 0, 0, pred.flatten())}
+    ).dropna()
+    assert len(pred_df) > 0
+
+    eval = AdaSTEM.eval_STEM_res("classification", pred_df.y_true, pred_df.y_pred)
+    assert eval["AUC"] >= 0.5
+    assert eval["kappa"] >= 0.2
+    # assert eval["Spearman_r"] >= 0.2
+
+    model.calculate_feature_importances()
+    assert model.feature_importances_.shape[0] > 0
+
+    importances_by_points = model.assign_feature_importances_by_points(verbosity=0)
     assert importances_by_points.shape[0] > 0
     assert importances_by_points.shape[1] == len(x_names) + 3
 

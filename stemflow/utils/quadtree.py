@@ -6,19 +6,21 @@ import warnings
 from functools import partial
 from typing import Tuple, Union
 
+import joblib
 import matplotlib
 import matplotlib.pyplot as plt  # plotting libraries
 import numpy as np
 import pandas
 import pandas as pd
 from tqdm import tqdm
-from tqdm.contrib.concurrent import process_map
 
 from ..gridding.QTree import QTree
 from ..gridding.QuadGrid import QuadGrid
 from .validation import check_transform_spatio_bin_jitter_magnitude, check_transform_temporal_bin_start_jitter
 
-# from ..multiprocessing.utils import load_data_from_shr_mem, load_data_to_shr_mem, mp_split_func_shr_mem
+# from tqdm.contrib.concurrent import process_map
+
+
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -75,27 +77,84 @@ def generate_temporal_bins(
 
 def get_one_ensemble_quadtree(
     ensemble_count,
-    size,
-    spatio_bin_jitter_magnitude,
-    temporal_start,
-    temporal_end,
-    temporal_step,
-    temporal_bin_interval,
-    temporal_bin_start_jitter,
-    data,
-    Temporal1,
-    grid_len,
-    grid_len_lon_upper_threshold,
-    grid_len_lon_lower_threshold,
-    grid_len_lat_upper_threshold,
-    grid_len_lat_lower_threshold,
-    points_lower_threshold,
-    plot_empty,
-    Spatio1,
-    Spatio2,
-    save_gridding_plot,
-    ax,
+    data: pandas.core.frame.DataFrame,
+    Spatio1: str = "longitude",
+    Spatio2: str = "latitude",
+    Temporal1: str = "DOY",
+    size: str = 1,
+    grid_len: Union[None, float, int] = None,
+    grid_len_lon_upper_threshold: Union[float, int] = 25,
+    grid_len_lon_lower_threshold: Union[float, int] = 5,
+    grid_len_lat_upper_threshold: Union[float, int] = 25,
+    grid_len_lat_lower_threshold: Union[float, int] = 5,
+    points_lower_threshold: int = 50,
+    temporal_start: Union[float, int] = 1,
+    temporal_end: Union[float, int] = 366,
+    temporal_step: Union[float, int] = 20,
+    temporal_bin_interval: Union[float, int] = 50,
+    temporal_bin_start_jitter: Union[float, int, str] = "adaptive",
+    spatio_bin_jitter_magnitude: Union[float, int] = "adaptive",
+    save_gridding_plot: bool = True,
+    ax=None,
+    plot_empty: bool = False,
 ):
+    """Generate QuadTree gridding based on the input dataframe
+
+    Args:
+        ensemble_count:
+            The index of ensemble
+        data:
+            Input pandas-like dataframe
+        Spatio1:
+            Spatial column name 1 in data
+        Spatio2:
+            Spatial column name 2 in data
+        Temporal1:
+            Temporal column name 1 in data
+        size:
+            How many ensemble to generate (how many round the data are gone through)
+        grid_len:
+            If used by STEM, instead of AdaSTEM, the grid length will be fixed by this parameters.
+            It overrides the following four gridding parameters.
+        grid_len_lon_upper_threshold:
+            force divide if grid longitude larger than the threshold
+        grid_len_lon_lower_threshold:
+            stop divide if grid longitude **will** be below than the threshold
+        grid_len_lat_upper_threshold:
+            force divide if grid latitude larger than the threshold
+        grid_len_lat_lower_threshold:
+            stop divide if grid latitude **will** be below than the threshold
+        points_lower_threshold:
+            Do not train the model if the available data records for this stixel is less than this threshold,
+            and directly set the value to np.nan.
+        temporal_start:
+            start of the temporal sequence
+        temporal_end:
+            end of the temporal sequence
+        temporal_step:
+            step of the sliding window
+        temporal_bin_interval:
+            size of the sliding window
+        temporal_bin_start_jitter:
+            jitter of the start of the sliding window.
+            If 'adaptive', a adaptive jitter of range (-bin_interval, 0) will be generated
+            for the start.
+        spatio_bin_jitter_magnitude:
+            jitter of the spatial gridding.
+        save_gridding_plot:
+            Whether ot save gridding plots
+        ax:
+            Matplotlib Axes to add to.
+        plot_empty:
+            Whether to plot the empty grid
+
+    Returns:
+        A tuple of <br>
+            1. ensemble dataframe;<br>
+            2. grid plot. np.nan if save_gridding_plot=False<br>
+
+    """
+
     rotation_angle = (90 / size) * ensemble_count
     calibration_point_x_jitter = np.random.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
     calibration_point_y_jitter = np.random.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
@@ -194,215 +253,3 @@ def get_one_ensemble_quadtree(
 
     this_ensemble_df = pd.concat(ensemble_all_df_list).reset_index(drop=True)
     return this_ensemble_df
-
-
-def get_ensemble_quadtree(
-    data: pandas.core.frame.DataFrame,
-    Spatio1: str = "longitude",
-    Spatio2: str = "latitude",
-    Temporal1: str = "DOY",
-    size: str = 1,
-    grid_len: Union[None, float, int] = None,
-    grid_len_lon_upper_threshold: Union[float, int] = 25,
-    grid_len_lon_lower_threshold: Union[float, int] = 5,
-    grid_len_lat_upper_threshold: Union[float, int] = 25,
-    grid_len_lat_lower_threshold: Union[float, int] = 5,
-    points_lower_threshold: int = 50,
-    temporal_start: Union[float, int] = 1,
-    temporal_end: Union[float, int] = 366,
-    temporal_step: Union[float, int] = 20,
-    temporal_bin_interval: Union[float, int] = 50,
-    temporal_bin_start_jitter: Union[float, int, str] = "adaptive",
-    spatio_bin_jitter_magnitude: Union[float, int] = "adaptive",
-    save_gridding_plot: bool = True,
-    njobs: int = 1,
-    verbosity: int = 1,
-    plot_xlims: Tuple[Union[float, int]] = (-180, 180),
-    plot_ylims: Tuple[Union[float, int]] = (-90, 90),
-    save_path: str = "",
-    ax=None,
-    plot_empty: bool = False,
-) -> Tuple[pandas.core.frame.DataFrame, Union[matplotlib.figure.Figure, float]]:
-    """Generate QuadTree gridding based on the input dataframe
-
-    Args:
-        data:
-            Input pandas-like dataframe
-        Spatio1:
-            Spatial column name 1 in data
-        Spatio2:
-            Spatial column name 2 in data
-        Temporal1:
-            Temporal column name 1 in data
-        size:
-            How many ensemble to generate (how many round the data are gone through)
-        grid_len:
-            If used by STEM, instead of AdaSTEM, the grid length will be fixed by this parameters.
-            It overrides the following four gridding parameters.
-        grid_len_lon_upper_threshold:
-            force divide if grid longitude larger than the threshold
-        grid_len_lon_lower_threshold:
-            stop divide if grid longitude **will** be below than the threshold
-        grid_len_lat_upper_threshold:
-            force divide if grid latitude larger than the threshold
-        grid_len_lat_lower_threshold:
-            stop divide if grid latitude **will** be below than the threshold
-        points_lower_threshold:
-            Do not train the model if the available data records for this stixel is less than this threshold,
-            and directly set the value to np.nan.
-        temporal_start:
-            start of the temporal sequence
-        temporal_end:
-            end of the temporal sequence
-        temporal_step:
-            step of the sliding window
-        temporal_bin_interval:
-            size of the sliding window
-        temporal_bin_start_jitter:
-            jitter of the start of the sliding window.
-            If 'adaptive', a adaptive jitter of range (-bin_interval, 0) will be generated
-            for the start.
-        spatio_bin_jitter_magnitude:
-            jitter of the spatial gridding.
-        save_gridding_plot:
-            Whether ot save gridding plots
-        njobs:
-            Multi-processes count.
-        plot_xlims:
-            If save_gridding_plot=True, what is the xlims of the plot
-        plot_ylims:
-            If save_gridding_plot=True, what is the ylims of the plot
-        save_path:
-            If not '', save the ensemble dataframe to this path
-        ax:
-            Matplotlib Axes to add to.
-        plot_empty:
-            Whether to plot the empty grid
-
-    Returns:
-        A tuple of <br>
-            1. ensemble dataframe;<br>
-            2. grid plot. np.nan if save_gridding_plot=False<br>
-
-    """
-    spatio_bin_jitter_magnitude = check_transform_spatio_bin_jitter_magnitude(
-        data, Spatio1, Spatio2, spatio_bin_jitter_magnitude
-    )
-
-    ensemble_all_df_list = []
-
-    if save_gridding_plot:
-        if ax is None:
-            plt.figure(figsize=(20, 20))
-            plt.xlim([plot_xlims[0], plot_xlims[1]])
-            plt.ylim([plot_ylims[0], plot_ylims[1]])
-            plt.title("Quadtree", fontsize=20)
-        else:
-            pass
-
-    partial_get_one_ensemble_quadtree = partial(
-        get_one_ensemble_quadtree,
-        size=size,
-        spatio_bin_jitter_magnitude=spatio_bin_jitter_magnitude,
-        temporal_start=temporal_start,
-        temporal_end=temporal_end,
-        temporal_step=temporal_step,
-        temporal_bin_interval=temporal_bin_interval,
-        temporal_bin_start_jitter=temporal_bin_start_jitter,
-        data=data,
-        Temporal1=Temporal1,
-        grid_len=grid_len,
-        grid_len_lon_upper_threshold=grid_len_lon_upper_threshold,
-        grid_len_lon_lower_threshold=grid_len_lon_lower_threshold,
-        grid_len_lat_upper_threshold=grid_len_lat_upper_threshold,
-        grid_len_lat_lower_threshold=grid_len_lat_lower_threshold,
-        points_lower_threshold=points_lower_threshold,
-        plot_empty=plot_empty,
-        Spatio1=Spatio1,
-        Spatio2=Spatio2,
-        save_gridding_plot=save_gridding_plot,
-        ax=ax,
-    )
-
-    if njobs > 1 and isinstance(njobs, int):
-        # data_bytes, data_shm = load_data_to_shr_mem(data)
-        # partial_get_one_ensemble_quadtree = mp_split_func_shr_mem(
-        #     data_bytes,
-        #     data_shm,
-        #     partial_get_one_ensemble_quadtree)
-
-        # partial_get_one_ensemble_quadtree = partial(
-        #     partial_get_one_ensemble_quadtree,
-        #     data=data)
-
-        # with mp.Pool(njobs) as pool:
-        #     mapper = pool.imap(partial_get_one_ensemble_quadtree, range(size))
-
-        # if verbosity>0:
-        #     mapper = tqdm(mapper, total=size, desc='Generating Ensemble: ')
-        # ensemble_all_df_list = list(mapper)
-
-        ensemble_all_df_list = process_map(
-            partial_get_one_ensemble_quadtree,
-            list(range(size)),
-            max_workers=njobs,
-            tqdm_class=tqdm,
-            total=size,
-            desc="Generating Ensemble: ",
-        )
-
-    else:
-        iter_func_ = tqdm(range(size), total=size, desc="Generating Ensemble: ") if verbosity > 0 else range(size)
-        for ensemble_count in iter_func_:
-            # rotation_angle = np.random.uniform(0,90)
-            this_ensemble = get_one_ensemble_quadtree(
-                ensemble_count,
-                size,
-                spatio_bin_jitter_magnitude,
-                temporal_start,
-                temporal_end,
-                temporal_step,
-                temporal_bin_interval,
-                temporal_bin_start_jitter,
-                data,
-                Temporal1,
-                grid_len,
-                grid_len_lon_upper_threshold,
-                grid_len_lon_lower_threshold,
-                grid_len_lat_upper_threshold,
-                grid_len_lat_lower_threshold,
-                points_lower_threshold,
-                plot_empty,
-                Spatio1,
-                Spatio2,
-                save_gridding_plot,
-                ax,
-            )
-
-            ensemble_all_df_list.append(this_ensemble)
-
-    # concat
-    ensemble_df = pd.concat(ensemble_all_df_list).reset_index(drop=True)
-    del ensemble_all_df_list
-
-    # processing
-    ensemble_df = ensemble_df.reset_index(drop=True)
-
-    if not save_path == "":
-        ensemble_df.to_csv(save_path, index=False)
-        print(f"Saved! {save_path}")
-
-    if save_gridding_plot:
-        if ax is None:
-            plt.tight_layout()
-            plt.gca().set_aspect("equal")
-            ax = plt.gcf()
-            plt.close()
-
-        else:
-            pass
-
-        return ensemble_df, ax
-
-    else:
-        return ensemble_df, np.nan
