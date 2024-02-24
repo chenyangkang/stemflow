@@ -21,6 +21,7 @@
 
 ## Documentation :book:
 [stemflow Documentation](https://chenyangkang.github.io/stemflow/)
+[JOSS paper](https://joss.theoj.org/papers/10.21105/joss.06158#)
 <!-- stemflow -->
 
 -----
@@ -207,6 +208,11 @@ Daily Abundance Map of Barn Swallow
 See section [AdaSTEM demo](https://chenyangkang.github.io/stemflow/Examples/01.AdaSTEM_demo.html) for how to generate this GIF.
 
 ----
+
+## Citation
+
+Chen et al., (2024). stemflow: A Python Package for Adaptive Spatio-Temporal Exploratory Model. Journal of Open Source Software, 9(94), 6158, https://doi.org/10.21105/joss.06158
+
 
 ## Contribute to stemflow :purple_heart:
 
