@@ -216,6 +216,21 @@ See section [AdaSTEM demo](https://chenyangkang.github.io/stemflow/Examples/01.A
 
 Chen et al., (2024). stemflow: A Python Package for Adaptive Spatio-Temporal Exploratory Model. Journal of Open Source Software, 9(94), 6158, https://doi.org/10.21105/joss.06158
 
+```
+@article{Chen2024, 
+  doi = {10.21105/joss.06158}, 
+  url = {https://doi.org/10.21105/joss.06158}, 
+  year = {2024}, 
+  publisher = {The Open Journal}, 
+  volume = {9}, 
+  number = {94}, 
+  pages = {6158}, 
+  author = {Yangkang Chen and Zhongru Gu and Xiangjiang Zhan}, 
+  title = {stemflow: A Python Package for Adaptive Spatio-Temporal Exploratory Model}, 
+  journal = {Journal of Open Source Software} 
+}
+```
+
 ----
 
 ## Contribute to stemflow :purple_heart:
