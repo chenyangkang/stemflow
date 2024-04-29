@@ -68,6 +68,9 @@ extra:
     #   link: https://twitter.com/TheJamesWillett
     # - icon: fontawesome/brands/linkedin
     #   link: https://www.linkedin.com/in/willettjames/
+  analytics:
+    provider: google
+    property: G-CSYL8K5ZXG
 
 
 nav:
