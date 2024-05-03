@@ -123,6 +123,11 @@ def check_X_train(X_train):
     if not isinstance(X_train, pd.core.frame.DataFrame):
         raise TypeError(f"Input X should be type 'pd.core.frame.DataFrame'. Got {str(type_X_train)}")
 
+    if np.sum(np.isnan(X_train)) > 0:
+        raise ValueError(
+            "NAs (missing values) detected in input data. stemflow do not support NAs input. Consider filling them with values (e.g., -1 or mean values) or removing the rows."
+        )
+
 
 def check_y_train(y_train):
     type_y_train = str(type(y_train))
@@ -130,6 +135,9 @@ def check_y_train(y_train):
         raise TypeError(
             f"Input y_train should be type 'pd.core.frame.DataFrame' or 'pd.core.frame.Series', or 'np.ndarray'. Got {str(type_y_train)}"
         )
+
+    if np.sum(np.isnan(y_train)) > 0:
+        raise ValueError("NAs (missing values) detected in input y data. Consider deleting these rows.")
 
 
 def check_X_test(X_test):
