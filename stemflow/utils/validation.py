@@ -155,7 +155,7 @@ def check_prediction_return(return_by_separate_ensembles, return_std):
         raise TypeError(f"return_by_separate_ensembles must be bool. Got {type_return_by_separate_ensembles}")
     else:
         if return_by_separate_ensembles and return_std:
-            warnings("return_by_separate_ensembles == True. Automatically setting return_std=False")
+            warnings.warn("return_by_separate_ensembles == True. Automatically setting return_std=False")
             return_std = False
     return return_by_separate_ensembles, return_std
 
@@ -170,29 +170,29 @@ def check_X_y_shape_match(X, y):
 
 def check_spatial_scale(x_min, x_max, y_min, y_max, grid_length_upper, grid_length_lower):
     if (grid_length_upper <= (x_max - x_min) / 100) or (grid_length_upper <= (y_max - y_min) / 100):
-        warnings(
+        warnings.warn(
             "The grid_len_upper_threshold is significantly smaller than the scale of longitude and latitude (x and y). Be sure if this is desired."
         )
     if (grid_length_upper >= (x_max - x_min) * 100) or (grid_length_upper >= (y_max - y_min) * 100):
-        warnings(
+        warnings.warn(
             "The grid_len_upper_threshold is significantly larger than the scale of longitude and latitude (x and y). Be sure if this is desired."
         )
     if (grid_length_lower <= (x_max - x_min) / 100) or (grid_length_lower <= (y_max - y_min) / 100):
-        warnings(
+        warnings.warn(
             "The grid_len_lower_threshold is significantly smaller than the scale of longitude and latitude (x and y). Be sure if this is desired."
         )
     if (grid_length_lower >= (x_max - x_min) * 100) or (grid_length_lower >= (y_max - y_min) * 100):
-        warnings(
+        warnings.warn(
             "The grid_len_lower_threshold is significantly larger than the scale of longitude and latitude (x and y). Be sure if this is desired."
         )
 
 
 def check_temporal_scale(t_min, t_max, temporal_bin_interval):
     if temporal_bin_interval <= (t_max - t_min) / 100:
-        warnings(
+        warnings.warn(
             "The temporal_bin_interval is significantly smaller than the scale of temporal parameters in provided data. Be sure if this is desired."
         )
     if temporal_bin_interval >= (t_max - t_min) * 100:
-        warnings(
+        warnings.warn(
             "The temporal_bin_interval is significantly larger than the scale of temporal parameters in provided data. Be sure if this is desired."
         )
