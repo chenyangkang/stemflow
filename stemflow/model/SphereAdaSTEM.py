@@ -22,9 +22,11 @@ from ..utils.sphere_quadtree import get_one_ensemble_sphere_quadtree
 from ..utils.validation import (
     check_base_model,
     check_prediciton_aggregation,
+    check_spatial_scale,
     check_spatio_bin_jitter_magnitude,
     check_task,
     check_temporal_bin_start_jitter,
+    check_temporal_scale,
     check_transform_njobs,
     check_verbosity,
 )
@@ -244,10 +246,32 @@ class SphereAdaSTEM(AdaSTEM):
         save_path = os.path.join(self.save_dir, "ensemble_quadtree_df.csv") if self.save_tmp else ""
 
         if "grid_len" not in self.__dir__():
-            # We har using AdaSTEM
+            # We are using AdaSTEM
             self.grid_len = None
+            check_spatial_scale(
+                X_train[self.Spatio1].min(),
+                X_train[self.Spatio1].max(),
+                X_train[self.Spatio2].min(),
+                X_train[self.Spatio2].max(),
+                self.grid_len_upper_threshold,
+                self.grid_len_lower_threshold,
+            )
+            check_temporal_scale(
+                X_train[self.Temporal1].min(), X_train[self.Temporal1].min(), self.temporal_bin_interval
+            )
         else:
-            # We har using STEM
+            # We are using STEM
+            check_spatial_scale(
+                X_train[self.Spatio1].min(),
+                X_train[self.Spatio1].max(),
+                X_train[self.Spatio2].min(),
+                X_train[self.Spatio2].max(),
+                self.grid_len,
+                self.grid_len,
+            )
+            check_temporal_scale(
+                X_train[self.Temporal1].min(), X_train[self.Temporal1].min(), self.temporal_bin_interval
+            )
             pass
 
         partial_get_one_ensemble_sphere_quadtree = partial(
