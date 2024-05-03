@@ -158,3 +158,33 @@ def check_X_y_shape_match(X, y):
     X_size = X.shape[0]
     if not y_size == X_size:
         raise ValueError(f"The shape of X and y should match. Got X: {X_size}, y: {y_size}")
+
+
+def check_spatial_scale(x_min, x_max, y_min, y_max, grid_length_upper, grid_length_lower):
+    if (grid_length_upper <= (x_max - x_min) / 100) or (grid_length_upper <= (y_max - y_min) / 100):
+        warnings(
+            "The grid_len_upper_threshold is significantly smaller than the scale of longitude and latitude (x and y). Be sure if this is desired."
+        )
+    if (grid_length_upper >= (x_max - x_min) * 100) or (grid_length_upper >= (y_max - y_min) * 100):
+        warnings(
+            "The grid_len_upper_threshold is significantly larger than the scale of longitude and latitude (x and y). Be sure if this is desired."
+        )
+    if (grid_length_lower <= (x_max - x_min) / 100) or (grid_length_lower <= (y_max - y_min) / 100):
+        warnings(
+            "The grid_len_lower_threshold is significantly smaller than the scale of longitude and latitude (x and y). Be sure if this is desired."
+        )
+    if (grid_length_lower >= (x_max - x_min) * 100) or (grid_length_lower >= (y_max - y_min) * 100):
+        warnings(
+            "The grid_len_lower_threshold is significantly larger than the scale of longitude and latitude (x and y). Be sure if this is desired."
+        )
+
+
+def check_temporal_scale(t_min, t_max, temporal_bin_interval):
+    if temporal_bin_interval <= (t_max - t_min) / 100:
+        warnings(
+            "The temporal_bin_interval is significantly smaller than the scale of temporal parameters in provided data. Be sure if this is desired."
+        )
+    if temporal_bin_interval >= (t_max - t_min) * 100:
+        warnings(
+            "The temporal_bin_interval is significantly larger than the scale of temporal parameters in provided data. Be sure if this is desired."
+        )
