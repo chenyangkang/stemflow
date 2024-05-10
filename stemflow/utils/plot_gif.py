@@ -8,7 +8,6 @@ import pandas
 import pandas as pd
 from matplotlib.animation import FuncAnimation, PillowWriter
 from sklearn.preprocessing import LabelEncoder
-from tqdm.auto import tqdm
 
 
 def make_sample_gif(
