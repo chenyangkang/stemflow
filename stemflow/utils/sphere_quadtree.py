@@ -107,7 +107,7 @@ def get_one_ensemble_sphere_quadtree(
     for time_block_index, bin_ in enumerate(temporal_bins):
         time_start = bin_[0]
         time_end = bin_[1]
-        sub_data = data[(data[Temporal1] >= time_start) & (data[Temporal1] < time_end)]
+        sub_data = data[(data[Temporal1] >= time_start) & (data[Temporal1] < time_end)].copy()
         if len(sub_data) == 0:
             continue
 
