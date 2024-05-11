@@ -33,7 +33,7 @@ jobs:
 
     - name: Run pytest
       run: |
-        pytest -n 2 --cov --no-cov-on-fail --cov-report=term-missing:skip-covered --cov-report xml:coverage.xml
+        pytest -n auto --cov --no-cov-on-fail --cov-report=term-missing:skip-covered --cov-report xml:coverage.xml
       timeout-minutes: 90  # Set the timeout to 1.5 hours for this step
 
     - name: Upload coverage reports to Codecov
