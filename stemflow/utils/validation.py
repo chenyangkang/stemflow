@@ -173,17 +173,17 @@ def check_spatial_scale(x_min, x_max, y_min, y_max, grid_length_upper, grid_leng
         warnings.warn(
             "The grid_len_upper_threshold is significantly smaller than the scale of longitude and latitude (x and y). Be sure if this is desired."
         )
-    if (grid_length_upper >= (x_max - x_min) * 100) or (grid_length_upper >= (y_max - y_min) * 100):
+    if (grid_length_upper >= (x_max - x_min)) or (grid_length_upper >= (y_max - y_min)):
         warnings.warn(
-            "The grid_len_upper_threshold is significantly larger than the scale of longitude and latitude (x and y). Be sure if this is desired."
+            "The grid_len_upper_threshold is larger than the scale of longitude and latitude (x and y). Be sure if this is desired."
         )
     if (grid_length_lower <= (x_max - x_min) / 100) or (grid_length_lower <= (y_max - y_min) / 100):
         warnings.warn(
             "The grid_len_lower_threshold is significantly smaller than the scale of longitude and latitude (x and y). Be sure if this is desired."
         )
-    if (grid_length_lower >= (x_max - x_min) * 100) or (grid_length_lower >= (y_max - y_min) * 100):
+    if (grid_length_lower >= (x_max - x_min)) or (grid_length_lower >= (y_max - y_min)):
         warnings.warn(
-            "The grid_len_lower_threshold is significantly larger than the scale of longitude and latitude (x and y). Be sure if this is desired."
+            "The grid_len_lower_threshold is larger than the scale of longitude and latitude (x and y). Be sure if this is desired."
         )
 
 
@@ -192,7 +192,7 @@ def check_temporal_scale(t_min, t_max, temporal_bin_interval):
         warnings.warn(
             "The temporal_bin_interval is significantly smaller than the scale of temporal parameters in provided data. Be sure if this is desired."
         )
-    if temporal_bin_interval >= (t_max - t_min) * 100:
+    if temporal_bin_interval >= t_max - t_min:
         warnings.warn(
-            "The temporal_bin_interval is significantly larger than the scale of temporal parameters in provided data. Be sure if this is desired."
+            "The temporal_bin_interval is larger than the scale of temporal parameters in provided data. Be sure if this is desired."
         )
