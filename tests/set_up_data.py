@@ -11,7 +11,7 @@ def get_data():
     data = pickle.load(urlopen(url))
     print("Done.")
     x_names = get_x_names()
-    X = data.drop("count", axis=1)[x_names + ["longitude", "latitude"]]
+    X = data.drop("count", axis=1)[x_names + ["longitude", "latitude"]].fillna(-1)
     y = data["count"].values
 
     assert os.path.exists(len(data) > 0)
