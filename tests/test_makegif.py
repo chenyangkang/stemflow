@@ -11,7 +11,7 @@ fake_data = pd.DataFrame(
     {
         "x": np.random.uniform(low=-180, high=180, size=size),
         "y": np.random.uniform(low=-90, high=90, size=size),
-        "DOY": np.random.uniform(low=1, high=366, size=size),
+        "DOY": [int(i) for i in np.random.uniform(low=1, high=366, size=size)],
         "dat": np.random.uniform(low=1, high=1000, size=size),
     }
 )
@@ -21,7 +21,6 @@ def test_make_gif():
     tmp_dir = "./stemflow_test_make_gif"
     if not os.path.exists(tmp_dir):
         os.mkdir(tmp_dir)
-
     make_sample_gif(
         fake_data,
         os.path.join(tmp_dir, "FTR_IPT_dat.gif"),
@@ -41,7 +40,6 @@ def test_make_gif():
         dpi=100,
         fps=10,
     )
-
     shutil.rmtree(tmp_dir)
 
 
