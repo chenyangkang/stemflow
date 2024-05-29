@@ -568,7 +568,7 @@ class AdaSTEM(BaseEstimator):
         y_train: Union[pd.core.frame.DataFrame, np.ndarray],
         verbosity: Union[None, int] = None,
         ax=None,
-        njobs: int = 1,
+        njobs: Union[None, int] = None,
     ):
         """Fitting method
 
@@ -576,6 +576,9 @@ class AdaSTEM(BaseEstimator):
             X_train: Training variables
             y_train: Training target
             ax: matplotlib Axes to add to
+            verbosty: whether to show progress bar. 0 for no and 1 for yes.
+            ax: matplotlib ax for adding grid plot on that.
+            njobs: multiprocessing thread count. Default the njob of model object.
 
         Raises:
             TypeError: X_train is not a type of pd.core.frame.DataFrame
