@@ -147,10 +147,10 @@ def make_sample_gif(
         temporal_value = np.array(sub[Temporal1].values)[0]
 
         g1 = np.digitize(sub[Spatio1], lng_gird, right=True)
-        g1 = np.where(g1 >= np.max(lng_gird), np.max(lng_gird) - 1, g1).astype("int")
+        g1 = np.where(g1 >= lng_size, lng_size - 1, g1).astype("int")
 
         g2 = np.digitize(sub[Spatio2], lat_gird, right=True)
-        g2 = np.where(g2 >= np.max(lat_gird), np.max(lat_gird) - 1, g2).astype("int")
+        g2 = np.where(g2 >= lng_size, lng_size - 1, g2).astype("int")
 
         sub.loc[:, f"{Spatio1}_grid"] = g1
         sub.loc[:, f"{Spatio2}_grid"] = g2
