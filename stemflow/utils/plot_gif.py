@@ -146,9 +146,15 @@ def make_sample_gif(
         sub = data[data["Temporal_indexer"] == i].copy()
         temporal_value = np.array(sub[Temporal1].values)[0]
 
-        sub.loc[:, f"{Spatio1}_grid"] = np.digitize(sub[Spatio1], lng_gird, right=True)
-        sub.loc[:, f"{Spatio2}_grid"] = np.digitize(sub[Spatio2], lat_gird, right=False)
-        sub = sub[(sub[f"{Spatio1}_grid"] <= lng_size + 1) & (sub[f"{Spatio2}_grid"] <= lat_size + 1)]
+        g1 = np.digitize(sub[Spatio1], lng_gird, right=True)
+        g1 = np.where(g1 >= lng_size, lng_size - 1, g1).astype("int")
+
+        g2 = np.digitize(sub[Spatio2], lat_gird, right=True)
+        g2 = np.where(g2 >= lng_size, lng_size - 1, g2).astype("int")
+
+        sub.loc[:, f"{Spatio1}_grid"] = g1
+        sub.loc[:, f"{Spatio2}_grid"] = g2
+        sub = sub[(sub[f"{Spatio1}_grid"] <= lng_size - 1) & (sub[f"{Spatio2}_grid"] <= lat_size - 1)]
 
         sub = sub.groupby([f"{Spatio1}_grid", f"{Spatio2}_grid"])[[col]].mean().reset_index(drop=False)
 
