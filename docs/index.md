@@ -39,7 +39,7 @@ pip install stemflow
 To install the latest beta version from github:
 
 ```py
-pip install pip@git+https://github.com/chenyangkang/stemflow.git
+pip install stemflow@git+https://github.com/chenyangkang/stemflow.git
 ```
 
 Or using conda:
