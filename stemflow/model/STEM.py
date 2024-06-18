@@ -45,8 +45,8 @@ class STEM(AdaSTEM):
         subset_x_names: bool = False,
         ensemble_models_disk_saver: bool = False,
         ensemble_models_disk_saving_dir: str = "./",
-        plot_xlims: Tuple[Union[float, int], Union[float, int]] = (-180, 180),
-        plot_ylims: Tuple[Union[float, int], Union[float, int]] = (-90, 90),
+        plot_xlims: Tuple[Union[float, int], Union[float, int]] = None,
+        plot_ylims: Tuple[Union[float, int], Union[float, int]] = None,
         verbosity: int = 0,
         plot_empty: bool = False,
     ):
@@ -111,9 +111,9 @@ class STEM(AdaSTEM):
             ensemble_models_disk_saving_dir:
                 Where to save the ensemble models. Only valid if ensemble_disk_saver is True.
             plot_xlims:
-                If save_gridding_plot=true, what is the xlims of the plot. Defaults to (-180,180).
+                If save_gridding_plot=true, what is the xlims of the plot. Defaults to the extent of input X varibale.
             plot_ylims:
-                If save_gridding_plot=true, what is the ylims of the plot. Defaults to (-90,90).
+                If save_gridding_plot=true, what is the ylims of the plot. Defaults to the extent of input Y varibale.
             verbosity:
                 0 to output nothing and everything otherwise.
             plot_empty:
@@ -237,8 +237,8 @@ class STEMClassifier(AdaSTEMClassifier):
         subset_x_names=False,
         ensemble_models_disk_saver=False,
         ensemble_models_disk_saving_dir="./",
-        plot_xlims=(-180, 180),
-        plot_ylims=(-90, 90),
+        plot_xlims=None,
+        plot_ylims=None,
         verbosity=0,
         plot_empty=False,
     ):
@@ -334,8 +334,8 @@ class STEMRegressor(AdaSTEMRegressor):
         subset_x_names=False,
         ensemble_models_disk_saver=False,
         ensemble_models_disk_saving_dir="./",
-        plot_xlims=(-180, 180),
-        plot_ylims=(-90, 90),
+        plot_xlims=None,
+        plot_ylims=None,
         verbosity=0,
         plot_empty=False,
     ):
