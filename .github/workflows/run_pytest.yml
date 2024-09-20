@@ -37,7 +37,7 @@ jobs:
       timeout-minutes: 300  # Set the timeout to 1.5 hours for this step
 
     - name: Upload coverage reports to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
