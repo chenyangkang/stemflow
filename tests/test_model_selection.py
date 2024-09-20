@@ -1,4 +1,4 @@
-from stemflow.model_selection import ST_CV, ST_train_test_split, ST_Kfold
+from stemflow.model_selection import ST_CV, ST_train_test_split, ST_KFold
 
 from .set_up_data import set_up_data
 
@@ -20,8 +20,8 @@ def test_CV():
         assert len(X_train) > 0 and len(X_test) > 0 and len(y_train) > 0 and len(y_test) > 0
 
 
-def test_ST_Kfold():
-    ST_KFold_generator = ST_Kfold(n_splits=3,
+def test_ST_KFold():
+    ST_KFold_generator = ST_KFold(n_splits=3,
             Spatio1 = "longitude",
             Spatio2 = "latitude",
             Temporal1 = "DOY",
