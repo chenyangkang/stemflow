@@ -195,7 +195,7 @@ def ST_CV(
         yield X_train, X_test, y_train, y_test
 
 
-class ST_Kfold():
+class ST_KFold():
     def __init__(
         self,
         Spatio1: str = "longitude",
@@ -206,8 +206,8 @@ class ST_Kfold():
         random_state: Union[np.random.RandomState, None, int] = None,
         n_splits: int = 3,
     ) -> None:
-        """Spatial Temporal Kfold generator class. While the ST_CV functions yield the data directly (X_train, X_test, y_train, y_test),
-            this ST_Kfold class generate only indices, which match the Kfold class in sklearn.model_selection.
+        """Spatial Temporal KFold generator class. While the ST_CV functions yield the data directly (X_train, X_test, y_train, y_test),
+            this ST_KFold class generate only indices, which match the KFold class in sklearn.model_selection.
 
         Args:
             Spatio1:
@@ -231,7 +231,7 @@ class ST_Kfold():
         Example:
             ```
             from sklearn.model_selection import KFold
-            ST_KFold_generator = ST_Kfold(n_splits=5,
+            ST_KFold_generator = ST_KFold(n_splits=5,
                     Spatio1 = "longitude",
                     Spatio2 = "latitude",
                     Temporal1 = "DOY",
