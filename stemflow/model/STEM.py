@@ -24,7 +24,7 @@ class STEM(AdaSTEM):
         task: str = "hurdle",
         ensemble_fold: int = 10,
         min_ensemble_required: int = 7,
-        grid_len: [float, int, None] = None,
+        grid_len: Union[float, int, None] = None,
         points_lower_threshold: int = 50,
         stixel_training_size_threshold: int = None,
         temporal_start: Union[float, int] = 1,
