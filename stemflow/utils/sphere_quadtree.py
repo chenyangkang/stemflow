@@ -44,7 +44,7 @@ def get_one_ensemble_sphere_quadtree(
     ax=None,
     radius: Union[int, float] = 6371.0,
     plot_empty: bool = False,
-    rng=None
+    rng: np.random._generator.Generator = None
 ):
     """Generate QuadTree gridding based on the input dataframe
     A function to get quadtree results for spherical indexing system. Twins to `get_ensemble_quadtree` in `quadtree.py`, Returns ensemble_df and plotting axes.
@@ -106,6 +106,7 @@ def get_one_ensemble_sphere_quadtree(
         step=temporal_step,
         bin_interval=temporal_bin_interval,
         temporal_bin_start_jitter=temporal_bin_start_jitter,
+        rng=rng
     )
 
     ensemble_all_df_list = []

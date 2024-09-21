@@ -34,6 +34,7 @@ def generate_temporal_bins(
     step: Union[float, int],
     bin_interval: Union[float, int],
     temporal_bin_start_jitter: Union[float, int, str] = "adaptive",
+    rng: np.random._generator.Generator = None,
 ) -> list:
     """Generate random temporal bins that splits the data
 
@@ -55,10 +56,11 @@ def generate_temporal_bins(
         A list of tuple. Start and end of each temporal bin.
 
     """
+    rng = check_random_state(rng)
     bin_interval = bin_interval  # 50
     step = step  # 20
 
-    jit = check_transform_temporal_bin_start_jitter(temporal_bin_start_jitter, bin_interval)
+    jit = check_transform_temporal_bin_start_jitter(temporal_bin_start_jitter, bin_interval, rng)
 
     start = start - jit
     bin_list = []
@@ -97,7 +99,7 @@ def get_one_ensemble_quadtree(
     save_gridding_plot: bool = True,
     ax=None,
     plot_empty: bool = False,
-    rng=None
+    rng: np.random._generator.Generator = None
 ):
     """Generate QuadTree gridding based on the input dataframe
 
@@ -169,6 +171,7 @@ def get_one_ensemble_quadtree(
         step=temporal_step,
         bin_interval=temporal_bin_interval,
         temporal_bin_start_jitter=temporal_bin_start_jitter,
+        rng=rng
     )
 
     ensemble_all_df_list = []
