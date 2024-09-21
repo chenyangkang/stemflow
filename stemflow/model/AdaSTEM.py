@@ -277,7 +277,7 @@ class AdaSTEM(BaseEstimator):
 
     def split(
         self, X_train: pd.core.frame.DataFrame, verbosity: Union[None, int] = None, ax=None, njobs: int = 1
-    ) -> dict:
+    ):
         """QuadTree indexing the input data
 
         Args:
@@ -288,6 +288,7 @@ class AdaSTEM(BaseEstimator):
         Returns:
             self.grid_dict, a dictionary of one DataFrame for each grid, containing the gridding information
         """
+        self.rng = check_random_state(self.random_state)
         njobs = check_transform_njobs(self, njobs)
 
         if verbosity is None:

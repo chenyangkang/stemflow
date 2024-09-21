@@ -29,6 +29,7 @@ from ..utils.validation import (
     check_temporal_scale,
     check_transform_njobs,
     check_verbosity,
+    check_random_state
 )
 from ..utils.wrapper import model_wrapper
 from .AdaSTEM import AdaSTEM, AdaSTEMClassifier, AdaSTEMRegressor
@@ -245,6 +246,7 @@ class SphereAdaSTEM(AdaSTEM):
         Returns:
             self.grid_dict, a dictionary of one DataFrame for each grid, containing the gridding information
         """
+        self.rng = check_random_state(self.random_state)
         verbosity = check_verbosity(self, verbosity)
         njobs = check_transform_njobs(self, njobs)
         save_path = os.path.join(self.save_dir, "ensemble_quadtree_df.csv") if self.save_tmp else ""
