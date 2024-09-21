@@ -7,26 +7,26 @@ import numpy as np
 import pandas as pd
 
 
-def check_random_state(seed: Union[None, int, np.random.RandomState]) -> np.random.RandomState:
+def check_random_state(seed: Union[None, int, np.random._generator.Generator]) -> np.random._generator.Generator:
     """Turn seed into a np.random.RandomState instance.
 
     Args:
         seed:
-            If seed is None, return the RandomState singleton used by np.random.
-            If seed is an int, return a new RandomState instance seeded with seed.
-            If seed is already a RandomState instance, return it.
+            If seed is None, return a random generator.
+            If seed is an int, return a random generator with that seed.
+            If seed is already a random generator instance, return it.
             Otherwise raise ValueError.
 
     Returns:
-        The random state object based on `seed` parameter.
+        The random generator object based on `seed` parameter.
     """
-    if seed is None or seed is np.random:
-        return np.random.mtrand._rand
+    if seed is None:
+        return np.random.default_rng(np.random.randint(0, 2**32 - 1))
     if isinstance(seed, int):
-        return np.random.RandomState(seed)
-    if isinstance(seed, np.random.RandomState):
+        return np.random.default_rng(seed)
+    if isinstance(seed, np.random._generator.Generator):
         return seed
-    raise ValueError("%r cannot be used to seed a numpy.random.RandomState instance" % seed)
+    raise ValueError("%r cannot be used to seed a np.random.default_rng instance" % seed)
 
 
 def check_task(task):

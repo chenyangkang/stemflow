@@ -17,6 +17,8 @@ from ..gridding.Sphere_QTree import Sphere_QTree
 from .quadtree import generate_temporal_bins
 from .sphere.coordinate_transform import lonlat_cartesian_3D_transformer
 
+from .validation import check_random_state
+
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -42,6 +44,7 @@ def get_one_ensemble_sphere_quadtree(
     ax=None,
     radius: Union[int, float] = 6371.0,
     plot_empty: bool = False,
+    rng=None
 ):
     """Generate QuadTree gridding based on the input dataframe
     A function to get quadtree results for spherical indexing system. Twins to `get_ensemble_quadtree` in `quadtree.py`, Returns ensemble_df and plotting axes.
@@ -82,17 +85,20 @@ def get_one_ensemble_sphere_quadtree(
             Matplotlib Axes to add to.
         radius (Union[int, float]):
             The radius of earth in km. Defaults to 6371.0.
-
+        rng:
+            random number generator.
+            
     Returns:
         A tuple of <br>
             1. ensemble dataframe;<br>
             2. grid plot. np.nan if save_gridding_plot=False<br>
 
     """
-
+    rng = check_random_state(rng)
+    
     if spatio_bin_jitter_magnitude == "adaptive":
-        rotation_angle = np.random.uniform(0, 90)
-        rotation_axis = np.random.uniform(-1, 1, 3)
+        rotation_angle = rng.uniform(0, 90)
+        rotation_axis = rng.uniform(-1, 1, 3)
 
     temporal_bins = generate_temporal_bins(
         start=temporal_start,

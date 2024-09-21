@@ -69,6 +69,7 @@ class SphereAdaSTEM(AdaSTEM):
         temporal_bin_interval: Union[float, int] = 50,
         temporal_bin_start_jitter: Union[float, int, str] = "adaptive",
         spatio_bin_jitter_magnitude: Union[float, int] = "adaptive",
+        random_state = None,
         save_gridding_plot: bool = True,
         save_tmp: bool = False,
         save_dir: str = "./",
@@ -124,6 +125,8 @@ class SphereAdaSTEM(AdaSTEM):
                 for the start. Defaults to 'adaptive'.
             spatio_bin_jitter_magnitude:
                 jitter of the spatial gridding. Defaults to 'adaptive'.
+            random_state:
+                None or int. After setting the same seed, the model will generate the same results each time. For reproducibility.
             save_gridding_plot:
                 Whether ot save gridding plots. Defaults to True.
             save_tmp:
@@ -201,6 +204,7 @@ class SphereAdaSTEM(AdaSTEM):
             temporal_bin_interval,
             temporal_bin_start_jitter,
             spatio_bin_jitter_magnitude,
+            random_state,
             save_gridding_plot,
             save_tmp,
             save_dir,
@@ -297,7 +301,9 @@ class SphereAdaSTEM(AdaSTEM):
         if njobs > 1 and isinstance(njobs, int):
             parallel = joblib.Parallel(n_jobs=njobs, return_as="generator")
             output_generator = parallel(
-                joblib.delayed(partial_get_one_ensemble_sphere_quadtree)(i) for i in list(range(self.ensemble_fold))
+                joblib.delayed(partial_get_one_ensemble_sphere_quadtree)(
+                    ensemble_count=ensemble_count, rng=np.random.default_rng(self.rng.integers(1e9) + ensemble_count)
+                    ) for ensemble_count in list(range(self.ensemble_fold))
             )
             if verbosity > 0:
                 output_generator = tqdm(output_generator, total=self.ensemble_fold, desc="Generating Ensemble: ")
@@ -311,7 +317,9 @@ class SphereAdaSTEM(AdaSTEM):
                 else range(self.ensemble_fold)
             )
             ensemble_all_df_list = [
-                partial_get_one_ensemble_sphere_quadtree(ensemble_count) for ensemble_count in iter_func_
+                partial_get_one_ensemble_sphere_quadtree(
+                    ensemble_count=ensemble_count, rng=np.random.default_rng(self.rng.integers(1e9) + ensemble_count)
+                    ) for ensemble_count in iter_func_
             ]
 
         ensemble_df = pd.concat(ensemble_all_df_list).reset_index(drop=True)
@@ -536,6 +544,7 @@ class SphereAdaSTEMClassifier(SphereAdaSTEM):
         temporal_bin_interval=50,
         temporal_bin_start_jitter="adaptive",
         spatio_bin_jitter_magnitude="adaptive",
+        random_state=None,
         save_gridding_plot=False,
         save_tmp=False,
         save_dir="./",
@@ -568,6 +577,7 @@ class SphereAdaSTEMClassifier(SphereAdaSTEM):
             temporal_bin_interval,
             temporal_bin_start_jitter,
             spatio_bin_jitter_magnitude,
+            random_state,
             save_gridding_plot,
             save_tmp,
             save_dir,
@@ -629,6 +639,7 @@ class SphereAdaSTEMRegressor(SphereAdaSTEM):
         temporal_bin_interval=50,
         temporal_bin_start_jitter="adaptive",
         spatio_bin_jitter_magnitude="adaptive",
+        random_state=None,
         save_gridding_plot=False,
         save_tmp=False,
         save_dir="./",
@@ -661,6 +672,7 @@ class SphereAdaSTEMRegressor(SphereAdaSTEM):
             temporal_bin_interval,
             temporal_bin_start_jitter,
             spatio_bin_jitter_magnitude,
+            random_state,
             save_gridding_plot,
             save_tmp,
             save_dir,

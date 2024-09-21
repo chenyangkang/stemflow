@@ -88,6 +88,7 @@ class AdaSTEM(BaseEstimator):
         temporal_bin_interval: Union[float, int] = 50,
         temporal_bin_start_jitter: Union[float, int, str] = "adaptive",
         spatio_bin_jitter_magnitude: Union[float, int] = "adaptive",
+        random_state = None,
         save_gridding_plot: bool = True,
         save_tmp: bool = False,
         save_dir: str = "./",
@@ -142,6 +143,8 @@ class AdaSTEM(BaseEstimator):
                 for the start. Defaults to 'adaptive'.
             spatio_bin_jitter_magnitude:
                 jitter of the spatial gridding. Defaults to 'adaptive'.
+            random_state:
+                None or int. After setting the same seed, the model will generate the same results each time. For reproducibility.
             save_gridding_plot:
                 Whether ot save gridding plots. Defaults to True.
             save_tmp:
@@ -201,19 +204,23 @@ class AdaSTEM(BaseEstimator):
                 feature importance dataframe for each stixel.
 
         """
-        # 1. Base model
+        # 1. Check random state
+        self.random_state = random_state
+        self.rng = check_random_state(random_state)
+        
+        # 2. Base model
         check_base_model(base_model)
         base_model = model_wrapper(base_model)
         self.base_model = base_model
 
-        # 2. Model params
+        # 3. Model params
         check_task(task)
         self.task = task
         self.Temporal1 = Temporal1
         self.Spatio1 = Spatio1
         self.Spatio2 = Spatio2
 
-        # 3. Gridding params
+        # 4. Gridding params
         if min_ensemble_required > ensemble_fold:
             raise ValueError("Not satisfied: min_ensemble_required <= ensemble_fold")
 
@@ -236,7 +243,7 @@ class AdaSTEM(BaseEstimator):
         check_temporal_bin_start_jitter(temporal_bin_start_jitter)
         self.temporal_bin_start_jitter = temporal_bin_start_jitter
 
-        # 4. Training params
+        # 5. Training params
         if stixel_training_size_threshold is None:
             self.stixel_training_size_threshold = points_lower_threshold
         else:
@@ -245,11 +252,11 @@ class AdaSTEM(BaseEstimator):
         self.subset_x_names = subset_x_names
         self.sample_weights_for_classifier = sample_weights_for_classifier
 
-        # 5. Multi-threading params (not implemented yet)
+        # 6. Multi-threading params (not implemented yet)
         njobs = check_transform_njobs(self, njobs)
         self.njobs = njobs
 
-        # 6. Plotting params
+        # 7. Plotting params
         self.plot_xlims = plot_xlims
         self.plot_ylims = plot_ylims
         self.save_tmp = save_tmp
@@ -261,7 +268,7 @@ class AdaSTEM(BaseEstimator):
         self.ensemble_models_disk_saver = ensemble_models_disk_saver
         self.ensemble_models_disk_saving_dir = ensemble_models_disk_saving_dir
         if self.ensemble_models_disk_saver:
-            self.saving_code = np.random.randint(1, 1e8, 1)
+            self.saving_code = self.rng.integers(1, 1e8, 1)
 
         if not verbosity == 0:
             self.verbosity = 1
@@ -363,7 +370,9 @@ class AdaSTEM(BaseEstimator):
         if njobs > 1 and isinstance(njobs, int):
             parallel = joblib.Parallel(n_jobs=njobs, return_as="generator")
             output_generator = parallel(
-                joblib.delayed(partial_get_one_ensemble_quadtree)(i) for i in list(range(self.ensemble_fold))
+                joblib.delayed(partial_get_one_ensemble_quadtree)(
+                    ensemble_count=ensemble_count, rng=np.random.default_rng(self.rng.integers(1e9) + ensemble_count)
+                    ) for ensemble_count in list(range(self.ensemble_fold))
             )
             if verbosity > 0:
                 output_generator = tqdm(output_generator, total=self.ensemble_fold, desc="Generating Ensemble: ")
@@ -376,7 +385,9 @@ class AdaSTEM(BaseEstimator):
                 if verbosity > 0
                 else range(self.ensemble_fold)
             )
-            ensemble_all_df_list = [partial_get_one_ensemble_quadtree(ensemble_count) for ensemble_count in iter_func_]
+            ensemble_all_df_list = [partial_get_one_ensemble_quadtree(
+                ensemble_count=ensemble_count, rng=np.random.default_rng(self.rng.integers(1e9) + ensemble_count)
+                ) for ensemble_count in iter_func_]
 
         # concat
         ensemble_df = pd.concat(ensemble_all_df_list).reset_index(drop=True)
@@ -1238,6 +1249,7 @@ class AdaSTEMClassifier(AdaSTEM):
         temporal_bin_interval=50,
         temporal_bin_start_jitter="adaptive",
         spatio_bin_jitter_magnitude="adaptive",
+        random_state=None,
         save_gridding_plot=False,
         save_tmp=False,
         save_dir="./",
@@ -1270,6 +1282,7 @@ class AdaSTEMClassifier(AdaSTEM):
             temporal_bin_interval,
             temporal_bin_start_jitter,
             spatio_bin_jitter_magnitude,
+            random_state,
             save_gridding_plot,
             save_tmp,
             save_dir,
@@ -1399,6 +1412,7 @@ class AdaSTEMRegressor(AdaSTEM):
         temporal_bin_interval=50,
         temporal_bin_start_jitter="adaptive",
         spatio_bin_jitter_magnitude="adaptive",
+        random_state=None,
         save_gridding_plot=False,
         save_tmp=False,
         save_dir="./",
@@ -1431,6 +1445,7 @@ class AdaSTEMRegressor(AdaSTEM):
             temporal_bin_interval,
             temporal_bin_start_jitter,
             spatio_bin_jitter_magnitude,
+            random_state,
             save_gridding_plot,
             save_tmp,
             save_dir,

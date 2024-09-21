@@ -16,7 +16,7 @@ from tqdm import tqdm
 
 from ..gridding.QTree import QTree
 from ..gridding.QuadGrid import QuadGrid
-from .validation import check_transform_spatio_bin_jitter_magnitude, check_transform_temporal_bin_start_jitter
+from .validation import check_transform_spatio_bin_jitter_magnitude, check_transform_temporal_bin_start_jitter, check_random_state
 
 # from tqdm.contrib.concurrent import process_map
 
@@ -97,6 +97,7 @@ def get_one_ensemble_quadtree(
     save_gridding_plot: bool = True,
     ax=None,
     plot_empty: bool = False,
+    rng=None
 ):
     """Generate QuadTree gridding based on the input dataframe
 
@@ -147,6 +148,8 @@ def get_one_ensemble_quadtree(
             Matplotlib Axes to add to.
         plot_empty:
             Whether to plot the empty grid
+        rng:
+            random number generator.
 
     Returns:
         A tuple of <br>
@@ -154,10 +157,10 @@ def get_one_ensemble_quadtree(
             2. grid plot. np.nan if save_gridding_plot=False<br>
 
     """
-
+    rng = check_random_state(rng)
     rotation_angle = (90 / size) * ensemble_count
-    calibration_point_x_jitter = np.random.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
-    calibration_point_y_jitter = np.random.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
+    calibration_point_x_jitter = rng.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
+    calibration_point_y_jitter = rng.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
 
     # print(f'ensemble_count: {ensemble_count}')
     temporal_bins = generate_temporal_bins(
