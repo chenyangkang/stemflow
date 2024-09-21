@@ -16,7 +16,7 @@ from tqdm import tqdm
 
 from ..gridding.QTree import QTree
 from ..gridding.QuadGrid import QuadGrid
-from .validation import check_transform_spatio_bin_jitter_magnitude, check_transform_temporal_bin_start_jitter
+from .validation import check_transform_spatio_bin_jitter_magnitude, check_transform_temporal_bin_start_jitter, check_random_state
 
 # from tqdm.contrib.concurrent import process_map
 
@@ -34,6 +34,7 @@ def generate_temporal_bins(
     step: Union[float, int],
     bin_interval: Union[float, int],
     temporal_bin_start_jitter: Union[float, int, str] = "adaptive",
+    rng: np.random._generator.Generator = None,
 ) -> list:
     """Generate random temporal bins that splits the data
 
@@ -55,10 +56,11 @@ def generate_temporal_bins(
         A list of tuple. Start and end of each temporal bin.
 
     """
+    rng = check_random_state(rng)
     bin_interval = bin_interval  # 50
     step = step  # 20
 
-    jit = check_transform_temporal_bin_start_jitter(temporal_bin_start_jitter, bin_interval)
+    jit = check_transform_temporal_bin_start_jitter(temporal_bin_start_jitter, bin_interval, rng)
 
     start = start - jit
     bin_list = []
@@ -97,6 +99,7 @@ def get_one_ensemble_quadtree(
     save_gridding_plot: bool = True,
     ax=None,
     plot_empty: bool = False,
+    rng: np.random._generator.Generator = None
 ):
     """Generate QuadTree gridding based on the input dataframe
 
@@ -147,6 +150,8 @@ def get_one_ensemble_quadtree(
             Matplotlib Axes to add to.
         plot_empty:
             Whether to plot the empty grid
+        rng:
+            random number generator.
 
     Returns:
         A tuple of <br>
@@ -154,10 +159,10 @@ def get_one_ensemble_quadtree(
             2. grid plot. np.nan if save_gridding_plot=False<br>
 
     """
-
+    rng = check_random_state(rng)
     rotation_angle = (90 / size) * ensemble_count
-    calibration_point_x_jitter = np.random.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
-    calibration_point_y_jitter = np.random.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
+    calibration_point_x_jitter = rng.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
+    calibration_point_y_jitter = rng.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
 
     # print(f'ensemble_count: {ensemble_count}')
     temporal_bins = generate_temporal_bins(
@@ -166,6 +171,7 @@ def get_one_ensemble_quadtree(
         step=temporal_step,
         bin_interval=temporal_bin_interval,
         temporal_bin_start_jitter=temporal_bin_start_jitter,
+        rng=rng
     )
 
     ensemble_all_df_list = []
