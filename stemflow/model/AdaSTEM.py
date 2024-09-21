@@ -296,34 +296,36 @@ class AdaSTEM(BaseEstimator):
         # fold = self.ensemble_fold
         save_path = os.path.join(self.save_dir, "ensemble_quadtree_df.csv") if self.save_tmp else ""
 
+        # Determine grid_len based on conditions
         if "grid_len" not in self.__dir__():
             # We are using AdaSTEM
             self.grid_len = None
-            check_spatial_scale(
-                X_train[self.Spatio1].min(),
-                X_train[self.Spatio1].max(),
-                X_train[self.Spatio2].min(),
-                X_train[self.Spatio2].max(),
-                self.grid_len_upper_threshold,
-                self.grid_len_lower_threshold,
-            )
-            check_temporal_scale(
-                X_train[self.Temporal1].min(), X_train[self.Temporal1].min(), self.temporal_bin_interval
-            )
+            grid_len_upper = self.grid_len_upper_threshold
+            grid_len_lower = self.grid_len_lower_threshold
+        elif self.grid_len is None:
+            # AdaSTEM with predefined thresholds
+            grid_len_upper = self.grid_len_upper_threshold
+            grid_len_lower = self.grid_len_lower_threshold
         else:
             # We are using STEM
-            check_spatial_scale(
-                X_train[self.Spatio1].min(),
-                X_train[self.Spatio1].max(),
-                X_train[self.Spatio2].min(),
-                X_train[self.Spatio2].max(),
-                self.grid_len,
-                self.grid_len,
-            )
-            check_temporal_scale(
-                X_train[self.Temporal1].min(), X_train[self.Temporal1].min(), self.temporal_bin_interval
-            )
-            pass
+            grid_len_upper = self.grid_len
+            grid_len_lower = self.grid_len
+
+        # Call spatial and temporal scale checks
+        check_spatial_scale(
+            X_train[self.Spatio1].min(),
+            X_train[self.Spatio1].max(),
+            X_train[self.Spatio2].min(),
+            X_train[self.Spatio2].max(),
+            grid_len_upper,
+            grid_len_lower,
+        )
+
+        check_temporal_scale(
+            X_train[self.Temporal1].min(),
+            X_train[self.Temporal1].min(),
+            self.temporal_bin_interval
+        )
 
         spatio_bin_jitter_magnitude = check_transform_spatio_bin_jitter_magnitude(
             X_train, self.Spatio1, self.Spatio2, self.spatio_bin_jitter_magnitude
