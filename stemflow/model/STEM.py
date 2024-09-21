@@ -33,6 +33,7 @@ class STEM(AdaSTEM):
         temporal_bin_interval: Union[float, int] = 50,
         temporal_bin_start_jitter: Union[float, int, str] = "adaptive",
         spatio_bin_jitter_magnitude: Union[float, int] = "adaptive",
+        random_state=None,
         save_gridding_plot: bool = True,
         save_tmp: bool = False,
         save_dir: str = "./",
@@ -85,6 +86,8 @@ class STEM(AdaSTEM):
                 for the start. Defaults to 'adaptive'.
             spatio_bin_jitter_magnitude:
                 jitter of the spatial gridding. Defaults to 'adaptive.
+            random_state:
+                None or int. After setting the same seed, the model will generate the same results each time. For reproducibility.
             save_gridding_plot:
                 Whether ot save gridding plots. Defaults to True.
             save_tmp:
@@ -160,6 +163,7 @@ class STEM(AdaSTEM):
             temporal_bin_interval,
             temporal_bin_start_jitter,
             spatio_bin_jitter_magnitude,
+            random_state,
             save_gridding_plot,
             save_tmp,
             save_dir,
@@ -225,6 +229,7 @@ class STEMClassifier(AdaSTEMClassifier):
         temporal_bin_interval=50,
         temporal_bin_start_jitter="adaptive",
         spatio_bin_jitter_magnitude="adaptive",
+        random_state=None,
         save_gridding_plot=False,
         save_tmp=False,
         save_dir="./",
@@ -257,6 +262,7 @@ class STEMClassifier(AdaSTEMClassifier):
             temporal_bin_interval,
             temporal_bin_start_jitter,
             spatio_bin_jitter_magnitude,
+            random_state,
             save_gridding_plot,
             save_tmp,
             save_dir,
@@ -322,6 +328,7 @@ class STEMRegressor(AdaSTEMRegressor):
         temporal_bin_interval=50,
         temporal_bin_start_jitter="adaptive",
         spatio_bin_jitter_magnitude="adaptive",
+        random_state=None,
         save_gridding_plot=False,
         save_tmp=False,
         save_dir="./",
@@ -354,6 +361,7 @@ class STEMRegressor(AdaSTEMRegressor):
             temporal_bin_interval,
             temporal_bin_start_jitter,
             spatio_bin_jitter_magnitude,
+            random_state,
             save_gridding_plot,
             save_tmp,
             save_dir,
