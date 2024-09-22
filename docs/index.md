@@ -144,7 +144,7 @@ model = AdaSTEMRegressor(
         regressor=XGBRegressor(tree_method='hist',random_state=42, verbosity = 0, n_jobs=1)
     ),                                      # hurdel model for zero-inflated problem (e.g., count)
     save_gridding_plot = True,
-    ensemble_fold=10,                       # data are modeled 10 times, each time with jitter and rotation in Quadtree algo
+    ensemble_fold=50,                       # data are modeled 50 times, each time with jitter and rotation in Quadtree algo
     min_ensemble_required=7,                # Only points covered by > 7 ensembles will be predicted
     grid_len_upper_threshold=25,            # force splitting if the grid length exceeds 25
     grid_len_lower_threshold=5,             # stop splitting if the grid length fall short 5         
