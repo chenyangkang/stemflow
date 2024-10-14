@@ -252,7 +252,7 @@ class AdaSTEM(BaseEstimator):
         self.subset_x_names = subset_x_names
         self.sample_weights_for_classifier = sample_weights_for_classifier
 
-        # 6. Multi-threading params (not implemented yet)
+        # 6. Multi-processing params
         njobs = check_transform_njobs(self, njobs)
         self.njobs = njobs
 
