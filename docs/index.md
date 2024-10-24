@@ -8,10 +8,10 @@
 </p>
 
 ![GitHub](https://img.shields.io/github/license/chenyangkang/stemflow)
-![Anaconda version](https://anaconda.org/conda-forge/stemflow/badges/version.svg)
 ![PyPI version](https://img.shields.io/pypi/v/stemflow)
-[![Downloads](https://static.pepy.tech/badge/stemflow)](https://pepy.tech/project/stemflow)
-[![Downloads](https://static.pepy.tech/badge/stemflow/month)](https://pepy.tech/project/stemflow)
+![PyPI downloads](https://img.shields.io/pypi/dm/stemflow)
+![Anaconda version](https://anaconda.org/conda-forge/stemflow/badges/version.svg)
+![Anaconda downloads](https://anaconda.org/conda-forge/stemflow/badges/downloads.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/chenyangkang/stemflow)
 [![codecov](https://codecov.io/gh/chenyangkang/stemflow/graph/badge.svg?token=RURPF6NKIJ)](https://codecov.io/gh/chenyangkang/stemflow)
 [![status](https://joss.theoj.org/papers/50a385b3283faf346fc16484f50f6add/status.svg)](https://joss.theoj.org/papers/50a385b3283faf346fc16484f50f6add)
