@@ -99,7 +99,8 @@ def get_one_ensemble_quadtree(
     save_gridding_plot: bool = True,
     ax=None,
     plot_empty: bool = False,
-    rng: np.random._generator.Generator = None
+    rng: np.random._generator.Generator = None,
+    completely_random_rotation = False
 ):
     """Generate QuadTree gridding based on the input dataframe
 
@@ -160,7 +161,12 @@ def get_one_ensemble_quadtree(
 
     """
     rng = check_random_state(rng)
-    rotation_angle = (90 / size) * ensemble_count
+    
+    if completely_random_rotation:
+        rotation_angle = rng.uniform(0, 90)
+    else:
+        rotation_angle = (90 / size) * ensemble_count
+        
     calibration_point_x_jitter = rng.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
     calibration_point_y_jitter = rng.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
 

@@ -105,6 +105,7 @@ class AdaSTEM(BaseEstimator):
         plot_ylims: Tuple[Union[float, int], Union[float, int]] = None,
         verbosity: int = 0,
         plot_empty: bool = False,
+        completely_random_rotation: bool = False
     ):
         """Make an AdaSTEM object
 
@@ -178,6 +179,8 @@ class AdaSTEM(BaseEstimator):
                 0 to output nothing and everything otherwise.
             plot_empty:
                 Whether to plot the empty grid
+            completely_random_rotation:
+                If True, the rotation angle will be generated completely randomly, as in paper https://doi.org/10.1002/eap.2056. If False, the ensembles will split the 90 degree with equal angle intervals. e.g., if ensemble_fold=9, then each ensemble will rotate 10 degree futher than the previous ensemble. Defalt to False, because if ensemble fold is small, it will be more robust to equally devide the data; and if ensemble fold is large, they are effectively similar than complete random.
 
         Raises:
             AttributeError: Base model do not have method 'fit' or 'predict'
@@ -237,6 +240,7 @@ class AdaSTEM(BaseEstimator):
         self.temporal_end = temporal_end
         self.temporal_step = temporal_step
         self.temporal_bin_interval = temporal_bin_interval
+        self.completely_random_rotation = completely_random_rotation
 
         check_spatio_bin_jitter_magnitude(spatio_bin_jitter_magnitude)
         self.spatio_bin_jitter_magnitude = spatio_bin_jitter_magnitude
@@ -368,6 +372,7 @@ class AdaSTEM(BaseEstimator):
             Spatio2=self.Spatio2,
             save_gridding_plot=self.save_gridding_plot,
             ax=ax,
+            completely_random_rotation=self.completely_random_rotation
         )
 
         if njobs > 1 and isinstance(njobs, int):
@@ -394,6 +399,7 @@ class AdaSTEM(BaseEstimator):
 
         # concat
         ensemble_df = pd.concat(ensemble_all_df_list).reset_index(drop=True)
+        
         del ensemble_all_df_list
 
         # processing
