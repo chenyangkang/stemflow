@@ -22,6 +22,7 @@ from ..utils.sphere_quadtree import get_one_ensemble_sphere_quadtree
 from ..utils.validation import (
     check_base_model,
     check_prediciton_aggregation,
+    check_random_state,
     check_spatial_scale,
     check_spatio_bin_jitter_magnitude,
     check_task,
@@ -29,7 +30,6 @@ from ..utils.validation import (
     check_temporal_scale,
     check_transform_njobs,
     check_verbosity,
-    check_random_state
 )
 from ..utils.wrapper import model_wrapper
 from .AdaSTEM import AdaSTEM, AdaSTEMClassifier, AdaSTEMRegressor
@@ -70,7 +70,7 @@ class SphereAdaSTEM(AdaSTEM):
         temporal_bin_interval: Union[float, int] = 50,
         temporal_bin_start_jitter: Union[float, int, str] = "adaptive",
         spatio_bin_jitter_magnitude: Union[float, int] = "adaptive",
-        random_state = None,
+        random_state=None,
         save_gridding_plot: bool = True,
         save_tmp: bool = False,
         save_dir: str = "./",
@@ -305,7 +305,8 @@ class SphereAdaSTEM(AdaSTEM):
             output_generator = parallel(
                 joblib.delayed(partial_get_one_ensemble_sphere_quadtree)(
                     ensemble_count=ensemble_count, rng=np.random.default_rng(self.rng.integers(1e9) + ensemble_count)
-                    ) for ensemble_count in list(range(self.ensemble_fold))
+                )
+                for ensemble_count in list(range(self.ensemble_fold))
             )
             if verbosity > 0:
                 output_generator = tqdm(output_generator, total=self.ensemble_fold, desc="Generating Ensemble: ")
@@ -321,7 +322,8 @@ class SphereAdaSTEM(AdaSTEM):
             ensemble_all_df_list = [
                 partial_get_one_ensemble_sphere_quadtree(
                     ensemble_count=ensemble_count, rng=np.random.default_rng(self.rng.integers(1e9) + ensemble_count)
-                    ) for ensemble_count in iter_func_
+                )
+                for ensemble_count in iter_func_
             ]
 
         ensemble_df = pd.concat(ensemble_all_df_list).reset_index(drop=True)

@@ -195,7 +195,7 @@ def ST_CV(
         yield X_train, X_test, y_train, y_test
 
 
-class ST_KFold():
+class ST_KFold:
     def __init__(
         self,
         Spatio1: str = "longitude",
@@ -238,14 +238,14 @@ class ST_KFold():
                     Spatio_blocks_count = 10,
                     Temporal_blocks_count = 10,
                     random_state = 42).split(X)
-            
+
             for train_indexes, test_indexes in ST_KFold_generator:
                 X_train = X.iloc[train_indexes,:]
                 X_test = X.iloc[test_indexes,:]
                 ...
-                
+
             ```
-        
+
         """
         self.rng = check_random_state(random_state)
         self.Spatio1 = Spatio1
@@ -254,10 +254,10 @@ class ST_KFold():
         self.Spatio_blocks_count = Spatio_blocks_count
         self.Temporal_blocks_count = Temporal_blocks_count
         self.n_splits = n_splits
-        
+
         if not (isinstance(n_splits, int) and n_splits > 0):
             raise ValueError("CV should be a positive integer")
-    
+
     def split(self, X: DataFrame) -> Generator[Tuple[ndarray, ndarray], None, None]:
         """split
 
@@ -281,7 +281,9 @@ class ST_KFold():
         indexes = [
             str(a) + "_" + str(b) + "_" + str(c)
             for a, b, c in zip(
-                np.digitize(X[self.Spatio1], Sindex1), np.digitize(X[self.Spatio2], Sindex2), np.digitize(X[self.Temporal1], Tindex1)
+                np.digitize(X[self.Spatio1], Sindex1),
+                np.digitize(X[self.Spatio2], Sindex2),
+                np.digitize(X[self.Temporal1], Tindex1),
             )
         ]
 

@@ -4,9 +4,7 @@ import pandas as pd
 from stemflow.model.AdaSTEM import AdaSTEM
 from stemflow.model_selection import ST_train_test_split
 
-from .make_models import (
-    make_AdaSTEMRegressor,
-)
+from .make_models import make_AdaSTEMRegressor
 from .set_up_data import set_up_data
 
 x_names, (X, y) = set_up_data()

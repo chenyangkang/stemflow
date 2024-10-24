@@ -1,4 +1,4 @@
-from stemflow.model_selection import ST_CV, ST_train_test_split, ST_KFold
+from stemflow.model_selection import ST_CV, ST_KFold, ST_train_test_split
 
 from .set_up_data import set_up_data
 

@@ -88,7 +88,7 @@ class AdaSTEM(BaseEstimator):
         temporal_bin_interval: Union[float, int] = 50,
         temporal_bin_start_jitter: Union[float, int, str] = "adaptive",
         spatio_bin_jitter_magnitude: Union[float, int] = "adaptive",
-        random_state = None,
+        random_state=None,
         save_gridding_plot: bool = True,
         save_tmp: bool = False,
         save_dir: str = "./",
@@ -105,7 +105,7 @@ class AdaSTEM(BaseEstimator):
         plot_ylims: Tuple[Union[float, int], Union[float, int]] = None,
         verbosity: int = 0,
         plot_empty: bool = False,
-        completely_random_rotation: bool = False
+        completely_random_rotation: bool = False,
     ):
         """Make an AdaSTEM object
 
@@ -210,7 +210,7 @@ class AdaSTEM(BaseEstimator):
         # 1. Check random state
         self.random_state = random_state
         self.rng = check_random_state(random_state)
-        
+
         # 2. Base model
         check_base_model(base_model)
         base_model = model_wrapper(base_model)
@@ -279,9 +279,7 @@ class AdaSTEM(BaseEstimator):
         else:
             self.verbosity = 0
 
-    def split(
-        self, X_train: pd.core.frame.DataFrame, verbosity: Union[None, int] = None, ax=None, njobs: int = 1
-    ):
+    def split(self, X_train: pd.core.frame.DataFrame, verbosity: Union[None, int] = None, ax=None, njobs: int = 1):
         """QuadTree indexing the input data
 
         Args:
@@ -326,11 +324,7 @@ class AdaSTEM(BaseEstimator):
             grid_len_lower,
         )
 
-        check_temporal_scale(
-            X_train[self.Temporal1].min(),
-            X_train[self.Temporal1].min(),
-            self.temporal_bin_interval
-        )
+        check_temporal_scale(X_train[self.Temporal1].min(), X_train[self.Temporal1].min(), self.temporal_bin_interval)
 
         spatio_bin_jitter_magnitude = check_transform_spatio_bin_jitter_magnitude(
             X_train, self.Spatio1, self.Spatio2, self.spatio_bin_jitter_magnitude
@@ -372,7 +366,7 @@ class AdaSTEM(BaseEstimator):
             Spatio2=self.Spatio2,
             save_gridding_plot=self.save_gridding_plot,
             ax=ax,
-            completely_random_rotation=self.completely_random_rotation
+            completely_random_rotation=self.completely_random_rotation,
         )
 
         if njobs > 1 and isinstance(njobs, int):
@@ -380,7 +374,8 @@ class AdaSTEM(BaseEstimator):
             output_generator = parallel(
                 joblib.delayed(partial_get_one_ensemble_quadtree)(
                     ensemble_count=ensemble_count, rng=np.random.default_rng(self.rng.integers(1e9) + ensemble_count)
-                    ) for ensemble_count in list(range(self.ensemble_fold))
+                )
+                for ensemble_count in list(range(self.ensemble_fold))
             )
             if verbosity > 0:
                 output_generator = tqdm(output_generator, total=self.ensemble_fold, desc="Generating Ensemble: ")
@@ -393,13 +388,16 @@ class AdaSTEM(BaseEstimator):
                 if verbosity > 0
                 else range(self.ensemble_fold)
             )
-            ensemble_all_df_list = [partial_get_one_ensemble_quadtree(
-                ensemble_count=ensemble_count, rng=np.random.default_rng(self.rng.integers(1e9) + ensemble_count)
-                ) for ensemble_count in iter_func_]
+            ensemble_all_df_list = [
+                partial_get_one_ensemble_quadtree(
+                    ensemble_count=ensemble_count, rng=np.random.default_rng(self.rng.integers(1e9) + ensemble_count)
+                )
+                for ensemble_count in iter_func_
+            ]
 
         # concat
         ensemble_df = pd.concat(ensemble_all_df_list).reset_index(drop=True)
-        
+
         del ensemble_all_df_list
 
         # processing
