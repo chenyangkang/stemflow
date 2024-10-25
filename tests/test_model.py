@@ -26,7 +26,7 @@ def test_STEMClassifier():
     model = make_STEMClassifier()
     model = model.fit(X_train, np.where(y_train > 0, 1, 0))
 
-    pred_mean, pred_std = model.predict(X_test.reset_index(drop=True), return_std=True, verbosity=1, njobs=1)
+    pred_mean, pred_std = model.predict(X_test.reset_index(drop=True), return_std=True, verbosity=1, n_jobs=1)
     assert np.sum(~np.isnan(pred_mean)) > 0
     assert np.sum(~np.isnan(pred_std)) > 0
 
@@ -47,7 +47,7 @@ def test_STEMClassifier():
     model.calculate_feature_importances()
     assert model.feature_importances_.shape[0] > 0
 
-    importances_by_points = model.assign_feature_importances_by_points(verbosity=0, njobs=1)
+    importances_by_points = model.assign_feature_importances_by_points(verbosity=0, n_jobs=1)
     assert importances_by_points.shape[0] > 0
     assert importances_by_points.shape[1] == len(x_names) + 3
 
@@ -86,7 +86,7 @@ def test_STEMRegressor():
     model = make_STEMRegressor()
     model = model.fit(X_train, np.where(y_train > 0, 1, 0))
 
-    pred_mean, pred_std = model.predict(X_test.reset_index(drop=True), return_std=True, verbosity=1, njobs=1)
+    pred_mean, pred_std = model.predict(X_test.reset_index(drop=True), return_std=True, verbosity=1, n_jobs=1)
     assert np.sum(~np.isnan(pred_mean)) > 0
     assert np.sum(~np.isnan(pred_std)) > 0
 
@@ -107,7 +107,7 @@ def test_STEMRegressor():
     model.calculate_feature_importances()
     assert model.feature_importances_.shape[0] > 0
 
-    importances_by_points = model.assign_feature_importances_by_points(verbosity=0, njobs=1)
+    importances_by_points = model.assign_feature_importances_by_points(verbosity=0, n_jobs=1)
     assert importances_by_points.shape[0] > 0
     assert importances_by_points.shape[1] == len(x_names) + 3
 
@@ -116,7 +116,7 @@ def test_AdaSTEMClassifier():
     model = make_AdaSTEMClassifier()
     model = model.fit(X_train, np.where(y_train > 0, 1, 0))
 
-    pred_mean, pred_std = model.predict(X_test.reset_index(drop=True), return_std=True, verbosity=1, njobs=1)
+    pred_mean, pred_std = model.predict(X_test.reset_index(drop=True), return_std=True, verbosity=1, n_jobs=1)
     assert np.sum(~np.isnan(pred_mean)) > 0
     assert np.sum(~np.isnan(pred_std)) > 0
 
@@ -137,7 +137,7 @@ def test_AdaSTEMClassifier():
     model.calculate_feature_importances()
     assert model.feature_importances_.shape[0] > 0
 
-    importances_by_points = model.assign_feature_importances_by_points(verbosity=0, njobs=1)
+    importances_by_points = model.assign_feature_importances_by_points(verbosity=0, n_jobs=1)
     assert importances_by_points.shape[0] > 0
     assert importances_by_points.shape[1] == len(x_names) + 3
 
@@ -146,7 +146,7 @@ def test_AdaSTEMRegressor():
     model = make_AdaSTEMRegressor()
     model = model.fit(X_train, np.where(y_train > 0, 1, 0))
 
-    pred_mean, pred_std = model.predict(X_test.reset_index(drop=True), return_std=True, verbosity=1, njobs=1)
+    pred_mean, pred_std = model.predict(X_test.reset_index(drop=True), return_std=True, verbosity=1, n_jobs=1)
     assert np.sum(~np.isnan(pred_mean)) > 0
     assert np.sum(~np.isnan(pred_std)) > 0
 
@@ -167,7 +167,7 @@ def test_AdaSTEMRegressor():
     model.calculate_feature_importances()
     assert model.feature_importances_.shape[0] > 0
 
-    importances_by_points = model.assign_feature_importances_by_points(verbosity=0, njobs=1)
+    importances_by_points = model.assign_feature_importances_by_points(verbosity=0, n_jobs=1)
     assert importances_by_points.shape[0] > 0
     assert importances_by_points.shape[1] == len(x_names) + 3
 
@@ -176,7 +176,7 @@ def test_SphereAdaClassifier():
     model = make_SphereAdaClassifier()
     model = model.fit(X_train, np.where(y_train > 0, 1, 0))
 
-    pred_mean, pred_std = model.predict(X_test.reset_index(drop=True), return_std=True, verbosity=1, njobs=1)
+    pred_mean, pred_std = model.predict(X_test.reset_index(drop=True), return_std=True, verbosity=1, n_jobs=1)
     assert np.sum(~np.isnan(pred_mean)) > 0
     assert np.sum(~np.isnan(pred_std)) > 0
 
@@ -197,7 +197,7 @@ def test_SphereAdaClassifier():
     model.calculate_feature_importances()
     assert model.feature_importances_.shape[0] > 0
 
-    importances_by_points = model.assign_feature_importances_by_points(verbosity=0, njobs=1)
+    importances_by_points = model.assign_feature_importances_by_points(verbosity=0, n_jobs=1)
     assert importances_by_points.shape[0] > 0
     assert importances_by_points.shape[1] == len(x_names) + 3
 
@@ -236,7 +236,7 @@ def test_SphereAdaSTEMRegressor():
     model = make_SphereAdaSTEMRegressor()
     model = model.fit(X_train, np.where(y_train > 0, 1, 0))
 
-    pred_mean, pred_std = model.predict(X_test.reset_index(drop=True), return_std=True, verbosity=1, njobs=1)
+    pred_mean, pred_std = model.predict(X_test.reset_index(drop=True), return_std=True, verbosity=1, n_jobs=1)
     assert np.sum(~np.isnan(pred_mean)) > 0
     assert np.sum(~np.isnan(pred_std)) > 0
 
@@ -257,6 +257,6 @@ def test_SphereAdaSTEMRegressor():
     model.calculate_feature_importances()
     assert model.feature_importances_.shape[0] > 0
 
-    importances_by_points = model.assign_feature_importances_by_points(verbosity=0, njobs=1)
+    importances_by_points = model.assign_feature_importances_by_points(verbosity=0, n_jobs=1)
     assert importances_by_points.shape[0] > 0
     assert importances_by_points.shape[1] == len(x_names) + 3
