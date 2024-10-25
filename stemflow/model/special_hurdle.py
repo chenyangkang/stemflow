@@ -49,7 +49,7 @@ class LightGBM_Hurdle(BaseEstimator):
                     Spatio2 = 'latitude',
                     Temporal1 = 'DOY',
                     use_temporal_to_train=True,
-                    njobs=1
+                    n_jobs=1
                 )
 
             >>> # fit adastem
@@ -189,7 +189,7 @@ class XGBoost_Hurdle(BaseEstimator):
                     Spatio2 = 'latitude',
                     Temporal1 = 'DOY',
                     use_temporal_to_train=True,
-                    njobs=1
+                    n_jobs=1
                 )
 
             >>> # fit adastem
