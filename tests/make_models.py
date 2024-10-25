@@ -41,7 +41,7 @@ def make_STEMClassifier(fold_=2, min_req=1):
         temporal_bin_start_jitter="adaptive",
         spatio_bin_jitter_magnitude="adaptive",
         use_temporal_to_train=True,
-        n_job=1,
+        n_jobs=1,
     )
 
     return model
@@ -67,7 +67,7 @@ def make_parallel_STEMClassifier(
         temporal_bin_start_jitter="adaptive",
         spatio_bin_jitter_magnitude="adaptive",
         use_temporal_to_train=True,
-        n_job=2,
+        n_jobs=2,
     )
 
     return model
@@ -94,7 +94,7 @@ def make_STEMRegressor(fold_=2, min_req=1):
         temporal_bin_start_jitter="adaptive",
         spatio_bin_jitter_magnitude="adaptive",
         use_temporal_to_train=True,
-        n_job=1,
+        n_jobs=1,
     )
 
     return model
@@ -119,7 +119,7 @@ def make_AdaSTEMClassifier(fold_=2, min_req=1):
         temporal_bin_start_jitter="adaptive",
         spatio_bin_jitter_magnitude="adaptive",
         use_temporal_to_train=True,
-        n_job=1,
+        n_jobs=1,
     )
     return model
 
@@ -146,7 +146,7 @@ def make_AdaSTEMRegressor(fold_=2, min_req=1):
         temporal_bin_start_jitter="adaptive",
         spatio_bin_jitter_magnitude="adaptive",
         use_temporal_to_train=True,
-        n_job=1,
+        n_jobs=1,
     )
     return model
 
@@ -175,7 +175,7 @@ def make_SphereAdaSTEMRegressor(
         temporal_bin_start_jitter="adaptive",
         spatio_bin_jitter_magnitude="adaptive",
         use_temporal_to_train=True,
-        n_job=1,
+        n_jobs=1,
     )
     return model
 
@@ -199,7 +199,7 @@ def make_SphereAdaClassifier(fold_=2, min_req=1):
         temporal_bin_start_jitter="adaptive",
         spatio_bin_jitter_magnitude="adaptive",
         use_temporal_to_train=True,
-        n_job=1,
+        n_jobs=1,
     )
     return model
 
@@ -225,6 +225,6 @@ def make_parallel_SphereAdaClassifier(
         temporal_bin_start_jitter="adaptive",
         spatio_bin_jitter_magnitude="adaptive",
         use_temporal_to_train=True,
-        n_job=2,
+        n_jobs=2,
     )
     return model
