@@ -211,6 +211,8 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
                 np.array(X_train[X_train["y_train"] > 0].iloc[:, -1]),
                 verbosity=1,
             )
+        
+        return self
 
     def predict(
         self,

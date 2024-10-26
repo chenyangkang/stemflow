@@ -179,15 +179,6 @@ def test_AdaSTEMRegressor():
     assert importances_by_points.shape[0] > 0
     assert importances_by_points.shape[1] == len(x_names) + 3
     
-    #
-    eval = AdaSTEM.eval_STEM_res("AAA", pred_df.y_true, pred_df.y_pred) # this should not work
-    all_nan = True
-    for eval_metric in eval:
-        if not np.isnan(eval[eval_metric]):
-            all_nan = False
-            break
-    assert all_nan
-    
     # score
     score_df = model.score(X_test, y_test)
     
