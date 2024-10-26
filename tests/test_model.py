@@ -13,6 +13,7 @@ from .make_models import (
     make_SphereAdaSTEMRegressor,
     make_STEMClassifier,
     make_STEMRegressor,
+    make_AdaSTEMRegressor_Hurdle_for_AdaSTEM
 )
 from .set_up_data import set_up_data
 
@@ -260,3 +261,28 @@ def test_SphereAdaSTEMRegressor():
     importances_by_points = model.assign_feature_importances_by_points(verbosity=0, n_jobs=1)
     assert importances_by_points.shape[0] > 0
     assert importances_by_points.shape[1] == len(x_names) + 3
+
+def test_AdaSTEMRegressor():
+    model = make_AdaSTEMRegressor_Hurdle_for_AdaSTEM()
+    model = model.fit(X_train, np.where(y_train > 0, 1, 0))
+
+    pred_mean, pred_std = model.predict(X_test.reset_index(drop=True), return_std=True, verbosity=1, n_jobs=1)
+    assert np.sum(~np.isnan(pred_mean)) > 0
+    assert np.sum(~np.isnan(pred_std)) > 0
+
+    pred = model.predict(X_test)
+    assert len(pred) == len(X_test)
+    assert np.sum(np.isnan(pred)) / len(pred) <= 0.3
+
+    pred_df = pd.DataFrame(
+        {"y_true": y_test.flatten(), "y_pred": np.where(pred.flatten() < 0, 0, pred.flatten())}
+    ).dropna()
+    assert len(pred_df) > 0
+
+    eval = AdaSTEM.eval_STEM_res("hurdle", pred_df.y_true, pred_df.y_pred)
+    assert eval["AUC"] >= 0.5
+    assert eval["kappa"] >= 0.1
+    assert eval["Spearman_r"] >= 0.1
+
+
+

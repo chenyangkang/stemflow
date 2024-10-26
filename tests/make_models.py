@@ -236,3 +236,55 @@ def make_parallel_SphereAdaClassifier(
         **kwargs
     )
     return model
+
+def make_AdaSTEMRegressor_Hurdle_for_AdaSTEM(fold_=2, min_req=1, **kwargs):
+    
+    classifier = AdaSTEMClassifier(
+        base_model=XGBClassifier(tree_method="hist", random_state=42, verbosity=0, n_jobs=1),
+        save_gridding_plot=True,
+        ensemble_fold=fold_,
+        min_ensemble_required=min_req,
+        grid_len_upper_threshold=50,
+        grid_len_lower_threshold=20,
+        temporal_start=1,
+        temporal_end=366,
+        temporal_step=40,
+        temporal_bin_interval=80,
+        points_lower_threshold=30,
+        Spatio1="longitude",
+        Spatio2="latitude",
+        Temporal1="DOY",
+        temporal_bin_start_jitter="adaptive",
+        spatio_bin_jitter_magnitude="adaptive",
+        use_temporal_to_train=True,
+        n_jobs=1,
+        **kwargs
+    )
+    
+    regressor = AdaSTEMRegressor(
+        base_model=XGBRegressor(tree_method="hist", random_state=42, verbosity=0, n_jobs=1),
+        save_gridding_plot=True,
+        ensemble_fold=fold_,
+        min_ensemble_required=min_req,
+        grid_len_upper_threshold=50,
+        grid_len_lower_threshold=20,
+        temporal_start=1,
+        temporal_end=366,
+        temporal_step=40,
+        temporal_bin_interval=80,
+        points_lower_threshold=30,
+        Spatio1="longitude",
+        Spatio2="latitude",
+        Temporal1="DOY",
+        temporal_bin_start_jitter="adaptive",
+        spatio_bin_jitter_magnitude="adaptive",
+        use_temporal_to_train=True,
+        n_jobs=1,
+        **kwargs
+    )
+    
+    model = Hurdle_for_AdaSTEM(
+        classifier=classifier, regressor=regressor
+    )
+    
+    return model
