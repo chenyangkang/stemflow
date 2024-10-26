@@ -170,7 +170,7 @@ class LazyLoadingEnsembleDict(MutableMapping):
         if ((not force) and (ensemble_id not in self.ensemble_models)) or force:
             ensemble_path = os.path.join(self.directory, f"ensemble_{ensemble_id}_dict.pkl")
             if not os.path.exists(ensemble_path):
-                raise FileNotFoundError(f"Ensemble file for ID {ensemble_id} not found.")
+                raise FileNotFoundError(f"Ensemble file for ID {ensemble_id} not found at {ensemble_path}.")
             
             loaded_ensemble = joblib.load(ensemble_path)
             if ensemble_id in self.ensemble_models:
@@ -192,8 +192,9 @@ class LazyLoadingEnsembleDict(MutableMapping):
             for key in self.ensemble_models[ensemble_id]:
                 del self.key_to_ensemble[key]
             del self.ensemble_models[ensemble_id]
+        
         ensemble_path = os.path.join(self.directory, f"ensemble_{ensemble_id}_dict.pkl")
         if os.path.exists(ensemble_path):
             os.remove(ensemble_path)
         else:
-            raise ValueError(f'Ensemble {ensemble_id} does not exist.')
+            raise ValueError(f'Ensemble {ensemble_id} not found on disk.')

@@ -1054,39 +1054,43 @@ class AdaSTEM(BaseEstimator):
         """
         # generate feature importance dict
         feature_importance_list = []
-
-        for index, ensemble_row in self.ensemble_df[
-            self.ensemble_df["stixel_checklist_count"] >= self.stixel_training_size_threshold
-        ].iterrows():
-            if ensemble_row["stixel_checklist_count"] < self.stixel_training_size_threshold:
-                continue
-
-            try:
-                stixel_index = ensemble_row["unique_stixel_id"]
-                the_model = self.model_dict[f"{stixel_index}_model"]
-                x_names = self.stixel_specific_x_names[{stixel_index}]
-
-                if isinstance(the_model, dummy_model1):
-                    importance_dict = dict(zip(self.x_names, [1 / len(self.x_names)] * len(self.x_names)))
-                elif isinstance(the_model, Hurdle):
-                    if "feature_importances_" in the_model.__dir__():
-                        importance_dict = dict(zip(x_names, the_model.feature_importances_))
-                    else:
-                        if isinstance(the_model.classifier, dummy_model1):
-                            importance_dict = dict(zip(self.x_names, [1 / len(self.x_names)] * len(self.x_names)))
+        
+        for ensemble_id in self.ensemble_df['ensemble_index'].unique():
+            for index, ensemble_row in self.ensemble_df[self.ensemble_df['ensemble_index']==ensemble_id][
+                self.ensemble_df["stixel_checklist_count"] >= self.stixel_training_size_threshold
+            ].iterrows():
+                if ensemble_row["stixel_checklist_count"] < self.stixel_training_size_threshold:
+                    continue
+                
+                try:
+                    stixel_index = ensemble_row["unique_stixel_id"]
+                    the_model = self.model_dict[f"{stixel_index}_model"]
+                    x_names = self.stixel_specific_x_names[stixel_index]
+                    
+                    if isinstance(the_model, dummy_model1):
+                        importance_dict = dict(zip(self.x_names, [1 / len(self.x_names)] * len(self.x_names)))
+                    elif isinstance(the_model, Hurdle):
+                        if "feature_importances_" in the_model.__dir__():
+                            importance_dict = dict(zip(x_names, the_model.feature_importances_))
                         else:
-                            importance_dict = dict(zip(x_names, the_model.classifier.feature_importances_))
-                else:
-                    importance_dict = dict(zip(x_names, the_model.feature_importances_))
+                            if isinstance(the_model.classifier, dummy_model1):
+                                importance_dict = dict(zip(self.x_names, [1 / len(self.x_names)] * len(self.x_names)))
+                            else:
+                                importance_dict = dict(zip(x_names, the_model.classifier.feature_importances_))
+                    else:
+                        importance_dict = dict(zip(x_names, the_model.feature_importances_))
 
-                importance_dict["stixel_index"] = stixel_index
-                feature_importance_list.append(importance_dict)
+                    importance_dict["stixel_index"] = stixel_index
+                    feature_importance_list.append(importance_dict)
 
-            except Exception as e:
-                warnings.warn(f"{e}")
-                # print(e)
-                continue
-
+                except Exception as e:
+                    warnings.warn(f"{e}")
+                    # print(e)
+                    continue
+                
+            if self.lazy_loading:
+                self.model_dict.dump_ensemble(ensemble_id)
+        
         self.feature_importances_ = (
             pd.DataFrame(feature_importance_list).set_index("stixel_index").reset_index(drop=False).fillna(0)
         )
@@ -1161,7 +1165,7 @@ class AdaSTEM(BaseEstimator):
             for var_name in [self.Spatio1, self.Spatio2, self.Temporal1]:
                 if var_name not in Sample_ST_df.columns:
                     raise KeyError(f"{var_name} not found in Sample_ST_df.columns")
-
+                
         partial_assign_func = partial(
             assign_function,
             ensemble_df=self.ensemble_df,
@@ -1171,7 +1175,7 @@ class AdaSTEM(BaseEstimator):
             Spatio2=self.Spatio2,
             feature_importances_=self.feature_importances_,
         )
-
+    
         # assign input spatio-temporal points to stixels
         if n_jobs > 1:
             parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator")
