@@ -266,7 +266,7 @@ class AdaSTEM(BaseEstimator):
         self.lazy_loading_dir = lazy_loading_dir
         if self.lazy_loading:
             if self.lazy_loading_dir is None:
-                saving_code = self.rng.integers(1, 1e8)
+                saving_code = int(np.random.uniform(1, 1e8))
                 self.lazy_loading_dir = f'./tmp_{saving_code}'
 
         if not verbosity == 0:
