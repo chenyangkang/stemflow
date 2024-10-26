@@ -556,9 +556,9 @@ class AdaSTEM(BaseEstimator):
 
         # iterate through
         if self.lazy_loading:
-            model_dict = LazyLoadingEnsembleDict(self.lazy_loading_dir)
+            self.model_dict = LazyLoadingEnsembleDict(self.lazy_loading_dir)
         else:
-            model_dict = {}
+            self.model_dict = {}
             
         stixel_specific_x_names = {}
 
@@ -570,14 +570,13 @@ class AdaSTEM(BaseEstimator):
                     name = feature_tuple[0]
                     model = feature_tuple[1]
                     x_names = feature_tuple[2]
-                    model_dict[f"{name}_model"] = model
+                    self.model_dict[f"{name}_model"] = model
                     stixel_specific_x_names[name] = x_names
                     
             # dump here if lazy_loading_ensemble = True
             if self.lazy_loading:
-                model_dict.dump_ensemble(ensemble_id)
+                self.model_dict.dump_ensemble(ensemble_id)
 
-        self.model_dict = model_dict
         self.stixel_specific_x_names = stixel_specific_x_names
         return self
 
