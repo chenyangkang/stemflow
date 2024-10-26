@@ -46,10 +46,10 @@ class LazyLoadingEnsembleDict():
         Dump the model to disk and remove it from memory.
         """
         if str(ensemble_id) in self.ensemble_models:
-            if os.path.exists(f"{self.directory}/ensemble_{ensemble_id}_dict.pkl"):
+            if os.path.exists(os.path.join({self.directory}, f"ensemble_{ensemble_id}_dict.pkl")):
                 pass
             else:
-                joblib.dump(self.ensemble_models[str(ensemble_id)], f"{self.directory}/ensemble_{ensemble_id}_dict.pkl")
+                joblib.dump(self.ensemble_models[str(ensemble_id)], os.path.join({self.directory}, f"ensemble_{ensemble_id}_dict.pkl"))
             del self.ensemble_models[str(ensemble_id)]
         else:
             raise ValueError(f'Ensemble {str(ensemble_id)} not exist in the current dictionary')
@@ -66,4 +66,4 @@ class LazyLoadingEnsembleDict():
         Load the whole ensemble of models from disk into memory.
         """
         if str(ensemble_id) not in self.ensemble_models:
-            self.ensemble_models[str(ensemble_id)] = joblib.load(f"{self.directory}/ensemble_{ensemble_id}_dict.pkl")
+            self.ensemble_models[str(ensemble_id)] = joblib.load(os.path.join({self.directory}, f"ensemble_{ensemble_id}_dict.pkl"))

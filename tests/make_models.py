@@ -23,7 +23,7 @@ fold_ = 2
 min_req = 1
 
 
-def make_STEMClassifier(fold_=2, min_req=1):
+def make_STEMClassifier(fold_=2, min_req=1, **kwargs):
     model = STEMClassifier(
         base_model=XGBClassifier(tree_method="hist", random_state=42, verbosity=0, n_jobs=1),
         save_gridding_plot=True,
@@ -42,13 +42,14 @@ def make_STEMClassifier(fold_=2, min_req=1):
         spatio_bin_jitter_magnitude="adaptive",
         use_temporal_to_train=True,
         n_jobs=1,
+        **kwargs
     )
 
     return model
 
 
 def make_parallel_STEMClassifier(
-    fold_=2, min_req=1
+    fold_=2, min_req=1, **kwargs
 ):
     model = STEMClassifier(
         base_model=XGBClassifier(tree_method="hist", random_state=42, verbosity=0, n_jobs=1),
@@ -68,12 +69,13 @@ def make_parallel_STEMClassifier(
         spatio_bin_jitter_magnitude="adaptive",
         use_temporal_to_train=True,
         n_jobs=2,
+        **kwargs
     )
 
     return model
 
 
-def make_STEMRegressor(fold_=2, min_req=1):
+def make_STEMRegressor(fold_=2, min_req=1, **kwargs):
     model = STEMRegressor(
         base_model=Hurdle(
             classifier=XGBClassifier(tree_method="hist", random_state=42, verbosity=0, n_jobs=1),
@@ -94,13 +96,14 @@ def make_STEMRegressor(fold_=2, min_req=1):
         temporal_bin_start_jitter="adaptive",
         spatio_bin_jitter_magnitude="adaptive",
         use_temporal_to_train=True,
-        n_jobs=1,
+        n_jobs=1, 
+        **kwargs
     )
 
     return model
 
 
-def make_AdaSTEMClassifier(fold_=2, min_req=1):
+def make_AdaSTEMClassifier(fold_=2, min_req=1, **kwargs):
     model = AdaSTEMClassifier(
         base_model=XGBClassifier(tree_method="hist", random_state=42, verbosity=0, n_jobs=1),
         save_gridding_plot=True,
@@ -119,12 +122,13 @@ def make_AdaSTEMClassifier(fold_=2, min_req=1):
         temporal_bin_start_jitter="adaptive",
         spatio_bin_jitter_magnitude="adaptive",
         use_temporal_to_train=True,
-        n_jobs=1,
+        n_jobs=1, 
+        **kwargs
     )
     return model
 
 
-def make_AdaSTEMRegressor(fold_=2, min_req=1):
+def make_AdaSTEMRegressor(fold_=2, min_req=1, **kwargs):
     model = AdaSTEMRegressor(
         base_model=Hurdle(
             classifier=XGBClassifier(tree_method="hist", random_state=42, verbosity=0, n_jobs=1),
@@ -147,12 +151,13 @@ def make_AdaSTEMRegressor(fold_=2, min_req=1):
         spatio_bin_jitter_magnitude="adaptive",
         use_temporal_to_train=True,
         n_jobs=1,
+        **kwargs
     )
     return model
 
 
 def make_SphereAdaSTEMRegressor(
-    fold_=2, min_req=1
+    fold_=2, min_req=1, **kwargs
 ):
     model = SphereAdaSTEMRegressor(
         base_model=Hurdle(
@@ -176,11 +181,12 @@ def make_SphereAdaSTEMRegressor(
         spatio_bin_jitter_magnitude="adaptive",
         use_temporal_to_train=True,
         n_jobs=1,
+        **kwargs
     )
     return model
 
 
-def make_SphereAdaClassifier(fold_=2, min_req=1):
+def make_SphereAdaClassifier(fold_=2, min_req=1, **kwargs):
     model = SphereAdaSTEMClassifier(
         base_model=XGBClassifier(tree_method="hist", random_state=42, verbosity=0, n_jobs=1),
         save_gridding_plot=True,
@@ -200,12 +206,13 @@ def make_SphereAdaClassifier(fold_=2, min_req=1):
         spatio_bin_jitter_magnitude="adaptive",
         use_temporal_to_train=True,
         n_jobs=1,
+        **kwargs
     )
     return model
 
 
 def make_parallel_SphereAdaClassifier(
-    fold_=2, min_req=1
+    fold_=2, min_req=1, **kwargs
 ):
     model = SphereAdaSTEMClassifier(
         base_model=XGBClassifier(tree_method="hist", random_state=42, verbosity=0, n_jobs=1),
@@ -226,5 +233,6 @@ def make_parallel_SphereAdaClassifier(
         spatio_bin_jitter_magnitude="adaptive",
         use_temporal_to_train=True,
         n_jobs=2,
+        **kwargs
     )
     return model
