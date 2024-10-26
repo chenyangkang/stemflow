@@ -434,9 +434,8 @@ class AdaSTEM(BaseEstimator):
             For a single stixel.
         """
 
-        ensemble_index = int(stixel["ensemble_index"].iloc[0])
         unique_stixel_id = stixel["unique_stixel_id"].iloc[0]
-        name = f"{ensemble_index}_{unique_stixel_id}"
+        name = unique_stixel_id
 
         model, stixel_specific_x_names, status = train_one_stixel(
             stixel_training_size_threshold=self.stixel_training_size_threshold,
@@ -453,8 +452,6 @@ class AdaSTEM(BaseEstimator):
             pass
 
         else:
-            # self.model_dict[f"{name}_model"] = model
-            # self.stixel_specific_x_names[name] = stixel_specific_x_names
             return (name, model, stixel_specific_x_names)
 
     def SAC_ensemble_training(self, index_df: pd.core.frame.DataFrame, data: pd.core.frame.DataFrame):
@@ -633,12 +630,11 @@ class AdaSTEM(BaseEstimator):
         Returns:
             pd.core.frame.DataFrame: the prediction result of this stixel
         """
-        ensemble_index = stixel["ensemble_index"].iloc[0]
+
         unique_stixel_id = stixel["unique_stixel_id"].iloc[0]
 
         model_x_names_tuple = get_model_and_stixel_specific_x_names(
             self.model_dict,
-            ensemble_index,
             unique_stixel_id,
             self.stixel_specific_x_names,
             self.x_names,
@@ -715,6 +711,7 @@ class AdaSTEM(BaseEstimator):
             )
 
             window_prediction_list.append(window_prediction)
+        
         
         if self.lazy_loading:
             ensemble_id = index_df['ensemble_index'].iloc[0]
@@ -1065,10 +1062,9 @@ class AdaSTEM(BaseEstimator):
                 continue
 
             try:
-                ensemble_index = ensemble_row["ensemble_index"]
                 stixel_index = ensemble_row["unique_stixel_id"]
-                the_model = self.model_dict[f"{ensemble_index}_{stixel_index}_model"]
-                x_names = self.stixel_specific_x_names[f"{ensemble_index}_{stixel_index}"]
+                the_model = self.model_dict[f"{stixel_index}_model"]
+                x_names = self.stixel_specific_x_names[{stixel_index}]
 
                 if isinstance(the_model, dummy_model1):
                     importance_dict = dict(zip(self.x_names, [1 / len(self.x_names)] * len(self.x_names)))

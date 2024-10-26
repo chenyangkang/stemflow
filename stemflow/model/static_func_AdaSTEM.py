@@ -242,6 +242,7 @@ def assign_points_to_one_ensemble_sphere(
         this_slice_sub_Sample_ST_df = Sample_ST_df_[
             (Sample_ST_df_[Temporal1] >= start) & (Sample_ST_df_[Temporal1] < end_)
         ]
+
         if len(this_slice_sub_Sample_ST_df) == 0:
             continue
 
@@ -364,19 +365,18 @@ def transform_pred_set_to_Sphere_STEM_quad(
     return X_train_
 
 
-def get_model_by_name(model_dict: dict, ensemble: str, grid_index: str) -> Union[None, BaseEstimator]:
+def get_model_by_name(model_dict: dict, grid_index: str) -> Union[None, BaseEstimator]:
     """get_model_by_name
 
     Args:
         model_dict (dict): self.model_dict. Dictionary of trained models.
-        ensemble (str): ensemble name.
         grid_index (str): grid index
 
     Returns:
         The trained model.
     """
     try:
-        model = model_dict[f"{ensemble}_{grid_index}_model"]
+        model = model_dict[f"{grid_index}_model"]
         return model
     except Exception as e:
         if not isinstance(e, KeyError):
@@ -385,7 +385,7 @@ def get_model_by_name(model_dict: dict, ensemble: str, grid_index: str) -> Union
 
 
 def get_stixel_specific_name_by_model(
-    model: Union[None, BaseEstimator], stixel_specific_x_names_dict: dict, x_names: list, ensemble: str, grid_index: str
+    model: Union[None, BaseEstimator], stixel_specific_x_names_dict: dict, x_names: list, grid_index: str
 ) -> Union[None, list]:
     """get_stixel_specific_name_by_model
 
@@ -393,7 +393,6 @@ def get_stixel_specific_name_by_model(
         model (Union[None, BaseEstimator]): model of this stixel
         stixel_specific_x_names_dict (dict): the stixel_specific_x_names dictionary. Generated after training.
         x_names (list): total x_names. All variables.
-        ensemble (str): ensemble name.
         grid_index (str): grid index.
 
     Returns:
@@ -405,19 +404,18 @@ def get_stixel_specific_name_by_model(
     if isinstance(model, dummy_model1):
         stixel_specific_x_names = x_names
     else:
-        stixel_specific_x_names = stixel_specific_x_names_dict[f"{ensemble}_{grid_index}"]
+        stixel_specific_x_names = stixel_specific_x_names_dict[grid_index]
 
     return stixel_specific_x_names
 
 
 def get_model_and_stixel_specific_x_names(
-    model_dict: dict, ensemble: str, grid_index: str, stixel_specific_x_names_dict: dict, x_names: list
+    model_dict: dict, grid_index: str, stixel_specific_x_names_dict: dict, x_names: list
 ) -> Tuple[Union[None, BaseEstimator], list]:
     """get_model_and_stixel_specific_x_names
 
     Args:
         model_dict (dict): self.model_dict. Dictionary of trained models.
-        ensemble (str): ensemble name.
         grid_index (str): grid index.
         stixel_specific_x_names_dict (dict): the stixel_specific_x_names dictionary. Generated after training.
         x_names (list): Total x_names. All variables.
@@ -425,9 +423,9 @@ def get_model_and_stixel_specific_x_names(
     Returns:
        A tuple of (model, stixel_specific_x_names) for this stixel
     """
-    model = get_model_by_name(model_dict, ensemble, grid_index)
+    model = get_model_by_name(model_dict, grid_index)
     stixel_specific_x_names = get_stixel_specific_name_by_model(
-        model, stixel_specific_x_names_dict, x_names, ensemble, grid_index
+        model, stixel_specific_x_names_dict, x_names, grid_index
     )
     return model, stixel_specific_x_names
 

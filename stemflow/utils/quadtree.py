@@ -174,7 +174,6 @@ def get_one_ensemble_quadtree(
     calibration_point_x_jitter = rng.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
     calibration_point_y_jitter = rng.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
 
-    # print(f'ensemble_count: {ensemble_count}')
     temporal_bins = generate_temporal_bins(
         start=temporal_start,
         end=temporal_end,
@@ -240,7 +239,7 @@ def get_one_ensemble_quadtree(
         this_slice[f"{Temporal1}_start"] = round(this_slice[f"{Temporal1}_start"], 1)
         this_slice[f"{Temporal1}_end"] = round(this_slice[f"{Temporal1}_end"], 1)
         this_slice["unique_stixel_id"] = [
-            str(time_block_index) + "_" + str(i) + "_" + str(k)
+            str(i) + "_" + str(time_block_index) + "_" + str(k)
             for i, k in zip(this_slice["ensemble_index"].values, this_slice["stixel_indexes"].values)
         ]
 
