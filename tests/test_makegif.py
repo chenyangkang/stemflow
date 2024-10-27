@@ -18,7 +18,7 @@ fake_data = pd.DataFrame(
 
 
 def test_make_gif():
-    tmp_dir = "./stemflow_test_make_gif"
+    tmp_dir = "./stemflow_test_make_gif1"
     if not os.path.exists(tmp_dir):
         os.mkdir(tmp_dir)
     make_sample_gif(
@@ -46,7 +46,7 @@ def test_make_gif():
 def test_make_gif_changing_ranges():
     fake_data_ = fake_data[(fake_data["x"] >= 0) & (fake_data["y"] >= 10) & (fake_data["DOY"] >= 20)].copy()
 
-    tmp_dir = "./stemflow_test_make_gif"
+    tmp_dir = "./stemflow_test_make_gif2"
     if not os.path.exists(tmp_dir):
         os.mkdir(tmp_dir)
 
