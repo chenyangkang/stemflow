@@ -596,7 +596,7 @@ class AdaSTEM(BaseEstimator):
             ax: matplotlib Axes to add to
             verbosty: whether to show progress bar. 0 for no and 1 for yes.
             ax: matplotlib ax for adding grid plot on that.
-            n_jobs: multiprocessing thread count. Default the njob of model object.
+            n_jobs: multiprocessing thread count. Default the n_jobs of model object.
 
         Raises:
             TypeError: X_train is not a type of pd.core.frame.DataFrame

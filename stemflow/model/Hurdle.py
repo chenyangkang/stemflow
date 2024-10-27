@@ -258,7 +258,7 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
     def predict_proba(
         self,
         X_test: Union[pd.core.frame.DataFrame, np.ndarray],
-        njobs: int = 1,
+        n_jobs: int = 1,
         verbosity: int = 0,
         return_by_separate_ensembles: bool = False,
     ) -> np.ndarray:
@@ -279,5 +279,5 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
         """
 
         return self.predict(
-            self, X_test, njobs=njobs, verbosity=verbosity, return_by_separate_ensembles=return_by_separate_ensembles
+            self, X_test, n_jobs=n_jobs, verbosity=verbosity, return_by_separate_ensembles=return_by_separate_ensembles
         )
