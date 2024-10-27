@@ -31,10 +31,10 @@ def test_random_state_reproducibility():
                 ensemble_df3['stixel_checklist_count'].values)
 
     # 1 and 2 (with the different random state)
-    assert np.sum(ensemble_df1['calibration_point_x_jitter'].values -
-            ensemble_df2['calibration_point_x_jitter'].values) != 0
-    assert np.sum(ensemble_df1['stixel_checklist_count'].values -
-            ensemble_df2['stixel_checklist_count'].values) != 0
+    assert np.sum(ensemble_df1['calibration_point_x_jitter'].values[0] - \
+            ensemble_df2['calibration_point_x_jitter'].values[0]) != 0
+    assert np.sum(ensemble_df1['stixel_checklist_count'].values[0] - \
+            ensemble_df2['stixel_checklist_count'].values[0]) != 0
 
 
 def test_random_state_reproducibility_completely_random_rotation_angle():
@@ -59,8 +59,8 @@ def test_random_state_reproducibility_completely_random_rotation_angle():
                 ensemble_df3['stixel_checklist_count'].values)
 
     # 1 and 2 (with the different random state)
-    assert np.sum(ensemble_df1['calibration_point_x_jitter'].values -
-            ensemble_df2['calibration_point_x_jitter'].values) != 0
-    assert np.sum(ensemble_df1['stixel_checklist_count'].values -
-            ensemble_df2['stixel_checklist_count'].values) != 0
+    assert np.sum(ensemble_df1['calibration_point_x_jitter'].values[0] -
+            ensemble_df2['calibration_point_x_jitter'].values[0]) != 0
+    assert np.sum(ensemble_df1['stixel_checklist_count'].values[0] -
+            ensemble_df2['stixel_checklist_count'].values[0]) != 0
 
