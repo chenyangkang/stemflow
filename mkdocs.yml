@@ -117,7 +117,7 @@ nav:
       - 'generate_soft_colors': API_Documentation/utils/stemflow.utils.generate_soft_colors.md
       - 'validation': API_Documentation/utils/stemflow.utils.validation.md
       - 'wrapper': API_Documentation/utils/stemflow.utils.wrapper.md
-      - 'lazyloading':API_Documentation/utils/stemflow.utils.lazyloading.md
+      - 'lazyloading': API_Documentation/utils/stemflow.utils.lazyloading.md
     - stemflow.model_selection: API_Documentation/stemflow.model_selection.md
 
   - Fun Visualization:
