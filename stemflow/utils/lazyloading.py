@@ -7,7 +7,10 @@ class LazyLoadingEnsembleDict(MutableMapping):
     def __init__(self, directory='./tmp_models'):
         """
         Initialize the LazyLoadingEnsembleDict with a directory to save and load models.
-        :param directory: The directory to save and load model files.
+        
+        Args:
+            directory:
+                The directory to save and load model files.
         """
         self.directory = directory
         self.ensemble_models = {}
