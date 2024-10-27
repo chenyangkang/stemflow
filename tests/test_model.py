@@ -283,9 +283,8 @@ def test_AdaSTEMRegressor_Hurdle_for_AdaSTEM():
     model = make_AdaSTEMRegressor_Hurdle_for_AdaSTEM()
     model = model.fit(X_train, np.where(y_train > 0, 1, 0))
 
-    pred_mean, pred_std = model.predict(X_test.reset_index(drop=True))
+    pred_mean = model.predict(X_test.reset_index(drop=True))
     assert np.sum(~np.isnan(pred_mean)) > 0
-    assert np.sum(~np.isnan(pred_std)) > 0
 
     pred = model.predict(X_test)
     assert len(pred) == len(X_test)

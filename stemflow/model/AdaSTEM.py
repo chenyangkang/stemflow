@@ -1039,7 +1039,7 @@ class AdaSTEM(BaseEstimator):
         """
 
         y_pred = self.predict(X_test)
-        score_dict = AdaSTEM.eval_STEM_res(self.task, y_test, y_pred)
+        score_dict = AdaSTEM.eval_STEM_res(self.task, np.array(y_test).flatten(), np.array(y_pred).flatten())
         self.score_dict = score_dict
         return self.score_dict
 
