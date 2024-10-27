@@ -57,7 +57,7 @@ model = AdaSTEMClassifier(
     Spatio2='proj_lat',
     Temporal1='Week',
     use_temporal_to_train=True,            # In each stixel, whether 'Week' should be a predictor
-    njobs=1
+    n_jobs=1
 )
 ```
 
@@ -100,7 +100,7 @@ model = AdaSTEMClassifier(
     Spatio2='proj_lat',
     Temporal1='Week',
     use_temporal_to_train=True,
-    njobs=1
+    n_jobs=1
 )
 ```
 
@@ -132,7 +132,7 @@ model = AdaSTEMClassifier(
     Spatio2='proj_lat',
     Temporal1='Week',
     use_temporal_to_train=True,
-    njobs=1
+    n_jobs=1
 )
 ```
 
@@ -161,7 +161,7 @@ model = STEMClassifier(
     Spatio2='proj_lat',
     Temporal1='Week',
     use_temporal_to_train=True,
-    njobs=1
+    n_jobs=1
 )
 ```
 
@@ -194,7 +194,7 @@ model = SphereAdaSTEMRegressor(
     points_lower_threshold=50,        # Only stixels with more than 50 samples are trained
     Temporal1='DOY',
     use_temporal_to_train=True,       # In each stixel, whether 'DOY' should be a predictor
-    njobs=1
+    n_jobs=1
 )
 ```
 

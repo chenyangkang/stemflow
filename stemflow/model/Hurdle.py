@@ -217,7 +217,7 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
     def predict(
         self,
         X_test: Union[pd.core.frame.DataFrame, np.ndarray],
-        njobs: int = 1,
+        n_jobs: int = 1,
         verbosity: int = 1,
         return_by_separate_ensembles: bool = False,
     ) -> np.ndarray:
@@ -226,7 +226,7 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
         Args:
             X_test:
                 Test variables
-            njobs:
+            n_jobs:
                 Multi-processing in prediction.
             verbosity:
                 Whether to show progress bar. 0 for No, and Yes other wise.
@@ -238,17 +238,17 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
         """
         if verbosity == 0:
             cls_res = self.classifier.predict(
-                X_test, njobs=njobs, verbosity=0, return_by_separate_ensembles=return_by_separate_ensembles
+                X_test, n_jobs=n_jobs, verbosity=0, return_by_separate_ensembles=return_by_separate_ensembles
             )
             reg_res = self.regressor.predict(
-                X_test, njobs=njobs, verbosity=0, return_by_separate_ensembles=return_by_separate_ensembles
+                X_test, n_jobs=n_jobs, verbosity=0, return_by_separate_ensembles=return_by_separate_ensembles
             )
         else:
             cls_res = self.classifier.predict(
-                X_test, njobs=njobs, verbosity=1, return_by_separate_ensembles=return_by_separate_ensembles
+                X_test, n_jobs=n_jobs, verbosity=1, return_by_separate_ensembles=return_by_separate_ensembles
             )
             reg_res = self.regressor.predict(
-                X_test, njobs=njobs, verbosity=1, return_by_separate_ensembles=return_by_separate_ensembles
+                X_test, n_jobs=n_jobs, verbosity=1, return_by_separate_ensembles=return_by_separate_ensembles
             )
         # reg_res = np.where(reg_res>=0, reg_res, 0) ### we constrain the reg value to be positive
         res = np.where(cls_res < 0.5, 0, cls_res)
@@ -267,7 +267,7 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
         Args:
             X_test:
                 Testing variables
-            njobs:
+            n_jobs:
                 Multi-processing in prediction.
             verbosity:
                 Whether to show progress bar. 0 for No, and Yes other wise.

@@ -157,7 +157,8 @@ model = AdaSTEMRegressor(
     Spatio2='latitude',                     # spatial coordinates shown in the dataframe
     Temporal1='DOY',
     use_temporal_to_train=True,             # In each stixel, whether 'DOY' should be a predictor
-    njobs=1
+    n_jobs=1,
+    random_state=42
 )
 ```
 
