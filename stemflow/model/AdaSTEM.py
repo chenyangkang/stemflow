@@ -1038,7 +1038,7 @@ class AdaSTEM(BaseEstimator):
             dict: dictionary containing the metric names and their values.
         """
 
-        y_pred, _ = self.predict(X_test)
+        y_pred = self.predict(X_test)
         score_dict = AdaSTEM.eval_STEM_res(self.task, y_test, y_pred)
         self.score_dict = score_dict
         return self.score_dict
@@ -1222,7 +1222,7 @@ class AdaSTEM(BaseEstimator):
         
         if target_lazyloading_path is None:
             saving_code = int(np.random.uniform(1, 1e8))
-            target_lazyloading_path = f'./tmp_{saving_code}'
+            target_lazyloading_path = f'./stemflow_model_{saving_code}'
         target_lazyloading_path = str(Path(target_lazyloading_path.rstrip('/\\')))
             
         file = tarfile.open(tar_gz_file) 
