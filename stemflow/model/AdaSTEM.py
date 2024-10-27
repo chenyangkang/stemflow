@@ -269,7 +269,7 @@ class AdaSTEM(BaseEstimator):
         self.lazy_loading_dir = lazy_loading_dir
         if self.lazy_loading_dir is None:
             saving_code = int(np.random.uniform(1, 1e8))
-            self.lazy_loading_dir = f'./tmp_{saving_code}'
+            self.lazy_loading_dir = f'./stemflow_model_{saving_code}'
         self.lazy_loading_dir = str(Path(self.lazy_loading_dir.rstrip('/\\')))
 
         if not verbosity == 0:
@@ -1218,29 +1218,28 @@ class AdaSTEM(BaseEstimator):
         return out_
 
     @staticmethod
-    def load(tar_gz_file, target_lazyloading_path=None, remove_original_file=False):
+    def load(tar_gz_file, new_lazy_loading_path=None, remove_original_file=False):
         
-        if target_lazyloading_path is None:
+        if new_lazy_loading_path is None:
             saving_code = int(np.random.uniform(1, 1e8))
-            target_lazyloading_path = f'./stemflow_model_{saving_code}'
-        target_lazyloading_path = str(Path(target_lazyloading_path.rstrip('/\\')))
+            new_lazy_loading_path = f'./stemflow_model_{saving_code}'
+        new_lazy_loading_path = str(Path(new_lazy_loading_path.rstrip('/\\')))
             
         file = tarfile.open(tar_gz_file) 
-        file.extractall(target_lazyloading_path, filter=tarfile.data_filter) 
+        file.extractall(new_lazy_loading_path, filter=tarfile.data_filter) 
         file.close()
         
-        with open(os.path.join(target_lazyloading_path, 'model.pkl'), 'rb') as f:
+        with open(os.path.join(new_lazy_loading_path, 'model.pkl'), 'rb') as f:
             model = pickle.load(f)
             
         if model.lazy_loading:
             # then this is lazy loading
-            if not len(os.listdir(target_lazyloading_path))>1:
+            if not len(os.listdir(new_lazy_loading_path))>1:
                 raise FileExistsError('Your model is not a lazy_loading model, but more than 1 files/folders are found in the .tar.gz file?')
             else:
-                _, basename = os.path.split(Path(model.lazy_loading_dir))
-                new_lazy_loading_path = os.path.join(target_lazyloading_path, basename)
                 model.set_params(lazy_loading_dir=new_lazy_loading_path)
                 model.model_dict.directory = new_lazy_loading_path
+                model.lazy_loading_dir = new_lazy_loading_path
         
         if remove_original_file:
             os.remove(tar_gz_file)
@@ -1262,20 +1261,19 @@ class AdaSTEM(BaseEstimator):
                     raise FileNotFoundError(f'Ensemble models file ensemble_{ensemble_id}_dict.pkl is missing in lazyloading directory {self.lazy_loading_dir}!')
             
         #
-        path, basename = os.path.split(Path(tar_gz_file.rstrip('/\\')))
-        tmp_code = int(np.random.uniform(0,1e8))
+        path_tar_gz_file, basename_tar_gz_file = os.path.split(Path(tar_gz_file.rstrip('/\\')))
         
         # temporary save the model using pickle
-        model_path = os.path.join(path, f'model_{tmp_code}.pkl')
+        model_path = os.path.join(self.lazy_loading_dir, f'model.pkl')
         with open(model_path, 'wb') as f:
             pickle.dump(self, f)
                 
         # save the main model class and potentially lazyloading pieces to the tar.gz file
         with tarfile.open(tar_gz_file, "w:gz") as tar:
-            tar.add(model_path)
+            tar.add(model_path, arcname=basename_tar_gz_file)
             if self.lazy_loading:
                 for pieces in os.listdir(self.lazy_loading_dir):
-                    tar.add(os.path.join(self.lazy_loading_dir, pieces))
+                    tar.add(os.path.join(self.lazy_loading_dir, pieces), arcname=pieces)
 
         if remove_temporary_file:
             os.remove(model_path)
