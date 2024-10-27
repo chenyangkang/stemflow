@@ -16,7 +16,11 @@ from tqdm import tqdm
 
 from ..gridding.QTree import QTree
 from ..gridding.QuadGrid import QuadGrid
-from .validation import check_transform_spatio_bin_jitter_magnitude, check_transform_temporal_bin_start_jitter, check_random_state
+from .validation import (
+    check_random_state,
+    check_transform_spatio_bin_jitter_magnitude,
+    check_transform_temporal_bin_start_jitter,
+)
 
 # from tqdm.contrib.concurrent import process_map
 
@@ -99,7 +103,8 @@ def get_one_ensemble_quadtree(
     save_gridding_plot: bool = True,
     ax=None,
     plot_empty: bool = False,
-    rng: np.random._generator.Generator = None
+    rng: np.random._generator.Generator = None,
+    completely_random_rotation=False,
 ):
     """Generate QuadTree gridding based on the input dataframe
 
@@ -160,18 +165,22 @@ def get_one_ensemble_quadtree(
 
     """
     rng = check_random_state(rng)
-    rotation_angle = (90 / size) * ensemble_count
+
+    if completely_random_rotation:
+        rotation_angle = rng.uniform(0, 90)
+    else:
+        rotation_angle = (90 / size) * ensemble_count
+
     calibration_point_x_jitter = rng.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
     calibration_point_y_jitter = rng.uniform(-spatio_bin_jitter_magnitude, spatio_bin_jitter_magnitude)
 
-    # print(f'ensemble_count: {ensemble_count}')
     temporal_bins = generate_temporal_bins(
         start=temporal_start,
         end=temporal_end,
         step=temporal_step,
         bin_interval=temporal_bin_interval,
         temporal_bin_start_jitter=temporal_bin_start_jitter,
-        rng=rng
+        rng=rng,
     )
 
     ensemble_all_df_list = []
@@ -230,7 +239,7 @@ def get_one_ensemble_quadtree(
         this_slice[f"{Temporal1}_start"] = round(this_slice[f"{Temporal1}_start"], 1)
         this_slice[f"{Temporal1}_end"] = round(this_slice[f"{Temporal1}_end"], 1)
         this_slice["unique_stixel_id"] = [
-            str(time_block_index) + "_" + str(i) + "_" + str(k)
+            str(i) + "_" + str(time_block_index) + "_" + str(k)
             for i, k in zip(this_slice["ensemble_index"].values, this_slice["stixel_indexes"].values)
         ]
 

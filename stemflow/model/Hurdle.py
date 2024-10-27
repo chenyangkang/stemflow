@@ -211,11 +211,13 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
                 np.array(X_train[X_train["y_train"] > 0].iloc[:, -1]),
                 verbosity=1,
             )
+        
+        return self
 
     def predict(
         self,
         X_test: Union[pd.core.frame.DataFrame, np.ndarray],
-        njobs: int = 1,
+        n_jobs: int = 1,
         verbosity: int = 1,
         return_by_separate_ensembles: bool = False,
     ) -> np.ndarray:
@@ -224,7 +226,7 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
         Args:
             X_test:
                 Test variables
-            njobs:
+            n_jobs:
                 Multi-processing in prediction.
             verbosity:
                 Whether to show progress bar. 0 for No, and Yes other wise.
@@ -236,17 +238,17 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
         """
         if verbosity == 0:
             cls_res = self.classifier.predict(
-                X_test, njobs=njobs, verbosity=0, return_by_separate_ensembles=return_by_separate_ensembles
+                X_test, n_jobs=n_jobs, verbosity=0, return_by_separate_ensembles=return_by_separate_ensembles
             )
             reg_res = self.regressor.predict(
-                X_test, njobs=njobs, verbosity=0, return_by_separate_ensembles=return_by_separate_ensembles
+                X_test, n_jobs=n_jobs, verbosity=0, return_by_separate_ensembles=return_by_separate_ensembles
             )
         else:
             cls_res = self.classifier.predict(
-                X_test, njobs=njobs, verbosity=1, return_by_separate_ensembles=return_by_separate_ensembles
+                X_test, n_jobs=n_jobs, verbosity=1, return_by_separate_ensembles=return_by_separate_ensembles
             )
             reg_res = self.regressor.predict(
-                X_test, njobs=njobs, verbosity=1, return_by_separate_ensembles=return_by_separate_ensembles
+                X_test, n_jobs=n_jobs, verbosity=1, return_by_separate_ensembles=return_by_separate_ensembles
             )
         # reg_res = np.where(reg_res>=0, reg_res, 0) ### we constrain the reg value to be positive
         res = np.where(cls_res < 0.5, 0, cls_res)
@@ -256,7 +258,7 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
     def predict_proba(
         self,
         X_test: Union[pd.core.frame.DataFrame, np.ndarray],
-        njobs: int = 1,
+        n_jobs: int = 1,
         verbosity: int = 0,
         return_by_separate_ensembles: bool = False,
     ) -> np.ndarray:
@@ -265,7 +267,7 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
         Args:
             X_test:
                 Testing variables
-            njobs:
+            n_jobs:
                 Multi-processing in prediction.
             verbosity:
                 Whether to show progress bar. 0 for No, and Yes other wise.
@@ -277,5 +279,5 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
         """
 
         return self.predict(
-            self, X_test, njobs=njobs, verbosity=verbosity, return_by_separate_ensembles=return_by_separate_ensembles
+            self, X_test, n_jobs=n_jobs, verbosity=verbosity, return_by_separate_ensembles=return_by_separate_ensembles
         )

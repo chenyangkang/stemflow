@@ -5,6 +5,9 @@ import time
 import warnings
 from functools import partial
 from itertools import repeat
+import tarfile 
+from pathlib import Path
+import shutil
 
 #
 from multiprocessing import Lock, Pool, Process, cpu_count, shared_memory
@@ -50,7 +53,7 @@ from ..utils.validation import (
     check_task,
     check_temporal_bin_start_jitter,
     check_temporal_scale,
-    check_transform_njobs,
+    check_transform_n_jobs,
     check_transform_spatio_bin_jitter_magnitude,
     check_verbosity,
     check_X_test,
@@ -68,6 +71,7 @@ from .static_func_AdaSTEM import (  # predict_one_ensemble
     transform_pred_set_to_STEM_quad,
 )
 
+from ..utils.lazyloading import LazyLoadingEnsembleDict
 
 class AdaSTEM(BaseEstimator):
     """A AdaSTEM model class inherited by AdaSTEMClassifier and AdaSTEMRegressor"""
@@ -88,23 +92,22 @@ class AdaSTEM(BaseEstimator):
         temporal_bin_interval: Union[float, int] = 50,
         temporal_bin_start_jitter: Union[float, int, str] = "adaptive",
         spatio_bin_jitter_magnitude: Union[float, int] = "adaptive",
-        random_state = None,
+        random_state=None,
         save_gridding_plot: bool = True,
-        save_tmp: bool = False,
-        save_dir: str = "./",
         sample_weights_for_classifier: bool = True,
         Spatio1: str = "longitude",
         Spatio2: str = "latitude",
         Temporal1: str = "DOY",
         use_temporal_to_train: bool = True,
-        njobs: int = 1,
+        n_jobs: int = 1,
         subset_x_names: bool = False,
-        ensemble_models_disk_saver: bool = False,
-        ensemble_models_disk_saving_dir: str = "./",
         plot_xlims: Tuple[Union[float, int], Union[float, int]] = None,
         plot_ylims: Tuple[Union[float, int], Union[float, int]] = None,
         verbosity: int = 0,
         plot_empty: bool = False,
+        completely_random_rotation: bool = False,
+        lazy_loading: bool = False,
+        lazy_loading_dir: Union[str, None] = None
     ):
         """Make an AdaSTEM object
 
@@ -147,12 +150,8 @@ class AdaSTEM(BaseEstimator):
                 None or int. After setting the same seed, the model will generate the same results each time. For reproducibility.
             save_gridding_plot:
                 Whether ot save gridding plots. Defaults to True.
-            save_tmp:
-                Whether to save the ensemble dataframe. Defaults to False.
-            save_dir:
-                If save_tmp==True, save the ensemble dataframe to this path. Defaults to './'.
-            ensemble_models_disk_saver:
-                Whether to balance the sample weights of classifier for imbalanced datasets. Defaults to True.
+            sample_weights_for_classifier:
+                Whether to adjust for unbanlanced data for the classifier. Default to True.
             Spatio1:
                 Spatial column name 1 in data. Defaults to 'longitude'.
             Spatio2:
@@ -162,14 +161,10 @@ class AdaSTEM(BaseEstimator):
             use_temporal_to_train:
                 Whether to use temporal variable to train. For example in modeling the daily abundance of bird population,
                 whether use 'day of year (DOY)' as a training variable. Defaults to True.
-            njobs:
+            n_jobs:
                 Number of multiprocessing in fitting the model. Defaults to 1.
             subset_x_names:
                 Whether to only store variables with std > 0 for each stixel. Set to False will significantly increase the training speed.
-            ensemble_disk_saver:
-                Whether to save each ensemble of models to dicts instead of saving them in memory.
-            ensemble_models_disk_saving_dir:
-                Where to save the ensemble models. Only valid if ensemble_disk_saver is True.
             plot_xlims:
                 If save_gridding_plot=true, what is the xlims of the plot. Defaults to the extent of input X varibale.
             plot_ylims:
@@ -178,6 +173,12 @@ class AdaSTEM(BaseEstimator):
                 0 to output nothing and everything otherwise.
             plot_empty:
                 Whether to plot the empty grid
+            completely_random_rotation:
+                If True, the rotation angle will be generated completely randomly, as in paper https://doi.org/10.1002/eap.2056. If False, the ensembles will split the 90 degree with equal angle intervals. e.g., if ensemble_fold=9, then each ensemble will rotate 10 degree futher than the previous ensemble. Defalt to False, because if ensemble fold is small, it will be more robust to equally devide the data; and if ensemble fold is large, they are effectively similar than complete random.
+            lazy_loading:
+                If True, ensembles of models will be saved in disk, and only loaded when being used (e.g., prediction phase), and the ensembles of models are dump to disk once it is used.
+            lazy_loading_dir:
+                If lazy_loading, the directory of the model to temporary save to. Default to None, where a random number will be generated as folder name.
 
         Raises:
             AttributeError: Base model do not have method 'fit' or 'predict'
@@ -207,7 +208,7 @@ class AdaSTEM(BaseEstimator):
         # 1. Check random state
         self.random_state = random_state
         self.rng = check_random_state(random_state)
-        
+
         # 2. Base model
         check_base_model(base_model)
         base_model = model_wrapper(base_model)
@@ -237,6 +238,7 @@ class AdaSTEM(BaseEstimator):
         self.temporal_end = temporal_end
         self.temporal_step = temporal_step
         self.temporal_bin_interval = temporal_bin_interval
+        self.completely_random_rotation = completely_random_rotation
 
         check_spatio_bin_jitter_magnitude(spatio_bin_jitter_magnitude)
         self.spatio_bin_jitter_magnitude = spatio_bin_jitter_magnitude
@@ -253,31 +255,29 @@ class AdaSTEM(BaseEstimator):
         self.sample_weights_for_classifier = sample_weights_for_classifier
 
         # 6. Multi-processing params
-        njobs = check_transform_njobs(self, njobs)
-        self.njobs = njobs
+        n_jobs = check_transform_n_jobs(self, n_jobs)
+        self.n_jobs = n_jobs
 
         # 7. Plotting params
         self.plot_xlims = plot_xlims
         self.plot_ylims = plot_ylims
-        self.save_tmp = save_tmp
-        self.save_dir = save_dir
         self.save_gridding_plot = save_gridding_plot
         self.plot_empty = plot_empty
 
         # X. miscellaneous
-        self.ensemble_models_disk_saver = ensemble_models_disk_saver
-        self.ensemble_models_disk_saving_dir = ensemble_models_disk_saving_dir
-        if self.ensemble_models_disk_saver:
-            self.saving_code = self.rng.integers(1, 1e8, 1)
+        self.lazy_loading = lazy_loading
+        self.lazy_loading_dir = lazy_loading_dir
+        if self.lazy_loading_dir is None:
+            saving_code = int(np.random.uniform(1, 1e8))
+            self.lazy_loading_dir = f'./stemflow_model_{saving_code}'
+        self.lazy_loading_dir = str(Path(self.lazy_loading_dir.rstrip('/\\')))
 
         if not verbosity == 0:
             self.verbosity = 1
         else:
             self.verbosity = 0
 
-    def split(
-        self, X_train: pd.core.frame.DataFrame, verbosity: Union[None, int] = None, ax=None, njobs: int = 1
-    ):
+    def split(self, X_train: pd.core.frame.DataFrame, verbosity: Union[None, int] = None, ax=None, n_jobs: int = 1):
         """QuadTree indexing the input data
 
         Args:
@@ -289,13 +289,10 @@ class AdaSTEM(BaseEstimator):
             self.grid_dict, a dictionary of one DataFrame for each grid, containing the gridding information
         """
         self.rng = check_random_state(self.random_state)
-        njobs = check_transform_njobs(self, njobs)
+        n_jobs = check_transform_n_jobs(self, n_jobs)
 
         if verbosity is None:
             verbosity = self.verbosity
-
-        # fold = self.ensemble_fold
-        save_path = os.path.join(self.save_dir, "ensemble_quadtree_df.csv") if self.save_tmp else ""
 
         # Determine grid_len based on conditions
         if "grid_len" not in self.__dir__():
@@ -322,11 +319,7 @@ class AdaSTEM(BaseEstimator):
             grid_len_lower,
         )
 
-        check_temporal_scale(
-            X_train[self.Temporal1].min(),
-            X_train[self.Temporal1].min(),
-            self.temporal_bin_interval
-        )
+        check_temporal_scale(X_train[self.Temporal1].min(), X_train[self.Temporal1].min(), self.temporal_bin_interval)
 
         spatio_bin_jitter_magnitude = check_transform_spatio_bin_jitter_magnitude(
             X_train, self.Spatio1, self.Spatio2, self.spatio_bin_jitter_magnitude
@@ -368,14 +361,16 @@ class AdaSTEM(BaseEstimator):
             Spatio2=self.Spatio2,
             save_gridding_plot=self.save_gridding_plot,
             ax=ax,
+            completely_random_rotation=self.completely_random_rotation,
         )
 
-        if njobs > 1 and isinstance(njobs, int):
-            parallel = joblib.Parallel(n_jobs=njobs, return_as="generator")
+        if n_jobs > 1 and isinstance(n_jobs, int):
+            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator")
             output_generator = parallel(
                 joblib.delayed(partial_get_one_ensemble_quadtree)(
                     ensemble_count=ensemble_count, rng=np.random.default_rng(self.rng.integers(1e9) + ensemble_count)
-                    ) for ensemble_count in list(range(self.ensemble_fold))
+                )
+                for ensemble_count in list(range(self.ensemble_fold))
             )
             if verbosity > 0:
                 output_generator = tqdm(output_generator, total=self.ensemble_fold, desc="Generating Ensemble: ")
@@ -388,20 +383,20 @@ class AdaSTEM(BaseEstimator):
                 if verbosity > 0
                 else range(self.ensemble_fold)
             )
-            ensemble_all_df_list = [partial_get_one_ensemble_quadtree(
-                ensemble_count=ensemble_count, rng=np.random.default_rng(self.rng.integers(1e9) + ensemble_count)
-                ) for ensemble_count in iter_func_]
+            ensemble_all_df_list = [
+                partial_get_one_ensemble_quadtree(
+                    ensemble_count=ensemble_count, rng=np.random.default_rng(self.rng.integers(1e9) + ensemble_count)
+                )
+                for ensemble_count in iter_func_
+            ]
 
         # concat
         ensemble_df = pd.concat(ensemble_all_df_list).reset_index(drop=True)
+
         del ensemble_all_df_list
 
         # processing
         ensemble_df = ensemble_df.reset_index(drop=True)
-
-        if not save_path == "":
-            ensemble_df.to_csv(save_path, index=False)
-            print(f"Saved! {save_path}")
 
         if self.save_gridding_plot:
             if ax is None:
@@ -442,9 +437,8 @@ class AdaSTEM(BaseEstimator):
             For a single stixel.
         """
 
-        ensemble_index = int(stixel["ensemble_index"].iloc[0])
         unique_stixel_id = stixel["unique_stixel_id"].iloc[0]
-        name = f"{ensemble_index}_{unique_stixel_id}"
+        name = unique_stixel_id
 
         model, stixel_specific_x_names, status = train_one_stixel(
             stixel_training_size_threshold=self.stixel_training_size_threshold,
@@ -461,8 +455,6 @@ class AdaSTEM(BaseEstimator):
             pass
 
         else:
-            # self.model_dict[f"{name}_model"] = model
-            # self.stixel_specific_x_names[name] = stixel_specific_x_names
             return (name, model, stixel_specific_x_names)
 
     def SAC_ensemble_training(self, index_df: pd.core.frame.DataFrame, data: pd.core.frame.DataFrame):
@@ -528,7 +520,7 @@ class AdaSTEM(BaseEstimator):
         return res_list
 
     def SAC_training(
-        self, ensemble_df: pd.core.frame.DataFrame, data: pd.core.frame.DataFrame, verbosity: int = 0, njobs: int = 1
+        self, ensemble_df: pd.core.frame.DataFrame, data: pd.core.frame.DataFrame, verbosity: int = 0, n_jobs: int = 1
     ):
         """This function is a training function with SAC strategy:
         Split (S), Apply(A), Combine (C). At ensemble level.
@@ -540,12 +532,12 @@ class AdaSTEM(BaseEstimator):
             verbosity (int, optional): Defaults to 0.
 
         """
-        assert isinstance(njobs, int)
+        assert isinstance(n_jobs, int)
 
         groups = ensemble_df.groupby("ensemble_index")
 
         # Parallel wrapper
-        if njobs == 1:
+        if n_jobs == 1:
             output_generator = (self.SAC_ensemble_training(index_df=ensemble[1], data=data) for ensemble in groups)
         else:
 
@@ -553,7 +545,7 @@ class AdaSTEM(BaseEstimator):
                 res = self.SAC_ensemble_training(index_df=ensemble[1], data=data)
                 return res
 
-            parallel = joblib.Parallel(n_jobs=njobs, return_as="generator")
+            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator")
             output_generator = parallel(joblib.delayed(mp_train)(i) for i in groups)
 
         # tqdm wrapper
@@ -563,10 +555,14 @@ class AdaSTEM(BaseEstimator):
             )
 
         # iterate through
-        model_dict = {}
+        if self.lazy_loading:
+            self.model_dict = LazyLoadingEnsembleDict(self.lazy_loading_dir)
+        else:
+            self.model_dict = {}
+            
         stixel_specific_x_names = {}
 
-        for ensemble in output_generator:
+        for ensemble_id, ensemble in enumerate(output_generator):
             for time_block in ensemble:
                 for feature_tuple in time_block:
                     if feature_tuple is None:
@@ -574,10 +570,13 @@ class AdaSTEM(BaseEstimator):
                     name = feature_tuple[0]
                     model = feature_tuple[1]
                     x_names = feature_tuple[2]
-                    model_dict[f"{name}_model"] = model
+                    self.model_dict[f"{name}_model"] = model
                     stixel_specific_x_names[name] = x_names
+                    
+            # dump here if lazy_loading_ensemble = True
+            if self.lazy_loading:
+                self.model_dict.dump_ensemble(ensemble_id)
 
-        self.model_dict = model_dict
         self.stixel_specific_x_names = stixel_specific_x_names
         return self
 
@@ -587,7 +586,7 @@ class AdaSTEM(BaseEstimator):
         y_train: Union[pd.core.frame.DataFrame, np.ndarray],
         verbosity: Union[None, int] = None,
         ax=None,
-        njobs: Union[None, int] = None,
+        n_jobs: Union[None, int] = None,
     ):
         """Fitting method
 
@@ -597,7 +596,7 @@ class AdaSTEM(BaseEstimator):
             ax: matplotlib Axes to add to
             verbosty: whether to show progress bar. 0 for no and 1 for yes.
             ax: matplotlib ax for adding grid plot on that.
-            njobs: multiprocessing thread count. Default the njob of model object.
+            n_jobs: multiprocessing thread count. Default the n_jobs of model object.
 
         Raises:
             TypeError: X_train is not a type of pd.core.frame.DataFrame
@@ -607,20 +606,20 @@ class AdaSTEM(BaseEstimator):
         verbosity = check_verbosity(self, verbosity)
         check_X_train(X_train)
         check_y_train(y_train)
-        njobs = check_transform_njobs(self, njobs)
+        n_jobs = check_transform_n_jobs(self, n_jobs)
         self.store_x_names(X_train)
 
         # quadtree
         X_train = X_train.reset_index(drop=True)  # I reset index here!! caution!
         X_train["true_y"] = np.array(y_train).flatten()
-        self.split(X_train, verbosity=verbosity, ax=ax, njobs=njobs)
+        self.split(X_train, verbosity=verbosity, ax=ax, n_jobs=n_jobs)
 
         # define model dict
         self.model_dict = {}
         # stixel specific x_names list
         self.stixel_specific_x_names = {}
 
-        self.SAC_training(self.ensemble_df, X_train, verbosity, njobs)
+        self.SAC_training(self.ensemble_df, X_train, verbosity, n_jobs)
 
         return self
 
@@ -634,12 +633,11 @@ class AdaSTEM(BaseEstimator):
         Returns:
             pd.core.frame.DataFrame: the prediction result of this stixel
         """
-        ensemble_index = stixel["ensemble_index"].iloc[0]
+
         unique_stixel_id = stixel["unique_stixel_id"].iloc[0]
 
         model_x_names_tuple = get_model_and_stixel_specific_x_names(
             self.model_dict,
-            ensemble_index,
             unique_stixel_id,
             self.stixel_specific_x_names,
             self.x_names,
@@ -716,6 +714,11 @@ class AdaSTEM(BaseEstimator):
             )
 
             window_prediction_list.append(window_prediction)
+        
+        
+        if self.lazy_loading:
+            ensemble_id = index_df['ensemble_index'].iloc[0]
+            self.model_dict.dump_ensemble(ensemble_id)
 
         if any([i is not None for i in window_prediction_list]):
             ensemble_prediction = pd.concat(window_prediction_list, axis=0)
@@ -729,7 +732,7 @@ class AdaSTEM(BaseEstimator):
         return ensemble_prediction
 
     def SAC_predict(
-        self, ensemble_df: pd.core.frame.DataFrame, data: pd.core.frame.DataFrame, verbosity: int = 0, njobs: int = 1
+        self, ensemble_df: pd.core.frame.DataFrame, data: pd.core.frame.DataFrame, verbosity: int = 0, n_jobs: int = 1
     ) -> pd.core.frame.DataFrame:
         """This function is a prediction function with SAC strategy:
         Split (S), Apply(A), Combine (C). At ensemble level.
@@ -743,12 +746,12 @@ class AdaSTEM(BaseEstimator):
         Returns:
             pd.core.frame.DataFrame: prediction results.
         """
-        assert isinstance(njobs, int)
+        assert isinstance(n_jobs, int)
 
         groups = ensemble_df.groupby("ensemble_index")
 
         # Parallel maker
-        if njobs == 1:
+        if n_jobs == 1:
             output_generator = (self.SAC_ensemble_predict(index_df=ensemble[1], data=data) for ensemble in groups)
         else:
 
@@ -756,7 +759,7 @@ class AdaSTEM(BaseEstimator):
                 res = self.SAC_ensemble_predict(index_df=ensemble[1], data=data)
                 return res
 
-            parallel = joblib.Parallel(n_jobs=njobs, return_as="generator")
+            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator")
             output_generator = parallel(joblib.delayed(mp_predict)(i) for i in groups)
 
         # tqdm wrapper
@@ -781,7 +784,7 @@ class AdaSTEM(BaseEstimator):
         X_test: pd.core.frame.DataFrame,
         verbosity: Union[int, None] = None,
         return_std: bool = False,
-        njobs: Union[None, int] = 1,
+        n_jobs: Union[None, int] = 1,
         aggregation: str = "mean",
         return_by_separate_ensembles: bool = False,
     ) -> Union[np.ndarray, Tuple[np.ndarray]]:
@@ -794,8 +797,8 @@ class AdaSTEM(BaseEstimator):
                 show progress bar or not. Yes for 0, and No for other. Defaults to None, which set it as the verbosity of the main model class.
             return_std (bool, optional):
                 Whether return the standard deviation among ensembles. Defaults to False.
-            njobs (Union[int, None], optional):
-                Number of processes used in this task. If None, use the self.njobs. Default to 1.
+            n_jobs (Union[int, None], optional):
+                Number of processes used in this task. If None, use the self.n_jobs. Default to 1.
                 I do not recommend setting value larger than 1.
                 In practice, multi-processing seems to slow down the process instead of speeding up.
                 Could be more practical with large amount of data.
@@ -822,10 +825,10 @@ class AdaSTEM(BaseEstimator):
         check_prediciton_aggregation(aggregation)
         return_by_separate_ensembles, return_std = check_prediction_return(return_by_separate_ensembles, return_std)
         verbosity = check_verbosity(self, verbosity)
-        njobs = check_transform_njobs(self, njobs)
+        n_jobs = check_transform_n_jobs(self, n_jobs)
 
         # predict
-        res = self.SAC_predict(self.ensemble_df, X_test, verbosity=verbosity, njobs=njobs)
+        res = self.SAC_predict(self.ensemble_df, X_test, verbosity=verbosity, n_jobs=n_jobs)
 
         # Experimental Function
         if return_by_separate_ensembles:
@@ -871,7 +874,7 @@ class AdaSTEM(BaseEstimator):
         X_test: pd.core.frame.DataFrame,
         verbosity: Union[None, int] = None,
         return_std: bool = False,
-        njobs: Union[None, int] = 1,
+        n_jobs: Union[None, int] = 1,
         aggregation: str = "mean",
         return_by_separate_ensembles: bool = False,
     ) -> Union[np.ndarray, Tuple[np.ndarray]]:
@@ -884,8 +887,8 @@ class AdaSTEM(BaseEstimator):
                 0 to output nothing, everything other wise. Default None set it to the verbosity of AdaSTEM model class.
             return_std (bool, optional):
                 Whether return the standard deviation among ensembles. Defaults to False.
-            njobs (Union[int, None], optional):
-                Number of processes used in this task. If None, use the self.njobs. Default to 1.
+            n_jobs (Union[int, None], optional):
+                Number of processes used in this task. If None, use the self.n_jobs. Default to 1.
                 I do not recommend setting value larger than 1.
                 In practice, multi-processing seems to slow down the process instead of speeding up.
                 Could be more practical with large amount of data.
@@ -913,7 +916,7 @@ class AdaSTEM(BaseEstimator):
             X_test,
             verbosity=verbosity,
             return_std=return_std,
-            njobs=njobs,
+            n_jobs=n_jobs,
             aggregation=aggregation,
             return_by_separate_ensembles=return_by_separate_ensembles,
         )
@@ -1035,8 +1038,8 @@ class AdaSTEM(BaseEstimator):
             dict: dictionary containing the metric names and their values.
         """
 
-        y_pred, _ = self.predict(X_test)
-        score_dict = AdaSTEM.eval_STEM_res(self.task, y_test, y_pred)
+        y_pred = self.predict(X_test)
+        score_dict = AdaSTEM.eval_STEM_res(self.task, np.array(y_test).flatten(), np.array(y_pred).flatten())
         self.score_dict = score_dict
         return self.score_dict
 
@@ -1054,40 +1057,43 @@ class AdaSTEM(BaseEstimator):
         """
         # generate feature importance dict
         feature_importance_list = []
-
-        for index, ensemble_row in self.ensemble_df[
-            self.ensemble_df["stixel_checklist_count"] >= self.stixel_training_size_threshold
-        ].iterrows():
-            if ensemble_row["stixel_checklist_count"] < self.stixel_training_size_threshold:
-                continue
-
-            try:
-                ensemble_index = ensemble_row["ensemble_index"]
-                stixel_index = ensemble_row["unique_stixel_id"]
-                the_model = self.model_dict[f"{ensemble_index}_{stixel_index}_model"]
-                x_names = self.stixel_specific_x_names[f"{ensemble_index}_{stixel_index}"]
-
-                if isinstance(the_model, dummy_model1):
-                    importance_dict = dict(zip(self.x_names, [1 / len(self.x_names)] * len(self.x_names)))
-                elif isinstance(the_model, Hurdle):
-                    if "feature_importances_" in the_model.__dir__():
-                        importance_dict = dict(zip(x_names, the_model.feature_importances_))
-                    else:
-                        if isinstance(the_model.classifier, dummy_model1):
-                            importance_dict = dict(zip(self.x_names, [1 / len(self.x_names)] * len(self.x_names)))
+        
+        for ensemble_id in self.ensemble_df['ensemble_index'].unique():
+            for index, ensemble_row in self.ensemble_df[self.ensemble_df['ensemble_index']==ensemble_id][
+                self.ensemble_df["stixel_checklist_count"] >= self.stixel_training_size_threshold
+            ].iterrows():
+                if ensemble_row["stixel_checklist_count"] < self.stixel_training_size_threshold:
+                    continue
+                
+                try:
+                    stixel_index = ensemble_row["unique_stixel_id"]
+                    the_model = self.model_dict[f"{stixel_index}_model"]
+                    x_names = self.stixel_specific_x_names[stixel_index]
+                    
+                    if isinstance(the_model, dummy_model1):
+                        importance_dict = dict(zip(self.x_names, [1 / len(self.x_names)] * len(self.x_names)))
+                    elif isinstance(the_model, Hurdle):
+                        if "feature_importances_" in the_model.__dir__():
+                            importance_dict = dict(zip(x_names, the_model.feature_importances_))
                         else:
-                            importance_dict = dict(zip(x_names, the_model.classifier.feature_importances_))
-                else:
-                    importance_dict = dict(zip(x_names, the_model.feature_importances_))
+                            if isinstance(the_model.classifier, dummy_model1):
+                                importance_dict = dict(zip(self.x_names, [1 / len(self.x_names)] * len(self.x_names)))
+                            else:
+                                importance_dict = dict(zip(x_names, the_model.classifier.feature_importances_))
+                    else:
+                        importance_dict = dict(zip(x_names, the_model.feature_importances_))
 
-                importance_dict["stixel_index"] = stixel_index
-                feature_importance_list.append(importance_dict)
+                    importance_dict["stixel_index"] = stixel_index
+                    feature_importance_list.append(importance_dict)
 
-            except Exception as e:
-                warnings.warn(f"{e}")
-                # print(e)
-                continue
-
+                except Exception as e:
+                    warnings.warn(f"{e}")
+                    # print(e)
+                    continue
+                
+            if self.lazy_loading:
+                self.model_dict.dump_ensemble(ensemble_id)
+        
         self.feature_importances_ = (
             pd.DataFrame(feature_importance_list).set_index("stixel_index").reset_index(drop=False).fillna(0)
         )
@@ -1097,7 +1103,7 @@ class AdaSTEM(BaseEstimator):
         Sample_ST_df: Union[pd.core.frame.DataFrame, None] = None,
         verbosity: Union[None, int] = None,
         aggregation: str = "mean",
-        njobs: Union[int, None] = 1,
+        n_jobs: Union[int, None] = 1,
         assign_function: Callable = assign_points_to_one_ensemble,
     ) -> pd.core.frame.DataFrame:
         """Assign feature importance to the input spatio-temporal points
@@ -1119,8 +1125,8 @@ class AdaSTEM(BaseEstimator):
                 0 to output nothing, everything other wise. Default None set it to the verbosity of AdaSTEM model class.
             aggregation (str, optional):
                 One of 'mean' and 'median' to aggregate feature importance across ensembles.
-            njobs (Union[int, None], optional):
-                Number of processes used in this task. If None, use the self.njobs. Default to 1.
+            n_jobs (Union[int, None], optional):
+                Number of processes used in this task. If None, use the self.n_jobs. Default to 1.
 
         Raises:
             NameError:
@@ -1135,7 +1141,7 @@ class AdaSTEM(BaseEstimator):
         """
         #
         verbosity = check_verbosity(self, verbosity=verbosity)
-        njobs = check_transform_njobs(self, njobs)
+        n_jobs = check_transform_n_jobs(self, n_jobs)
         check_prediciton_aggregation(aggregation)
 
         #
@@ -1162,7 +1168,7 @@ class AdaSTEM(BaseEstimator):
             for var_name in [self.Spatio1, self.Spatio2, self.Temporal1]:
                 if var_name not in Sample_ST_df.columns:
                     raise KeyError(f"{var_name} not found in Sample_ST_df.columns")
-
+                
         partial_assign_func = partial(
             assign_function,
             ensemble_df=self.ensemble_df,
@@ -1172,10 +1178,10 @@ class AdaSTEM(BaseEstimator):
             Spatio2=self.Spatio2,
             feature_importances_=self.feature_importances_,
         )
-
+    
         # assign input spatio-temporal points to stixels
-        if njobs > 1:
-            parallel = joblib.Parallel(n_jobs=njobs, return_as="generator")
+        if n_jobs > 1:
+            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator")
             output_generator = parallel(joblib.delayed(partial_assign_func)(i) for i in list(range(self.ensemble_fold)))
             if verbosity > 0:
                 output_generator = tqdm(output_generator, total=self.ensemble_fold, desc="Querying ensembles: ")
@@ -1211,6 +1217,68 @@ class AdaSTEM(BaseEstimator):
         out_ = pd.concat([Sample_ST_df, mean_feature_importances_across_ensembles], axis=1).dropna()
         return out_
 
+    @staticmethod
+    def load(tar_gz_file, new_lazy_loading_path=None, remove_original_file=False):
+        
+        if new_lazy_loading_path is None:
+            saving_code = int(np.random.uniform(1, 1e8))
+            new_lazy_loading_path = f'./stemflow_model_{saving_code}'
+        new_lazy_loading_path = str(Path(new_lazy_loading_path.rstrip('/\\')))
+            
+        file = tarfile.open(tar_gz_file) 
+        file.extractall(new_lazy_loading_path, filter=tarfile.data_filter) 
+        file.close()
+        
+        with open(os.path.join(new_lazy_loading_path, 'model.pkl'), 'rb') as f:
+            model = pickle.load(f)
+            
+        if model.lazy_loading:
+            # then this is lazy loading
+            if not len(os.listdir(new_lazy_loading_path))>1:
+                raise FileExistsError('Your model is not a lazy_loading model, but more than 1 files/folders are found in the .tar.gz file?')
+            else:
+                model.set_params(lazy_loading_dir=new_lazy_loading_path)
+                model.model_dict.directory = new_lazy_loading_path
+                model.lazy_loading_dir = new_lazy_loading_path
+        
+        if remove_original_file:
+            os.remove(tar_gz_file)
+            
+        return model
+    
+    def save(self, tar_gz_file, remove_temporary_file = True):
+        if not os.path.exists(self.lazy_loading_dir):
+            os.makedirs(self.lazy_loading_dir, exist_ok=False)
+            
+        if self.lazy_loading:
+            ensemble_ids = list(self.model_dict.ensemble_models.keys())
+            for current_in_memory_ensemble in ensemble_ids:
+                self.model_dict.dump_ensemble(current_in_memory_ensemble)
+                
+            # check all ensemble on disk
+            for ensemble_id in range(self.ensemble_fold):
+                if not f'ensemble_{ensemble_id}_dict.pkl' in os.listdir(self.lazy_loading_dir):
+                    raise FileNotFoundError(f'Ensemble models file ensemble_{ensemble_id}_dict.pkl is missing in lazyloading directory {self.lazy_loading_dir}!')
+            
+        #
+        path_tar_gz_file, basename_tar_gz_file = os.path.split(Path(tar_gz_file.rstrip('/\\')))
+        
+        # temporary save the model using pickle
+        model_path = os.path.join(self.lazy_loading_dir, f'model.pkl')
+        with open(model_path, 'wb') as f:
+            pickle.dump(self, f)
+                
+        # save the main model class and potentially lazyloading pieces to the tar.gz file
+        with tarfile.open(tar_gz_file, "w:gz") as tar:
+            tar.add(model_path, arcname=basename_tar_gz_file)
+            if self.lazy_loading:
+                for pieces in os.listdir(self.lazy_loading_dir):
+                    tar.add(os.path.join(self.lazy_loading_dir, pieces), arcname=pieces)
+
+        if remove_temporary_file:
+            os.remove(model_path)
+            if self.lazy_loading:
+                shutil.rmtree(self.lazy_loading_dir)
 
 class AdaSTEMClassifier(AdaSTEM):
     """AdaSTEM model Classifier interface
@@ -1254,54 +1322,52 @@ class AdaSTEMClassifier(AdaSTEM):
         spatio_bin_jitter_magnitude="adaptive",
         random_state=None,
         save_gridding_plot=False,
-        save_tmp=False,
-        save_dir="./",
         sample_weights_for_classifier=True,
         Spatio1="longitude",
         Spatio2="latitude",
         Temporal1="DOY",
         use_temporal_to_train=True,
-        njobs=1,
+        n_jobs=1,
         subset_x_names=False,
-        ensemble_models_disk_saver=False,
-        ensemble_models_disk_saving_dir="./",
         plot_xlims=None,
         plot_ylims=None,
         verbosity=0,
         plot_empty=False,
+        completely_random_rotation=False,
+        lazy_loading = False,
+        lazy_loading_dir = None
     ):
         super().__init__(
-            base_model,
-            task,
-            ensemble_fold,
-            min_ensemble_required,
-            grid_len_upper_threshold,
-            grid_len_lower_threshold,
-            points_lower_threshold,
-            stixel_training_size_threshold,
-            temporal_start,
-            temporal_end,
-            temporal_step,
-            temporal_bin_interval,
-            temporal_bin_start_jitter,
-            spatio_bin_jitter_magnitude,
-            random_state,
-            save_gridding_plot,
-            save_tmp,
-            save_dir,
-            sample_weights_for_classifier,
-            Spatio1,
-            Spatio2,
-            Temporal1,
-            use_temporal_to_train,
-            njobs,
-            subset_x_names,
-            ensemble_models_disk_saver,
-            ensemble_models_disk_saving_dir,
-            plot_xlims,
-            plot_ylims,
-            verbosity,
-            plot_empty,
+            base_model=base_model,
+            task=task,
+            ensemble_fold=ensemble_fold,
+            min_ensemble_required=min_ensemble_required,
+            grid_len_upper_threshold=grid_len_upper_threshold,
+            grid_len_lower_threshold=grid_len_lower_threshold,
+            points_lower_threshold=points_lower_threshold,
+            stixel_training_size_threshold=stixel_training_size_threshold,
+            temporal_start=temporal_start,
+            temporal_end=temporal_end,
+            temporal_step=temporal_step,
+            temporal_bin_interval=temporal_bin_interval,
+            temporal_bin_start_jitter=temporal_bin_start_jitter,
+            spatio_bin_jitter_magnitude=spatio_bin_jitter_magnitude,
+            random_state=random_state,
+            save_gridding_plot=save_gridding_plot,
+            sample_weights_for_classifier=sample_weights_for_classifier,
+            Spatio1=Spatio1,
+            Spatio2=Spatio2,
+            Temporal1=Temporal1,
+            use_temporal_to_train=use_temporal_to_train,
+            n_jobs=n_jobs,
+            subset_x_names=subset_x_names,
+            plot_xlims=plot_xlims,
+            plot_ylims=plot_ylims,
+            verbosity=verbosity,
+            plot_empty=plot_empty,
+            completely_random_rotation=completely_random_rotation,
+            lazy_loading=lazy_loading,
+            lazy_loading_dir=lazy_loading_dir
         )
 
     def predict(
@@ -1310,7 +1376,7 @@ class AdaSTEMClassifier(AdaSTEM):
         verbosity: Union[None, int] = None,
         return_std: bool = False,
         cls_threshold: float = 0.5,
-        njobs: Union[int, None] = 1,
+        n_jobs: Union[int, None] = 1,
         aggregation: str = "mean",
         return_by_separate_ensembles: bool = False,
     ) -> Union[np.ndarray, Tuple[np.ndarray]]:
@@ -1327,8 +1393,8 @@ class AdaSTEMClassifier(AdaSTEM):
                 Cutting threshold for the classification.
                 Values above cls_threshold will be labeled as 1 and 0 otherwise.
                 Defaults to 0.5.
-            njobs (Union[int, None], optional):
-                Number of processes used in this task. If None, use the self.njobs. Default to 1.
+            n_jobs (Union[int, None], optional):
+                Number of processes used in this task. If None, use the self.n_jobs. Default to 1.
                 I do not recommend setting value larger than 1.
                 In practice, multi-processing seems to slow down the process instead of speeding up.
                 Could be more practical with large amount of data.
@@ -1354,7 +1420,7 @@ class AdaSTEMClassifier(AdaSTEM):
                 X_test,
                 verbosity=verbosity,
                 return_std=True,
-                njobs=njobs,
+                n_jobs=n_jobs,
                 aggregation=aggregation,
                 return_by_separate_ensembles=return_by_separate_ensembles,
             )
@@ -1366,7 +1432,7 @@ class AdaSTEMClassifier(AdaSTEM):
                 X_test,
                 verbosity=verbosity,
                 return_std=False,
-                njobs=njobs,
+                n_jobs=n_jobs,
                 aggregation=aggregation,
                 return_by_separate_ensembles=return_by_separate_ensembles,
             )
@@ -1417,52 +1483,50 @@ class AdaSTEMRegressor(AdaSTEM):
         spatio_bin_jitter_magnitude="adaptive",
         random_state=None,
         save_gridding_plot=False,
-        save_tmp=False,
-        save_dir="./",
         sample_weights_for_classifier=True,
         Spatio1="longitude",
         Spatio2="latitude",
         Temporal1="DOY",
         use_temporal_to_train=True,
-        njobs=1,
+        n_jobs=1,
         subset_x_names=False,
-        ensemble_models_disk_saver=False,
-        ensemble_models_disk_saving_dir="./",
         plot_xlims=None,
         plot_ylims=None,
         verbosity=0,
         plot_empty=False,
+        completely_random_rotation=False,
+        lazy_loading = False,
+        lazy_loading_dir = None
     ):
         super().__init__(
-            base_model,
-            task,
-            ensemble_fold,
-            min_ensemble_required,
-            grid_len_upper_threshold,
-            grid_len_lower_threshold,
-            points_lower_threshold,
-            stixel_training_size_threshold,
-            temporal_start,
-            temporal_end,
-            temporal_step,
-            temporal_bin_interval,
-            temporal_bin_start_jitter,
-            spatio_bin_jitter_magnitude,
-            random_state,
-            save_gridding_plot,
-            save_tmp,
-            save_dir,
-            sample_weights_for_classifier,
-            Spatio1,
-            Spatio2,
-            Temporal1,
-            use_temporal_to_train,
-            njobs,
-            subset_x_names,
-            ensemble_models_disk_saver,
-            ensemble_models_disk_saving_dir,
-            plot_xlims,
-            plot_ylims,
-            verbosity,
-            plot_empty,
+            base_model=base_model,
+            task=task,
+            ensemble_fold=ensemble_fold,
+            min_ensemble_required=min_ensemble_required,
+            grid_len_upper_threshold=grid_len_upper_threshold,
+            grid_len_lower_threshold=grid_len_lower_threshold,
+            points_lower_threshold=points_lower_threshold,
+            stixel_training_size_threshold=stixel_training_size_threshold,
+            temporal_start=temporal_start,
+            temporal_end=temporal_end,
+            temporal_step=temporal_step,
+            temporal_bin_interval=temporal_bin_interval,
+            temporal_bin_start_jitter=temporal_bin_start_jitter,
+            spatio_bin_jitter_magnitude=spatio_bin_jitter_magnitude,
+            random_state=random_state,
+            save_gridding_plot=save_gridding_plot,
+            sample_weights_for_classifier=sample_weights_for_classifier,
+            Spatio1=Spatio1,
+            Spatio2=Spatio2,
+            Temporal1=Temporal1,
+            use_temporal_to_train=use_temporal_to_train,
+            n_jobs=n_jobs,
+            subset_x_names=subset_x_names,
+            plot_xlims=plot_xlims,
+            plot_ylims=plot_ylims,
+            verbosity=verbosity,
+            plot_empty=plot_empty,
+            completely_random_rotation=completely_random_rotation,
+            lazy_loading=lazy_loading,
+            lazy_loading_dir=lazy_loading_dir
         )

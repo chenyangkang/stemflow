@@ -37,7 +37,7 @@ model = AdaSTEMClassifier(
     Spatio2='proj_lat',
     Temporal1='DOY',
     use_temporal_to_train=True,
-    njobs=1
+    n_jobs=1
 )
 ```
 
@@ -103,7 +103,7 @@ model = AdaSTEMRegressor(
     Spatio2='proj_lat',
     Temporal1='DOY',
     use_temporal_to_train=True,
-    njobs=1
+    n_jobs=1
 )
 ```
 Correspondingly, you would use a set of metrics for the regression problem:

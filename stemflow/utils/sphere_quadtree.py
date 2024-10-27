@@ -16,7 +16,6 @@ from tqdm import tqdm
 from ..gridding.Sphere_QTree import Sphere_QTree
 from .quadtree import generate_temporal_bins
 from .sphere.coordinate_transform import lonlat_cartesian_3D_transformer
-
 from .validation import check_random_state
 
 os.environ["MKL_NUM_THREADS"] = "1"
@@ -44,7 +43,7 @@ def get_one_ensemble_sphere_quadtree(
     ax=None,
     radius: Union[int, float] = 6371.0,
     plot_empty: bool = False,
-    rng: np.random._generator.Generator = None
+    rng: np.random._generator.Generator = None,
 ):
     """Generate QuadTree gridding based on the input dataframe
     A function to get quadtree results for spherical indexing system. Twins to `get_ensemble_quadtree` in `quadtree.py`, Returns ensemble_df and plotting axes.
@@ -87,7 +86,7 @@ def get_one_ensemble_sphere_quadtree(
             The radius of earth in km. Defaults to 6371.0.
         rng:
             random number generator.
-            
+
     Returns:
         A tuple of <br>
             1. ensemble dataframe;<br>
@@ -95,7 +94,7 @@ def get_one_ensemble_sphere_quadtree(
 
     """
     rng = check_random_state(rng)
-    
+
     if spatio_bin_jitter_magnitude == "adaptive":
         rotation_angle = rng.uniform(0, 90)
         rotation_axis = rng.uniform(-1, 1, 3)
@@ -106,7 +105,7 @@ def get_one_ensemble_sphere_quadtree(
         step=temporal_step,
         bin_interval=temporal_bin_interval,
         temporal_bin_start_jitter=temporal_bin_start_jitter,
-        rng=rng
+        rng=rng,
     )
 
     ensemble_all_df_list = []

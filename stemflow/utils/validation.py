@@ -44,21 +44,21 @@ def check_base_model(base_model):
             raise AttributeError(f"input base model must have method '{func}'!")
 
 
-def check_transform_njobs(self, njobs):
-    if njobs is None:
-        if self.njobs is None:
-            warnings.warn("No njobs input. Default to 1.")
+def check_transform_n_jobs(self, n_jobs):
+    if n_jobs is None:
+        if self.n_jobs is None:
+            warnings.warn("No n_jobs input. Default to 1.")
             return 1
         else:
-            return self.njobs
+            return self.n_jobs
     else:
-        if not isinstance(njobs, int):
-            raise TypeError(f"njobs is not a integer. Got {njobs}.")
+        if not isinstance(n_jobs, int):
+            raise TypeError(f"n_jobs is not a integer. Got {n_jobs}.")
         else:
-            if njobs == 0:
-                raise ValueError("njobs cannot be 0!")
+            if n_jobs == 0:
+                raise ValueError("n_jobs cannot be 0!")
             else:
-                return njobs
+                return n_jobs
 
 
 def check_verbosity(self, verbosity):

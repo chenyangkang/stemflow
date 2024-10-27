@@ -84,6 +84,7 @@ nav:
     - 'Using hurdle model in AdaSTEM': Examples/05.Hurdle_in_ada_or_ada_in_hurdle.ipynb
     - 'Base model choices': Examples/06.Base_model_choices.ipynb
     - 'Optimizing stixel size': Examples/07.Optimizing_stixel_size.ipynb
+    - 'Lazy-loading': Examples/08.Lazy_loading.ipynb
   - Tips:
     - 'Tips for spatiotemporal indexing': Tips/Tips_for_spatiotemporal_indexing.md
     - 'Tips for data types': Tips/Tips_for_data_types.md
@@ -116,6 +117,7 @@ nav:
       - 'generate_soft_colors': API_Documentation/utils/stemflow.utils.generate_soft_colors.md
       - 'validation': API_Documentation/utils/stemflow.utils.validation.md
       - 'wrapper': API_Documentation/utils/stemflow.utils.wrapper.md
+      - 'lazyloading':API_Documentation/utils/stemflow.utils.lazyloading.md
     - stemflow.model_selection: API_Documentation/stemflow.model_selection.md
 
   - Fun Visualization:

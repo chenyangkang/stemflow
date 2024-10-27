@@ -22,14 +22,14 @@ from ..utils.sphere_quadtree import get_one_ensemble_sphere_quadtree
 from ..utils.validation import (
     check_base_model,
     check_prediciton_aggregation,
+    check_random_state,
     check_spatial_scale,
     check_spatio_bin_jitter_magnitude,
     check_task,
     check_temporal_bin_start_jitter,
     check_temporal_scale,
-    check_transform_njobs,
+    check_transform_n_jobs,
     check_verbosity,
-    check_random_state
 )
 from ..utils.wrapper import model_wrapper
 from .AdaSTEM import AdaSTEM, AdaSTEMClassifier, AdaSTEMRegressor
@@ -70,24 +70,22 @@ class SphereAdaSTEM(AdaSTEM):
         temporal_bin_interval: Union[float, int] = 50,
         temporal_bin_start_jitter: Union[float, int, str] = "adaptive",
         spatio_bin_jitter_magnitude: Union[float, int] = "adaptive",
-        random_state = None,
+        random_state=None,
         save_gridding_plot: bool = True,
-        save_tmp: bool = False,
-        save_dir: str = "./",
         sample_weights_for_classifier: bool = True,
         Spatio1: str = "longitude",
         Spatio2: str = "latitude",
         Temporal1: str = "DOY",
         use_temporal_to_train: bool = True,
-        njobs: int = 1,
+        n_jobs: int = 1,
         subset_x_names: bool = False,
-        ensemble_models_disk_saver: bool = False,
-        ensemble_models_disk_saving_dir: str = "./",
         plot_xlims: Tuple[Union[float, int], Union[float, int]] = (-180, 180),
         plot_ylims: Tuple[Union[float, int], Union[float, int]] = (-90, 90),
         verbosity: int = 0,
         plot_empty: bool = False,
         radius: float = 6371.0,
+        lazy_loading: bool = False,
+        lazy_loading_dir: Union[str, None] = None
     ):
         """Make a Spherical AdaSTEM object
 
@@ -130,12 +128,8 @@ class SphereAdaSTEM(AdaSTEM):
                 None or int. After setting the same seed, the model will generate the same results each time. For reproducibility.
             save_gridding_plot:
                 Whether ot save gridding plots. Defaults to True.
-            save_tmp:
-                Whether to save the ensemble dataframe. Defaults to False.
-            save_dir:
-                If save_tmp==True, save the ensemble dataframe to this path. Defaults to './'.
-            ensemble_models_disk_saver:
-                Whether to balance the sample weights of classifier for imbalanced datasets. Defaults to True.
+            sample_weights_for_classifier:
+                Whether to adjust for unbanlanced data for the classifier. Default to True.
             Spatio1:
                 Spatial column name 1 in data. For SphereAdaSTEM, this HAS to be 'longitude'.
             Spatio2:
@@ -145,14 +139,10 @@ class SphereAdaSTEM(AdaSTEM):
             use_temporal_to_train:
                 Whether to use temporal variable to train. For example in modeling the daily abundance of bird population,
                 whether use 'day of year (DOY)' as a training variable. Defaults to True.
-            njobs:
+            n_jobs:
                 Number of multiprocessing in fitting the model. Defaults to 1.
             subset_x_names:
                 Whether to only store variables with std > 0 for each stixel. Set to False will significantly increase the training speed.
-            ensemble_disk_saver:
-                Whether to save each ensemble of models to dicts instead of saving them in memory.
-            ensemble_models_disk_saving_dir:
-                Where to save the ensemble models. Only valid if ensemble_disk_saver is True.
             plot_xlims:
                 If save_gridding_plot=true, what is the xlims of the plot. Defaults to (-180,180).
             plot_ylims:
@@ -163,6 +153,11 @@ class SphereAdaSTEM(AdaSTEM):
                 Whether to plot the empty grid
             radius:
                 radius of earth in km.
+            lazy_loading:
+                If True, ensembles of models will be saved in disk, and only loaded when being used (e.g., prediction phase), and the ensembles of models are dump to disk once it is used.
+            lazy_loading_dir:
+                If lazy_loading, the directory of the model to temporary save to. Default to None, where a random number will be generated as folder name.
+
 
         Raises:
             AttributeError: Base model do not have method 'fit' or 'predict'
@@ -191,37 +186,35 @@ class SphereAdaSTEM(AdaSTEM):
         """
         # Init parent class
         super().__init__(
-            base_model,
-            task,
-            ensemble_fold,
-            min_ensemble_required,
-            grid_len_upper_threshold,
-            grid_len_lower_threshold,
-            points_lower_threshold,
-            stixel_training_size_threshold,
-            temporal_start,
-            temporal_end,
-            temporal_step,
-            temporal_bin_interval,
-            temporal_bin_start_jitter,
-            spatio_bin_jitter_magnitude,
-            random_state,
-            save_gridding_plot,
-            save_tmp,
-            save_dir,
-            sample_weights_for_classifier,
-            Spatio1,
-            Spatio2,
-            Temporal1,
-            use_temporal_to_train,
-            njobs,
-            subset_x_names,
-            ensemble_models_disk_saver,
-            ensemble_models_disk_saving_dir,
-            plot_xlims,
-            plot_ylims,
-            verbosity,
-            plot_empty,
+            base_model=base_model,
+            task=task,
+            ensemble_fold=ensemble_fold,
+            min_ensemble_required=min_ensemble_required,
+            grid_len_upper_threshold=grid_len_upper_threshold,
+            grid_len_lower_threshold=grid_len_lower_threshold,
+            points_lower_threshold=points_lower_threshold,
+            stixel_training_size_threshold=stixel_training_size_threshold,
+            temporal_start=temporal_start,
+            temporal_end=temporal_end,
+            temporal_step=temporal_step,
+            temporal_bin_interval=temporal_bin_interval,
+            temporal_bin_start_jitter=temporal_bin_start_jitter,
+            spatio_bin_jitter_magnitude=spatio_bin_jitter_magnitude,
+            random_state=random_state,
+            save_gridding_plot=save_gridding_plot,
+            sample_weights_for_classifier=sample_weights_for_classifier,
+            Spatio1=Spatio1,
+            Spatio2=Spatio2,
+            Temporal1=Temporal1,
+            use_temporal_to_train=use_temporal_to_train,
+            n_jobs=n_jobs,
+            subset_x_names=subset_x_names,
+            plot_xlims=plot_xlims,
+            plot_ylims=plot_ylims,
+            verbosity=verbosity,
+            plot_empty=plot_empty,
+            lazy_loading=lazy_loading,
+            lazy_loading_dir=lazy_loading_dir
         )
 
         if not self.Spatio1 == "longitude":
@@ -234,7 +227,7 @@ class SphereAdaSTEM(AdaSTEM):
         self.radius = radius
 
     def split(
-        self, X_train: pd.core.frame.DataFrame, verbosity: Union[None, int] = None, ax=None, njobs: int = 1
+        self, X_train: pd.core.frame.DataFrame, verbosity: Union[None, int] = None, ax=None, n_jobs: int = 1
     ) -> dict:
         """QuadTree indexing the input data
 
@@ -248,8 +241,7 @@ class SphereAdaSTEM(AdaSTEM):
         """
         self.rng = check_random_state(self.random_state)
         verbosity = check_verbosity(self, verbosity)
-        njobs = check_transform_njobs(self, njobs)
-        save_path = os.path.join(self.save_dir, "ensemble_quadtree_df.csv") if self.save_tmp else ""
+        n_jobs = check_transform_n_jobs(self, n_jobs)
 
         if "grid_len" not in self.__dir__():
             # We are using AdaSTEM
@@ -300,12 +292,13 @@ class SphereAdaSTEM(AdaSTEM):
             ax=ax,
         )
 
-        if njobs > 1 and isinstance(njobs, int):
-            parallel = joblib.Parallel(n_jobs=njobs, return_as="generator")
+        if n_jobs > 1 and isinstance(n_jobs, int):
+            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator")
             output_generator = parallel(
                 joblib.delayed(partial_get_one_ensemble_sphere_quadtree)(
                     ensemble_count=ensemble_count, rng=np.random.default_rng(self.rng.integers(1e9) + ensemble_count)
-                    ) for ensemble_count in list(range(self.ensemble_fold))
+                )
+                for ensemble_count in list(range(self.ensemble_fold))
             )
             if verbosity > 0:
                 output_generator = tqdm(output_generator, total=self.ensemble_fold, desc="Generating Ensemble: ")
@@ -321,17 +314,14 @@ class SphereAdaSTEM(AdaSTEM):
             ensemble_all_df_list = [
                 partial_get_one_ensemble_sphere_quadtree(
                     ensemble_count=ensemble_count, rng=np.random.default_rng(self.rng.integers(1e9) + ensemble_count)
-                    ) for ensemble_count in iter_func_
+                )
+                for ensemble_count in iter_func_
             ]
 
         ensemble_df = pd.concat(ensemble_all_df_list).reset_index(drop=True)
         ensemble_df = ensemble_df.reset_index(drop=True)
 
         del ensemble_all_df_list
-
-        if not save_path == "":
-            ensemble_df.to_csv(save_path, index=False)
-            print(f"Saved! {save_path}")
 
         if self.save_gridding_plot:
             self.ensemble_df, self.gridding_plot = ensemble_df, ax
@@ -498,11 +488,11 @@ class SphereAdaSTEM(AdaSTEM):
         Sample_ST_df: Union[pd.core.frame.DataFrame, None] = None,
         verbosity: Union[None, int] = None,
         aggregation: str = "mean",
-        njobs: Union[int, None] = 1,
+        n_jobs: Union[int, None] = 1,
         assign_function: Callable = assign_points_to_one_ensemble_sphere,
     ) -> pd.core.frame.DataFrame:
         return super().assign_feature_importances_by_points(
-            Sample_ST_df, verbosity, aggregation, njobs, assign_function
+            Sample_ST_df, verbosity, aggregation, n_jobs, assign_function
         )
 
 
@@ -548,54 +538,50 @@ class SphereAdaSTEMClassifier(SphereAdaSTEM):
         spatio_bin_jitter_magnitude="adaptive",
         random_state=None,
         save_gridding_plot=False,
-        save_tmp=False,
-        save_dir="./",
         sample_weights_for_classifier=True,
         Spatio1="longitude",
         Spatio2="latitude",
         Temporal1="DOY",
         use_temporal_to_train=True,
-        njobs=1,
+        n_jobs=1,
         subset_x_names=False,
-        ensemble_models_disk_saver=False,
-        ensemble_models_disk_saving_dir="./",
         plot_xlims=(-180, 180),
         plot_ylims=(-90, 90),
         verbosity=0,
         plot_empty=False,
+        lazy_loading=False,
+        lazy_loading_dir=None
     ):
         super().__init__(
-            base_model,
-            task,
-            ensemble_fold,
-            min_ensemble_required,
-            grid_len_upper_threshold,
-            grid_len_lower_threshold,
-            points_lower_threshold,
-            stixel_training_size_threshold,
-            temporal_start,
-            temporal_end,
-            temporal_step,
-            temporal_bin_interval,
-            temporal_bin_start_jitter,
-            spatio_bin_jitter_magnitude,
-            random_state,
-            save_gridding_plot,
-            save_tmp,
-            save_dir,
-            sample_weights_for_classifier,
-            Spatio1,
-            Spatio2,
-            Temporal1,
-            use_temporal_to_train,
-            njobs,
-            subset_x_names,
-            ensemble_models_disk_saver,
-            ensemble_models_disk_saving_dir,
-            plot_xlims,
-            plot_ylims,
-            verbosity,
-            plot_empty,
+            base_model=base_model,
+            task=task,
+            ensemble_fold=ensemble_fold,
+            min_ensemble_required=min_ensemble_required,
+            grid_len_upper_threshold=grid_len_upper_threshold,
+            grid_len_lower_threshold=grid_len_lower_threshold,
+            points_lower_threshold=points_lower_threshold,
+            stixel_training_size_threshold=stixel_training_size_threshold,
+            temporal_start=temporal_start,
+            temporal_end=temporal_end,
+            temporal_step=temporal_step,
+            temporal_bin_interval=temporal_bin_interval,
+            temporal_bin_start_jitter=temporal_bin_start_jitter,
+            spatio_bin_jitter_magnitude=spatio_bin_jitter_magnitude,
+            random_state=random_state,
+            save_gridding_plot=save_gridding_plot,
+            sample_weights_for_classifier=sample_weights_for_classifier,
+            Spatio1=Spatio1,
+            Spatio2=Spatio2,
+            Temporal1=Temporal1,
+            use_temporal_to_train=use_temporal_to_train,
+            n_jobs=n_jobs,
+            subset_x_names=subset_x_names,
+            plot_xlims=plot_xlims,
+            plot_ylims=plot_ylims,
+            verbosity=verbosity,
+            plot_empty=plot_empty,
+            lazy_loading=lazy_loading,
+            lazy_loading_dir=lazy_loading_dir
         )
 
         self.predict = MethodType(AdaSTEMClassifier.predict, self)
@@ -643,52 +629,48 @@ class SphereAdaSTEMRegressor(SphereAdaSTEM):
         spatio_bin_jitter_magnitude="adaptive",
         random_state=None,
         save_gridding_plot=False,
-        save_tmp=False,
-        save_dir="./",
         sample_weights_for_classifier=True,
         Spatio1="longitude",
         Spatio2="latitude",
         Temporal1="DOY",
         use_temporal_to_train=True,
-        njobs=1,
+        n_jobs=1,
         subset_x_names=False,
-        ensemble_models_disk_saver=False,
-        ensemble_models_disk_saving_dir="./",
         plot_xlims=(-180, 180),
         plot_ylims=(-90, 90),
         verbosity=0,
         plot_empty=False,
+        lazy_loading=False,
+        lazy_loading_dir=None
     ):
         super().__init__(
-            base_model,
-            task,
-            ensemble_fold,
-            min_ensemble_required,
-            grid_len_upper_threshold,
-            grid_len_lower_threshold,
-            points_lower_threshold,
-            stixel_training_size_threshold,
-            temporal_start,
-            temporal_end,
-            temporal_step,
-            temporal_bin_interval,
-            temporal_bin_start_jitter,
-            spatio_bin_jitter_magnitude,
-            random_state,
-            save_gridding_plot,
-            save_tmp,
-            save_dir,
-            sample_weights_for_classifier,
-            Spatio1,
-            Spatio2,
-            Temporal1,
-            use_temporal_to_train,
-            njobs,
-            subset_x_names,
-            ensemble_models_disk_saver,
-            ensemble_models_disk_saving_dir,
-            plot_xlims,
-            plot_ylims,
-            verbosity,
-            plot_empty,
+            base_model=base_model,
+            task=task,
+            ensemble_fold=ensemble_fold,
+            min_ensemble_required=min_ensemble_required,
+            grid_len_upper_threshold=grid_len_upper_threshold,
+            grid_len_lower_threshold=grid_len_lower_threshold,
+            points_lower_threshold=points_lower_threshold,
+            stixel_training_size_threshold=stixel_training_size_threshold,
+            temporal_start=temporal_start,
+            temporal_end=temporal_end,
+            temporal_step=temporal_step,
+            temporal_bin_interval=temporal_bin_interval,
+            temporal_bin_start_jitter=temporal_bin_start_jitter,
+            spatio_bin_jitter_magnitude=spatio_bin_jitter_magnitude,
+            random_state=random_state,
+            save_gridding_plot=save_gridding_plot,
+            sample_weights_for_classifier=sample_weights_for_classifier,
+            Spatio1=Spatio1,
+            Spatio2=Spatio2,
+            Temporal1=Temporal1,
+            use_temporal_to_train=use_temporal_to_train,
+            n_jobs=n_jobs,
+            subset_x_names=subset_x_names,
+            plot_xlims=plot_xlims,
+            plot_ylims=plot_ylims,
+            verbosity=verbosity,
+            plot_empty=plot_empty,
+            lazy_loading=lazy_loading,
+            lazy_loading_dir=lazy_loading_dir
         )
