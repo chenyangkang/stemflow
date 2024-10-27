@@ -1263,9 +1263,10 @@ class AdaSTEM(BaseEstimator):
             
         #
         path, basename = os.path.split(Path(tar_gz_file.rstrip('/\\')))
+        tmp_code = int(np.random.uniform(0,1e8))
         
         # temporary save the model using pickle
-        model_path = os.path.join(path, 'model.pkl')
+        model_path = os.path.join(path, f'model_{tmp_code}.pkl')
         with open(model_path, 'wb') as f:
             pickle.dump(self, f)
                 
