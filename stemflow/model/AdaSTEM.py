@@ -12,6 +12,9 @@ import shutil
 #
 from multiprocessing import Lock, Pool, Process, cpu_count, shared_memory
 from typing import Callable, Tuple, Union
+from abc import ABC, abstractmethod
+import string
+
 
 import joblib
 import matplotlib.pyplot as plt
@@ -72,6 +75,7 @@ from .static_func_AdaSTEM import (  # predict_one_ensemble
 )
 
 from ..utils.lazyloading import LazyLoadingEnsembleDict
+
 
 class AdaSTEM(BaseEstimator):
     """A AdaSTEM model class inherited by AdaSTEMClassifier and AdaSTEMRegressor"""
@@ -207,7 +211,6 @@ class AdaSTEM(BaseEstimator):
         """
         # 1. Check random state
         self.random_state = random_state
-        self.rng = check_random_state(random_state)
 
         # 2. Base model
         check_base_model(base_model)
@@ -227,12 +230,8 @@ class AdaSTEM(BaseEstimator):
 
         self.ensemble_fold = ensemble_fold
         self.min_ensemble_required = min_ensemble_required
-        self.grid_len_upper_threshold = (
-            self.grid_len_lon_upper_threshold
-        ) = self.grid_len_lat_upper_threshold = grid_len_upper_threshold
-        self.grid_len_lower_threshold = (
-            self.grid_len_lon_lower_threshold
-        ) = self.grid_len_lat_lower_threshold = grid_len_lower_threshold
+        self.grid_len_upper_threshold = grid_len_upper_threshold
+        self.grid_len_lower_threshold = grid_len_lower_threshold
         self.points_lower_threshold = points_lower_threshold
         self.temporal_start = temporal_start
         self.temporal_end = temporal_end
@@ -267,10 +266,6 @@ class AdaSTEM(BaseEstimator):
         # X. miscellaneous
         self.lazy_loading = lazy_loading
         self.lazy_loading_dir = lazy_loading_dir
-        if self.lazy_loading_dir is None:
-            saving_code = int(np.random.uniform(1, 1e8))
-            self.lazy_loading_dir = f'./stemflow_model_{saving_code}'
-        self.lazy_loading_dir = str(Path(self.lazy_loading_dir.rstrip('/\\')))
 
         if not verbosity == 0:
             self.verbosity = 1
@@ -351,10 +346,10 @@ class AdaSTEM(BaseEstimator):
             data=X_train,
             Temporal1=self.Temporal1,
             grid_len=self.grid_len,
-            grid_len_lon_upper_threshold=self.grid_len_lon_upper_threshold,
-            grid_len_lon_lower_threshold=self.grid_len_lon_lower_threshold,
-            grid_len_lat_upper_threshold=self.grid_len_lat_upper_threshold,
-            grid_len_lat_lower_threshold=self.grid_len_lat_lower_threshold,
+            grid_len_lon_upper_threshold=self.grid_len_upper_threshold,
+            grid_len_lon_lower_threshold=self.grid_len_lower_threshold,
+            grid_len_lat_upper_threshold=self.grid_len_upper_threshold,
+            grid_len_lat_lower_threshold=self.grid_len_lower_threshold,
             points_lower_threshold=self.points_lower_threshold,
             plot_empty=self.plot_empty,
             Spatio1=self.Spatio1,
@@ -602,7 +597,18 @@ class AdaSTEM(BaseEstimator):
             TypeError: X_train is not a type of pd.core.frame.DataFrame
             TypeError: y_train is not a type of np.ndarray or pd.core.frame.DataFrame
         """
-        #
+        # setup random state
+        self.rng = check_random_state(self.random_state)
+        
+        # Setup lazyloading dir
+        if self.lazy_loading_dir is None:
+            saving_code = ''.join(np.random.choice(list(string.ascii_letters + string.digits)) for _ in range(16))
+            self.lazy_loading_dir = f'./stemflow_model_{saving_code}'
+        else:
+            if os.path.exists(self.lazy_loading_dir):
+                shutil.rmtree(self.lazy_loading_dir)
+        self.lazy_loading_dir = str(Path(self.lazy_loading_dir.rstrip('/\\')))
+        
         verbosity = check_verbosity(self, verbosity)
         check_X_train(X_train)
         check_y_train(y_train)
@@ -620,6 +626,7 @@ class AdaSTEM(BaseEstimator):
         self.stixel_specific_x_names = {}
 
         self.SAC_training(self.ensemble_df, X_train, verbosity, n_jobs)
+        self.classes_ = np.unique(y_train)
 
         return self
 
@@ -836,6 +843,12 @@ class AdaSTEM(BaseEstimator):
             new_res = new_res.merge(res, left_on="index", right_on="index", how="left")
             return new_res.values
 
+        # Transform to logit space if classification:
+        if self.task=='classification':
+            for col_index in range(res.shape[1]):
+                prob = np.clip(res.iloc[:,col_index], 0.001, 0.999)
+                res.iloc[:,col_index] = np.log(prob / (1-prob)) # logit space
+            
         # Aggregate
         if aggregation == "mean":
             res_mean = res.mean(axis=1, skipna=True)  # mean of all grid model that predicts this stixel
@@ -843,6 +856,10 @@ class AdaSTEM(BaseEstimator):
             res_mean = res.median(axis=1, skipna=True)
         res_std = res.std(axis=1, skipna=True)
 
+        # Transform to logit space if classification:
+        if self.task=='classification':
+            res_mean = 1/(1+np.exp(-res_mean)) # notice that the res_std is not transformed!
+        
         # Nan count
         res_nan_count = res.isnull().sum(axis=1)
         pred_mean = np.where(
@@ -865,10 +882,11 @@ class AdaSTEM(BaseEstimator):
         warnings.warn(f"There are {nan_frac}% points ({nan_count} points) falling out of predictable range.")
 
         if return_std:
-            return new_res["pred_mean"].values, new_res["pred_std"].values
+            return np.array([1-new_res["pred_mean"].values.flatten(), new_res["pred_mean"].values.flatten()]).T, new_res["pred_std"].values
         else:
-            return new_res["pred_mean"].values
+            return np.array([1-new_res["pred_mean"].values.flatten(), new_res["pred_mean"].values.flatten()]).T
 
+    @abstractmethod
     def predict(
         self,
         X_test: pd.core.frame.DataFrame,
@@ -878,48 +896,8 @@ class AdaSTEM(BaseEstimator):
         aggregation: str = "mean",
         return_by_separate_ensembles: bool = False,
     ) -> Union[np.ndarray, Tuple[np.ndarray]]:
-        """A rewrite of predict_proba
+        pass
 
-        Args:
-            X_test (pd.core.frame.DataFrame):
-                Testing variables.
-            verbosity (Union[None, int], optional):
-                0 to output nothing, everything other wise. Default None set it to the verbosity of AdaSTEM model class.
-            return_std (bool, optional):
-                Whether return the standard deviation among ensembles. Defaults to False.
-            n_jobs (Union[int, None], optional):
-                Number of processes used in this task. If None, use the self.n_jobs. Default to 1.
-                I do not recommend setting value larger than 1.
-                In practice, multi-processing seems to slow down the process instead of speeding up.
-                Could be more practical with large amount of data.
-                Still in experiment.
-            aggregation (str, optional):
-                'mean' or 'median' for aggregation method across ensembles.
-            return_by_separate_ensembles (bool, optional):
-                Experimental function. return not by aggregation, but by separate ensembles.
-
-        Raises:
-            TypeError:
-                X_test is not of type pd.core.frame.DataFrame.
-            ValueError:
-                aggregation is not in ['mean','median'].
-
-        Returns:
-            predicted results. (pred_mean, pred_std) if return_std==true, and pred_mean if return_std==False.
-
-            If return_by_separate_ensembles == True:
-                Return numpy.ndarray of shape (n_samples, n_ensembles)
-
-        """
-
-        return self.predict_proba(
-            X_test,
-            verbosity=verbosity,
-            return_std=return_std,
-            n_jobs=n_jobs,
-            aggregation=aggregation,
-            return_by_separate_ensembles=return_by_separate_ensembles,
-        )
 
     @classmethod
     def eval_STEM_res(
@@ -1088,7 +1066,6 @@ class AdaSTEM(BaseEstimator):
 
                 except Exception as e:
                     warnings.warn(f"{e}")
-                    # print(e)
                     continue
                 
             if self.lazy_loading:
@@ -1369,6 +1346,8 @@ class AdaSTEMClassifier(AdaSTEM):
             lazy_loading=lazy_loading,
             lazy_loading_dir=lazy_loading_dir
         )
+        
+        self._estimator_type = 'classifier'
 
     def predict(
         self,
@@ -1424,6 +1403,7 @@ class AdaSTEMClassifier(AdaSTEM):
                 aggregation=aggregation,
                 return_by_separate_ensembles=return_by_separate_ensembles,
             )
+            mean = mean[:,1]
             mean = np.where(mean < cls_threshold, 0, mean)
             mean = np.where(mean >= cls_threshold, 1, mean)
             return mean, std
@@ -1436,6 +1416,7 @@ class AdaSTEMClassifier(AdaSTEM):
                 aggregation=aggregation,
                 return_by_separate_ensembles=return_by_separate_ensembles,
             )
+            mean = mean[:,1]
             mean = np.where(mean < cls_threshold, 0, mean)
             mean = np.where(mean >= cls_threshold, 1, mean)
             return mean
@@ -1530,3 +1511,64 @@ class AdaSTEMRegressor(AdaSTEM):
             lazy_loading=lazy_loading,
             lazy_loading_dir=lazy_loading_dir
         )
+        
+        self._estimator_type = 'regressor'
+            
+            
+    def predict(
+        self,
+        X_test: pd.core.frame.DataFrame,
+        verbosity: Union[None, int] = None,
+        return_std: bool = False,
+        n_jobs: Union[None, int] = 1,
+        aggregation: str = "mean",
+        return_by_separate_ensembles: bool = False,
+    ) -> Union[np.ndarray, Tuple[np.ndarray]]:
+        """A rewrite of predict_proba
+
+        Args:
+            X_test (pd.core.frame.DataFrame):
+                Testing variables.
+            verbosity (Union[None, int], optional):
+                0 to output nothing, everything other wise. Default None set it to the verbosity of AdaSTEM model class.
+            return_std (bool, optional):
+                Whether return the standard deviation among ensembles. Defaults to False.
+            n_jobs (Union[int, None], optional):
+                Number of processes used in this task. If None, use the self.n_jobs. Default to 1.
+                I do not recommend setting value larger than 1.
+                In practice, multi-processing seems to slow down the process instead of speeding up.
+                Could be more practical with large amount of data.
+                Still in experiment.
+            aggregation (str, optional):
+                'mean' or 'median' for aggregation method across ensembles.
+            return_by_separate_ensembles (bool, optional):
+                Experimental function. return not by aggregation, but by separate ensembles.
+
+        Raises:
+            TypeError:
+                X_test is not of type pd.core.frame.DataFrame.
+            ValueError:
+                aggregation is not in ['mean','median'].
+
+        Returns:
+            predicted results. (pred_mean, pred_std) if return_std==true, and pred_mean if return_std==False.
+
+            If return_by_separate_ensembles == True:
+                Return numpy.ndarray of shape (n_samples, n_ensembles)
+
+        """
+        
+        prediciton = self.predict_proba(
+            X_test,
+            verbosity=verbosity,
+            return_std=return_std,
+            n_jobs=n_jobs,
+            aggregation=aggregation,
+            return_by_separate_ensembles=return_by_separate_ensembles,
+        )
+        
+        if return_by_separate_ensembles:
+            return prediciton
+        else:
+            return prediciton[:,1] # the prediciton[:,0] won't make any sense -- it is a regressor, is should not have a method called "predict_proba". But we have it for completeness. So we should definately remove the first column when the prediction is done.
+        
