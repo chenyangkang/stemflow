@@ -45,7 +45,7 @@ def train_one_stixel(
         sample_weights_for_classifier (bool): Whether to balance the sample weights in classifier for imbalanced samples.
         subset_x_names (bool): Whether to only store variables with std > 0 for each stixel.
         sub_X_train (pd.core.frame.DataFrame): Input training dataframe for THE stixel.
-        min_class_sample (int): Number of samples needed to train the classifier. If the sample does not satisfy, fit a dummy one.
+        min_class_sample (int): Minimum umber of samples needed to train the classifier in each stixel. If the sample does not satisfy, fit a dummy one.
 
     Returns:
         tuple[Union[None, BaseEstimator], list]: trained_model, stixel_specific_x_names
