@@ -641,6 +641,7 @@ class AdaSTEM(BaseEstimator):
             pd.core.frame.DataFrame: the prediction result of this stixel
         """
 
+        # stixel['unique_stixel_id'] = stixel.name
         unique_stixel_id = stixel["unique_stixel_id"].iloc[0]
 
         model_x_names_tuple = get_model_and_stixel_specific_x_names(
@@ -707,17 +708,17 @@ class AdaSTEM(BaseEstimator):
                 .groupby(["ensemble_index", "unique_stixel_id"])
                 .apply(find_belonged_points, df_a=window_data_df)
             )
-
+            
             if len(query_results) == 0:
                 """All points fall out of the grids"""
                 continue
 
-            # predict
+            # predict            
             window_prediction = (
                 query_results.reset_index(drop=False, level=[0, 1])
                 .dropna(subset="unique_stixel_id")
                 .groupby("unique_stixel_id")
-                .apply(lambda stixel: self.stixel_predict(stixel))
+                .apply(lambda stixel: self.stixel_predict(stixel)) #
             )
 
             window_prediction_list.append(window_prediction)
@@ -965,8 +966,8 @@ class AdaSTEM(BaseEstimator):
                 auc, kappa, f1, precision, recall, average_precision = [np.nan] * 6
 
             else:
-                auc = roc_auc_score(y_test_b, y_pred_b)
-                kappa = cohen_kappa_score(y_test_b, y_pred_b)
+                auc = roc_auc_score(y_test_b, np.array(a.pred)) # AUC can be calculated with probability
+                kappa = cohen_kappa_score(y_test_b, y_pred_b, weights='linear')
                 f1 = f1_score(y_test_b, y_pred_b)
                 precision = precision_score(y_test_b, y_pred_b)
                 recall = recall_score(y_test_b, y_pred_b)

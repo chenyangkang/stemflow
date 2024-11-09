@@ -445,6 +445,7 @@ def predict_one_stixel(
     Returns:
         A Dataframe of predicted results. With 'index' the same as the input indexes.
     """
+    
     if model_x_names_tuple[0] is None:
         return None
 
@@ -453,9 +454,9 @@ def predict_one_stixel(
 
     # get test data
     if task == "regression":
-        pred = model_x_names_tuple[0].predict(np.array(X_test_stixel[model_x_names_tuple[1]]))
+        pred = model_x_names_tuple[0].predict(X_test_stixel[model_x_names_tuple[1]])
     else:
-        pred = model_x_names_tuple[0].predict_proba(np.array(X_test_stixel[model_x_names_tuple[1]]))[:, 1]
+        pred = model_x_names_tuple[0].predict_proba(X_test_stixel[model_x_names_tuple[1]])[:, 1]
 
     res = pd.DataFrame({"index": list(X_test_stixel.index), "pred": np.array(pred).flatten()}).set_index("index")
 
