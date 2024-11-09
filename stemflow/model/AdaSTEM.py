@@ -111,7 +111,8 @@ class AdaSTEM(BaseEstimator):
         plot_empty: bool = False,
         completely_random_rotation: bool = False,
         lazy_loading: bool = False,
-        lazy_loading_dir: Union[str, None] = None
+        lazy_loading_dir: Union[str, None] = None,
+        min_class_sample: int = 1
     ):
         """Make an AdaSTEM object
 
@@ -183,7 +184,8 @@ class AdaSTEM(BaseEstimator):
                 If True, ensembles of models will be saved in disk, and only loaded when being used (e.g., prediction phase), and the ensembles of models are dump to disk once it is used.
             lazy_loading_dir:
                 If lazy_loading, the directory of the model to temporary save to. Default to None, where a random number will be generated as folder name.
-
+            min_class_sample:
+                Minimum umber of samples needed to train the classifier in each stixel. If the sample does not satisfy, fit a dummy one. This parameter does not influence regression tasks.
         Raises:
             AttributeError: Base model do not have method 'fit' or 'predict'
             AttributeError: task not in one of ['regression', 'classification', 'hurdle']
@@ -252,6 +254,7 @@ class AdaSTEM(BaseEstimator):
         self.use_temporal_to_train = use_temporal_to_train
         self.subset_x_names = subset_x_names
         self.sample_weights_for_classifier = sample_weights_for_classifier
+        self.min_class_sample = min_class_sample
 
         # 6. Multi-processing params
         n_jobs = check_transform_n_jobs(self, n_jobs)
@@ -443,6 +446,7 @@ class AdaSTEM(BaseEstimator):
             sample_weights_for_classifier=self.sample_weights_for_classifier,
             subset_x_names=self.subset_x_names,
             stixel_X_train=stixel,
+            min_class_sample=self.min_class_sample
         )
 
         if not status == "Success":
@@ -641,7 +645,7 @@ class AdaSTEM(BaseEstimator):
             pd.core.frame.DataFrame: the prediction result of this stixel
         """
 
-        # stixel['unique_stixel_id'] = stixel.name
+        stixel['unique_stixel_id'] = stixel.name
         unique_stixel_id = stixel["unique_stixel_id"].iloc[0]
 
         model_x_names_tuple = get_model_and_stixel_specific_x_names(
@@ -654,7 +658,7 @@ class AdaSTEM(BaseEstimator):
         if model_x_names_tuple[0] is None:
             return None
 
-        pred = predict_one_stixel(stixel, self.task, model_x_names_tuple)
+        pred = predict_one_stixel(stixel, self.task, model_x_names_tuple, **self.base_model_prediction_param)
 
         if pred is None:
             return None
@@ -795,6 +799,7 @@ class AdaSTEM(BaseEstimator):
         n_jobs: Union[None, int] = 1,
         aggregation: str = "mean",
         return_by_separate_ensembles: bool = False,
+        **base_model_prediction_param
     ) -> Union[np.ndarray, Tuple[np.ndarray]]:
         """Predict probability
 
@@ -834,6 +839,7 @@ class AdaSTEM(BaseEstimator):
         return_by_separate_ensembles, return_std = check_prediction_return(return_by_separate_ensembles, return_std)
         verbosity = check_verbosity(self, verbosity)
         n_jobs = check_transform_n_jobs(self, n_jobs)
+        self.base_model_prediction_param = base_model_prediction_param
 
         # predict
         res = self.SAC_predict(self.ensemble_df, X_test, verbosity=verbosity, n_jobs=n_jobs)
@@ -896,6 +902,7 @@ class AdaSTEM(BaseEstimator):
         n_jobs: Union[None, int] = 1,
         aggregation: str = "mean",
         return_by_separate_ensembles: bool = False,
+        **base_model_prediction_param
     ) -> Union[np.ndarray, Tuple[np.ndarray]]:
         pass
 
@@ -1313,7 +1320,8 @@ class AdaSTEMClassifier(AdaSTEM):
         plot_empty=False,
         completely_random_rotation=False,
         lazy_loading = False,
-        lazy_loading_dir = None
+        lazy_loading_dir = None,
+        min_class_sample = 1
     ):
         super().__init__(
             base_model=base_model,
@@ -1345,7 +1353,8 @@ class AdaSTEMClassifier(AdaSTEM):
             plot_empty=plot_empty,
             completely_random_rotation=completely_random_rotation,
             lazy_loading=lazy_loading,
-            lazy_loading_dir=lazy_loading_dir
+            lazy_loading_dir=lazy_loading_dir,
+            min_class_sample=min_class_sample
         )
         
         self._estimator_type = 'classifier'
@@ -1359,6 +1368,7 @@ class AdaSTEMClassifier(AdaSTEM):
         n_jobs: Union[int, None] = 1,
         aggregation: str = "mean",
         return_by_separate_ensembles: bool = False,
+        **base_model_prediction_param
     ) -> Union[np.ndarray, Tuple[np.ndarray]]:
         """A rewrite of predict_proba adapted for Classifier
 
@@ -1383,6 +1393,8 @@ class AdaSTEMClassifier(AdaSTEM):
                 'mean' or 'median' for aggregation method across ensembles.
             return_by_separate_ensembles (bool, optional):
                 Experimental function. return not by aggregation, but by separate ensembles.
+            base_model_prediction_param:
+                Additional parameter passed to base_model.predict_proba or base_model.predict
 
         Raises:
             TypeError:
@@ -1403,6 +1415,7 @@ class AdaSTEMClassifier(AdaSTEM):
                 n_jobs=n_jobs,
                 aggregation=aggregation,
                 return_by_separate_ensembles=return_by_separate_ensembles,
+                **base_model_prediction_param
             )
             mean = mean[:,1]
             mean = np.where(mean < cls_threshold, 0, mean)
@@ -1416,6 +1429,7 @@ class AdaSTEMClassifier(AdaSTEM):
                 n_jobs=n_jobs,
                 aggregation=aggregation,
                 return_by_separate_ensembles=return_by_separate_ensembles,
+                **base_model_prediction_param
             )
             mean = mean[:,1]
             mean = np.where(mean < cls_threshold, 0, mean)
@@ -1478,7 +1492,8 @@ class AdaSTEMRegressor(AdaSTEM):
         plot_empty=False,
         completely_random_rotation=False,
         lazy_loading = False,
-        lazy_loading_dir = None
+        lazy_loading_dir = None,
+        min_class_sample = 1
     ):
         super().__init__(
             base_model=base_model,
@@ -1510,7 +1525,8 @@ class AdaSTEMRegressor(AdaSTEM):
             plot_empty=plot_empty,
             completely_random_rotation=completely_random_rotation,
             lazy_loading=lazy_loading,
-            lazy_loading_dir=lazy_loading_dir
+            lazy_loading_dir=lazy_loading_dir,
+            min_class_sample=min_class_sample
         )
         
         self._estimator_type = 'regressor'
@@ -1524,6 +1540,7 @@ class AdaSTEMRegressor(AdaSTEM):
         n_jobs: Union[None, int] = 1,
         aggregation: str = "mean",
         return_by_separate_ensembles: bool = False,
+        **base_model_prediction_param
     ) -> Union[np.ndarray, Tuple[np.ndarray]]:
         """A rewrite of predict_proba
 
@@ -1544,7 +1561,9 @@ class AdaSTEMRegressor(AdaSTEM):
                 'mean' or 'median' for aggregation method across ensembles.
             return_by_separate_ensembles (bool, optional):
                 Experimental function. return not by aggregation, but by separate ensembles.
-
+            base_model_prediction_param:
+                Additional parameter passed to base_model.predict_proba or base_model.predict
+                
         Raises:
             TypeError:
                 X_test is not of type pd.core.frame.DataFrame.
@@ -1566,6 +1585,7 @@ class AdaSTEMRegressor(AdaSTEM):
             n_jobs=n_jobs,
             aggregation=aggregation,
             return_by_separate_ensembles=return_by_separate_ensembles,
+            **base_model_prediction_param
         )
         
         if return_by_separate_ensembles:
