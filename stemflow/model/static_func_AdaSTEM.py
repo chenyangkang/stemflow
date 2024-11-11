@@ -89,7 +89,7 @@ def train_one_stixel(
         if (not task == "regression") and sample_weights_for_classifier:
             sample_weights = class_weight.compute_sample_weight(
                 class_weight="balanced", y=np.where(sub_y_train > 0, 1, 0)
-            )
+            ).astype('float32')
             trained_model.fit(sub_X_train[stixel_specific_x_names], sub_y_train, sample_weight=sample_weights)
             
             # try:
