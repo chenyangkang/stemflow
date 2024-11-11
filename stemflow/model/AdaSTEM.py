@@ -853,7 +853,7 @@ class AdaSTEM(BaseEstimator):
         # Transform to logit space if classification:
         if self.task=='classification':
             for col_index in range(res.shape[1]):
-                prob = np.clip(res.iloc[:,col_index], 0.001, 0.999)
+                prob = np.clip(res.iloc[:,col_index], 1e-6, 1 - 1e-6)
                 res.iloc[:,col_index] = np.log(prob / (1-prob)) # logit space
             
         # Aggregate
