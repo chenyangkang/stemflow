@@ -275,7 +275,7 @@ class AdaSTEM(BaseEstimator):
         else:
             self.verbosity = 0
 
-    def split(self, X_train: pd.core.frame.DataFrame, verbosity: Union[None, int] = None, ax=None, n_jobs: int = 1):
+    def split(self, X_train: pd.core.frame.DataFrame, verbosity: Union[None, int] = None, ax=None, n_jobs: Union[None, int] = None):
         """QuadTree indexing the input data
 
         Args:
@@ -796,7 +796,7 @@ class AdaSTEM(BaseEstimator):
         X_test: pd.core.frame.DataFrame,
         verbosity: Union[int, None] = None,
         return_std: bool = False,
-        n_jobs: Union[None, int] = 1,
+        n_jobs: Union[None, int] = None,
         aggregation: str = "mean",
         return_by_separate_ensembles: bool = False,
         **base_model_prediction_param

@@ -122,6 +122,8 @@ def make_sample_gif(
             if log_scale
             else np.max(data[col].values)
         )
+        
+    print(vmin, vmax)
     norm = Normalize(vmin=vmin, vmax=vmax)
 
     # Prepare colormap
