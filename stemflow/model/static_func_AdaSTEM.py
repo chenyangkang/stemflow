@@ -90,7 +90,11 @@ def train_one_stixel(
             sample_weights = class_weight.compute_sample_weight(
                 class_weight="balanced", y=np.where(sub_y_train > 0, 1, 0)
             ).astype('float32')
+            class_weights = class_weight.compute_class_weight(
+                class_weight="balanced", classes=np.array([0,1]), y=np.where(sub_y_train > 0, 1, 0)
+            ).astype('float32')
             trained_model.fit(sub_X_train[stixel_specific_x_names], sub_y_train, sample_weight=sample_weights)
+            trained_model.my_class_weights = class_weights
             
             # try:
             #     trained_model.fit(sub_X_train[stixel_specific_x_names], sub_y_train, sample_weight=sample_weights)
@@ -466,7 +470,14 @@ def predict_one_stixel(
     if task == "regression":
         pred = model_x_names_tuple[0].predict(X_test_stixel[model_x_names_tuple[1]])
     else:
-        pred = model_x_names_tuple[0].predict_proba(X_test_stixel[model_x_names_tuple[1]], **base_model_prediction_param)[:, 1]
+        pred = model_x_names_tuple[0].predict_proba(X_test_stixel[model_x_names_tuple[1]], **base_model_prediction_param)
+        if hasattr(model_x_names_tuple[0], 'my_class_weights'):
+            pred_r = pred * model_x_names_tuple[0].my_class_weights
+            pred_r = (pred_r / np.sum(pred_r, axis=1)[:,np.newaxis])
+            pred = pred_r 
+        
+        pred = pred[:,1]
+
 
     res = pd.DataFrame({"index": list(X_test_stixel.index), "pred": np.array(pred).flatten()}).set_index("index")
 

@@ -889,9 +889,16 @@ class AdaSTEM(BaseEstimator):
         warnings.warn(f"There are {nan_frac}% points ({nan_count} points) falling out of predictable range.")
 
         if return_std:
-            return np.array([1-new_res["pred_mean"].values.flatten(), new_res["pred_mean"].values.flatten()]).T, new_res["pred_std"].values
+            if self.task=='classification':
+                return np.array([1-new_res["pred_mean"].values.flatten(), new_res["pred_mean"].values.flatten()]).T, new_res["pred_std"].values
+            else:
+                return new_res["pred_mean"].values.reshape(-1,1), new_res["pred_std"].values
         else:
-            return np.array([1-new_res["pred_mean"].values.flatten(), new_res["pred_mean"].values.flatten()]).T
+            if self.task=='classification':
+                return np.array([1-new_res["pred_mean"].values.flatten(), new_res["pred_mean"].values.flatten()]).T
+            else:
+                return new_res["pred_mean"].values.reshape(-1,1)
+        
 
     @abstractmethod
     def predict(
@@ -1406,7 +1413,9 @@ class AdaSTEMClassifier(AdaSTEM):
             predicted results. (pred_mean, pred_std) if return_std==true, and pred_mean if return_std==False.
 
         """
-
+        if return_by_separate_ensembles!=False:
+            raise AttributeError('If you want to return by separate ensembles in this classifier, use it in .predict_proba, instead of .predict.')
+        
         if return_std:
             mean, std = self.predict_proba(
                 X_test,
@@ -1420,7 +1429,8 @@ class AdaSTEMClassifier(AdaSTEM):
             mean = mean[:,1]
             mean = np.where(mean < cls_threshold, 0, mean)
             mean = np.where(mean >= cls_threshold, 1, mean)
-            return mean, std
+            warnings.warn('This is a classification task. The standard deviation of the prediction is output at logit scale! The mean prediction is output at probability scale.')
+            return mean, std # notice! the std
         else:
             mean = self.predict_proba(
                 X_test,
@@ -1588,8 +1598,7 @@ class AdaSTEMRegressor(AdaSTEM):
             **base_model_prediction_param
         )
         
-        if return_by_separate_ensembles:
-            return prediciton
-        else:
-            return prediciton[:,1] # the prediciton[:,0] won't make any sense -- it is a regressor, is should not have a method called "predict_proba". But we have it for completeness. So we should definately remove the first column when the prediction is done.
-        
+        # if return_by_separate_ensembles, this will be the dataframe for ensemble
+        # if return_std, this wil be a tuple of mean and std of prediction
+        # if none of these, then it ill output the mean prediction
+        return prediciton
