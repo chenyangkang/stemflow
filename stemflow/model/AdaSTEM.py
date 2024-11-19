@@ -336,7 +336,9 @@ class AdaSTEM(BaseEstimator):
                 plt.title("Quadtree", fontsize=20)
             else:
                 pass
-
+        
+        X_train_indexes = X_train[[self.Temporal1, self.Spatio1, self.Spatio2]]
+        
         partial_get_one_ensemble_quadtree = partial(
             get_one_ensemble_quadtree,
             size=self.ensemble_fold,
@@ -346,7 +348,7 @@ class AdaSTEM(BaseEstimator):
             temporal_step=self.temporal_step,
             temporal_bin_interval=self.temporal_bin_interval,
             temporal_bin_start_jitter=self.temporal_bin_start_jitter,
-            data=X_train,
+            data=X_train_indexes,
             Temporal1=self.Temporal1,
             grid_len=self.grid_len,
             grid_len_lon_upper_threshold=self.grid_len_upper_threshold,
@@ -371,13 +373,13 @@ class AdaSTEM(BaseEstimator):
                 for ensemble_count in list(range(self.ensemble_fold))
             )
             if verbosity > 0:
-                output_generator = tqdm(output_generator, total=self.ensemble_fold, desc="Generating Ensemble: ")
+                output_generator = tqdm(output_generator, total=self.ensemble_fold, desc="Generating Ensembles: ")
 
             ensemble_all_df_list = [i for i in output_generator]
 
         else:
             iter_func_ = (
-                tqdm(range(self.ensemble_fold), total=self.ensemble_fold, desc="Generating Ensemble: ")
+                tqdm(range(self.ensemble_fold), total=self.ensemble_fold, desc="Generating Ensembles: ")
                 if verbosity > 0
                 else range(self.ensemble_fold)
             )
