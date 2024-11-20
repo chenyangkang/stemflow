@@ -18,6 +18,8 @@ from stemflow.model.Hurdle import Hurdle, Hurdle_for_AdaSTEM
 from stemflow.model.SphereAdaSTEM import SphereAdaSTEM, SphereAdaSTEMClassifier, SphereAdaSTEMRegressor
 from stemflow.model.STEM import STEM, STEMClassifier, STEMRegressor
 from stemflow.model_selection import ST_train_test_split
+# from sklearn.calibration import CalibratedClassifierCV
+# CalibratedClassifierCV(XGBClassifier(tree_method="hist", random_state=42, verbosity=0, n_jobs=1), cv=3, n_jobs=1, ensemble=True)
 
 fold_ = 2
 min_req = 1

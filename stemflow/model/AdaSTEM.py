@@ -112,7 +112,8 @@ class AdaSTEM(BaseEstimator):
         completely_random_rotation: bool = False,
         lazy_loading: bool = False,
         lazy_loading_dir: Union[str, None] = None,
-        min_class_sample: int = 1
+        min_class_sample: int = 1,
+        logit_agg: bool = False
     ):
         """Make an AdaSTEM object
 
@@ -186,6 +187,8 @@ class AdaSTEM(BaseEstimator):
                 If lazy_loading, the directory of the model to temporary save to. Default to None, where a random number will be generated as folder name.
             min_class_sample:
                 Minimum umber of samples needed to train the classifier in each stixel. If the sample does not satisfy, fit a dummy one. This parameter does not influence regression tasks.
+            logit_agg:
+                Whether to use logit aggregation for the classification task. If True, the model is averaging the probability prediction estimated by all ensembles in logit scale, and then back-tranform it to probability scale. It's recommened to be combinedly used with the CalibratedClassifierCV class in sklearn as a wrapper of the classifier to estimate the calibrated probability. If False, the output is the essentially the proportion of "1s" acorss the related ensembles; e.g., if 100 stixels covers this spatiotemporal points, and 90% of them predict that it is a "1", then the ouput probability is 0.9; Therefore it would be a probability estimated by the spatiotemporal neiborhood.
         Raises:
             AttributeError: Base model do not have method 'fit' or 'predict'
             AttributeError: task not in one of ['regression', 'classification', 'hurdle']
@@ -269,6 +272,7 @@ class AdaSTEM(BaseEstimator):
         # X. miscellaneous
         self.lazy_loading = lazy_loading
         self.lazy_loading_dir = lazy_loading_dir
+        self.logit_agg=logit_agg
 
         if not verbosity == 0:
             self.verbosity = 1
@@ -853,22 +857,30 @@ class AdaSTEM(BaseEstimator):
             return new_res.values
 
         # Transform to logit space if classification:
-        if self.task=='classification':
+        if self.task=='classification' and self.logit_agg:
             for col_index in range(res.shape[1]):
                 prob = np.clip(res.iloc[:,col_index], 1e-6, 1 - 1e-6)
                 res.iloc[:,col_index] = np.log(prob / (1-prob)) # logit space
-            
-        # Aggregate
-        if aggregation == "mean":
-            res_mean = res.mean(axis=1, skipna=True)  # mean of all grid model that predicts this stixel
-        elif aggregation == "median":
-            res_mean = res.median(axis=1, skipna=True)
-        res_std = res.std(axis=1, skipna=True)
-
-        # Transform to logit space if classification:
-        if self.task=='classification':
+                
+            # Aggregate
+            if aggregation == "mean":
+                res_mean = res.mean(axis=1, skipna=True)  # mean of all grid model that predicts this stixel
+            elif aggregation == "median":
+                res_mean = res.median(axis=1, skipna=True)
+                
+             # Transform to logit space if classification:
             res_mean = 1/(1+np.exp(-res_mean)) # notice that the res_std is not transformed!
             res_mean = res_mean.where(res_mean<=1e-6, 0)
+            
+        else:
+            # don't need to aggregate at logit scale
+            # Aggregate
+            if aggregation == "mean":
+                res_mean = res.mean(axis=1, skipna=True)  # mean of all grid model that predicts this stixel
+            elif aggregation == "median":
+                res_mean = res.median(axis=1, skipna=True)
+                
+        res_std = res.std(axis=1, skipna=True)
         
         # Nan count
         res_nan_count = res.isnull().sum(axis=1)
@@ -1331,7 +1343,8 @@ class AdaSTEMClassifier(AdaSTEM):
         completely_random_rotation=False,
         lazy_loading = False,
         lazy_loading_dir = None,
-        min_class_sample = 1
+        min_class_sample = 1,
+        logit_agg=False
     ):
         super().__init__(
             base_model=base_model,
@@ -1364,7 +1377,8 @@ class AdaSTEMClassifier(AdaSTEM):
             completely_random_rotation=completely_random_rotation,
             lazy_loading=lazy_loading,
             lazy_loading_dir=lazy_loading_dir,
-            min_class_sample=min_class_sample
+            min_class_sample=min_class_sample,
+            logit_agg=logit_agg
         )
         
         self._estimator_type = 'classifier'
