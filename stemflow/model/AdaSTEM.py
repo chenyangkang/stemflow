@@ -868,6 +868,7 @@ class AdaSTEM(BaseEstimator):
         # Transform to logit space if classification:
         if self.task=='classification':
             res_mean = 1/(1+np.exp(-res_mean)) # notice that the res_std is not transformed!
+            res_mean = res_mean.where(res_mean<=1e-6, 0)
         
         # Nan count
         res_nan_count = res.isnull().sum(axis=1)
@@ -894,12 +895,12 @@ class AdaSTEM(BaseEstimator):
             if self.task=='classification':
                 return np.array([1-new_res["pred_mean"].values.flatten(), new_res["pred_mean"].values.flatten()]).T, new_res["pred_std"].values
             else:
-                return new_res["pred_mean"].values.reshape(-1,1), new_res["pred_std"].values
+                return new_res["pred_mean"].values.flatten(), new_res["pred_std"].values.flatten()
         else:
             if self.task=='classification':
                 return np.array([1-new_res["pred_mean"].values.flatten(), new_res["pred_mean"].values.flatten()]).T
             else:
-                return new_res["pred_mean"].values.reshape(-1,1)
+                return new_res["pred_mean"].values.flatten()
         
 
     @abstractmethod
@@ -1428,7 +1429,7 @@ class AdaSTEMClassifier(AdaSTEM):
                 return_by_separate_ensembles=return_by_separate_ensembles,
                 **base_model_prediction_param
             )
-            mean = mean[:,1]
+            mean = mean[:,1].flatten()
             mean = np.where(mean < cls_threshold, 0, mean)
             mean = np.where(mean >= cls_threshold, 1, mean)
             warnings.warn('This is a classification task. The standard deviation of the prediction is output at logit scale! The mean prediction is output at probability scale.')
@@ -1443,7 +1444,7 @@ class AdaSTEMClassifier(AdaSTEM):
                 return_by_separate_ensembles=return_by_separate_ensembles,
                 **base_model_prediction_param
             )
-            mean = mean[:,1]
+            mean = mean[:,1].flatten()
             mean = np.where(mean < cls_threshold, 0, mean)
             mean = np.where(mean >= cls_threshold, 1, mean)
             return mean
