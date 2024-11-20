@@ -456,11 +456,6 @@ def predict_one_stixel(
         pred = model_x_names_tuple[0].predict(X_test_stixel[model_x_names_tuple[1]])
     else:
         pred = model_x_names_tuple[0].predict_proba(X_test_stixel[model_x_names_tuple[1]], **base_model_prediction_param)
-        if hasattr(model_x_names_tuple[0], 'my_class_weights'):
-            pred_r = pred * model_x_names_tuple[0].my_class_weights
-            pred_r = (pred_r / np.sum(pred_r, axis=1)[:,np.newaxis])
-            pred = pred_r 
-        
         pred = pred[:,1]
 
 
