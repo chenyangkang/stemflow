@@ -50,7 +50,7 @@ class Hurdle(BaseEstimator):
         """
         binary_ = np.unique(np.where(y_train > 0, 1, 0))
         if len(binary_) == 1:
-            warnings.warn("Warning: only one class presented. Replace with dummy classifier & regressor.")
+            # warnings.warn("Warning: only one class presented. Replace with dummy classifier & regressor.")
             self.classifier = dummy_model1(binary_[0])
             self.regressor = dummy_model1(binary_[0])
             return
@@ -88,7 +88,7 @@ class Hurdle(BaseEstimator):
         reg_res = self.regressor.predict(X_test)
         # reg_res = np.where(reg_res>=0, reg_res, 0) ### we constrain the reg value to be positive
         res = np.where(cls_res > 0, reg_res, cls_res)
-        return res.reshape(-1, 1)
+        return res.flatten()
 
     def predict_proba(self, X_test: Union[pd.core.frame.DataFrame, np.ndarray]) -> np.ndarray:
         """Predicting probability
@@ -253,7 +253,7 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
         # reg_res = np.where(reg_res>=0, reg_res, 0) ### we constrain the reg value to be positive
         res = np.where(cls_res < 0.5, 0, cls_res)
         res = np.where(cls_res > 0.5, reg_res, cls_res)
-        return res.reshape(-1, 1)
+        return res.flatten()
 
     def predict_proba(
         self,

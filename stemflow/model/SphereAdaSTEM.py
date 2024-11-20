@@ -85,7 +85,8 @@ class SphereAdaSTEM(AdaSTEM):
         plot_empty: bool = False,
         radius: float = 6371.0,
         lazy_loading: bool = False,
-        lazy_loading_dir: Union[str, None] = None
+        lazy_loading_dir: Union[str, None] = None,
+        min_class_sample: int = 1
     ):
         """Make a Spherical AdaSTEM object
 
@@ -157,8 +158,9 @@ class SphereAdaSTEM(AdaSTEM):
                 If True, ensembles of models will be saved in disk, and only loaded when being used (e.g., prediction phase), and the ensembles of models are dump to disk once it is used.
             lazy_loading_dir:
                 If lazy_loading, the directory of the model to temporary save to. Default to None, where a random number will be generated as folder name.
-
-
+            min_class_sample:
+                Minimum umber of samples needed to train the classifier in each stixel. If the sample does not satisfy, fit a dummy one. This parameter does not influence regression tasks.
+                
         Raises:
             AttributeError: Base model do not have method 'fit' or 'predict'
             AttributeError: task not in one of ['regression', 'classification', 'hurdle']
@@ -214,7 +216,8 @@ class SphereAdaSTEM(AdaSTEM):
             verbosity=verbosity,
             plot_empty=plot_empty,
             lazy_loading=lazy_loading,
-            lazy_loading_dir=lazy_loading_dir
+            lazy_loading_dir=lazy_loading_dir,
+            min_class_sample=min_class_sample
         )
 
         if not self.Spatio1 == "longitude":
@@ -550,7 +553,8 @@ class SphereAdaSTEMClassifier(SphereAdaSTEM):
         verbosity=0,
         plot_empty=False,
         lazy_loading=False,
-        lazy_loading_dir=None
+        lazy_loading_dir=None,
+        min_class_sample: int = 1
     ):
         super().__init__(
             base_model=base_model,
@@ -581,7 +585,8 @@ class SphereAdaSTEMClassifier(SphereAdaSTEM):
             verbosity=verbosity,
             plot_empty=plot_empty,
             lazy_loading=lazy_loading,
-            lazy_loading_dir=lazy_loading_dir
+            lazy_loading_dir=lazy_loading_dir,
+            min_class_sample=min_class_sample
         )
 
         self.predict = MethodType(AdaSTEMClassifier.predict, self)
@@ -641,7 +646,8 @@ class SphereAdaSTEMRegressor(SphereAdaSTEM):
         verbosity=0,
         plot_empty=False,
         lazy_loading=False,
-        lazy_loading_dir=None
+        lazy_loading_dir=None,
+        min_class_sample: int = 1
     ):
         super().__init__(
             base_model=base_model,
@@ -672,5 +678,8 @@ class SphereAdaSTEMRegressor(SphereAdaSTEM):
             verbosity=verbosity,
             plot_empty=plot_empty,
             lazy_loading=lazy_loading,
-            lazy_loading_dir=lazy_loading_dir
+            lazy_loading_dir=lazy_loading_dir,
+            min_class_sample=min_class_sample
         )
+
+        self.predict = MethodType(AdaSTEMRegressor.predict, self)

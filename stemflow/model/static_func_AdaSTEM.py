@@ -33,6 +33,7 @@ def train_one_stixel(
     sample_weights_for_classifier: bool,
     subset_x_names: bool,
     stixel_X_train: pd.core.frame.DataFrame,
+    min_class_sample: int,
 ) -> Tuple[Union[None, BaseEstimator], list]:
     """Train one stixel
 
@@ -44,6 +45,7 @@ def train_one_stixel(
         sample_weights_for_classifier (bool): Whether to balance the sample weights in classifier for imbalanced samples.
         subset_x_names (bool): Whether to only store variables with std > 0 for each stixel.
         sub_X_train (pd.core.frame.DataFrame): Input training dataframe for THE stixel.
+        min_class_sample (int): Minimum umber of samples needed to train the classifier in each stixel. If the sample does not satisfy, fit a dummy one.
 
     Returns:
         tuple[Union[None, BaseEstimator], list]: trained_model, stixel_specific_x_names
@@ -61,8 +63,11 @@ def train_one_stixel(
     if nan_count > 0:
         return (None, [], "Contain_Nan")
 
+    sample_count_each_class = {i:np.sum(np.where(sub_y_train > 0, 1, 0)==i) for i in unique_sub_y_train_binary}
+    min_sample_count_each_class = min([sample_count_each_class[i] for i in sample_count_each_class])
+    
     # fit
-    if (not task == "regression") and (len(unique_sub_y_train_binary) == 1):
+    if (not task == "regression") and ((len(unique_sub_y_train_binary) == 1) or min_sample_count_each_class < min_class_sample):
         trained_model = dummy_model1(float(unique_sub_y_train_binary[0]))
         return (trained_model, [], "Success")
     else:
@@ -84,23 +89,15 @@ def train_one_stixel(
         if (not task == "regression") and sample_weights_for_classifier:
             sample_weights = class_weight.compute_sample_weight(
                 class_weight="balanced", y=np.where(sub_y_train > 0, 1, 0)
-            )
-
-            try:
-                trained_model.fit(sub_X_train[stixel_specific_x_names], sub_y_train, sample_weight=sample_weights)
-
-            except Exception as e:
-                print(e)
-                # raise
-                return (None, [], "Base_model_fitting_error(non-regression, balanced weight)")
+            ).astype('float32')
+            class_weights = class_weight.compute_class_weight(
+                class_weight="balanced", classes=np.array([0,1]), y=np.where(sub_y_train > 0, 1, 0)
+            ).astype('float32')
+            trained_model.fit(sub_X_train[stixel_specific_x_names], sub_y_train, sample_weight=sample_weights)
+            trained_model.my_class_weights = class_weights
+            
         else:
-            try:
-                trained_model.fit(sub_X_train[stixel_specific_x_names], sub_y_train)
-
-            except Exception as e:
-                print(e)
-                # raise
-                return (None, [], "Base_model_fitting_error(regression)")
+            trained_model.fit(sub_X_train[stixel_specific_x_names], sub_y_train)
 
     return (trained_model, stixel_specific_x_names, "Success")
 
@@ -434,6 +431,7 @@ def predict_one_stixel(
     X_test_stixel: pd.core.frame.DataFrame,
     task: str,
     model_x_names_tuple: Tuple[Union[None, BaseEstimator], list],
+    **base_model_prediction_param
 ) -> pd.core.frame.DataFrame:
     """predict_one_stixel
 
@@ -441,10 +439,12 @@ def predict_one_stixel(
         X_test_stixel (pd.core.frame.DataFrame): Input testing variables
         task (str): One of 'regression', 'classification' and 'hurdle'
         model_x_names_tuple (tuple[Union[None, BaseEstimator], list]): A tuple of (model, stixel_specific_x_names)
+        base_model_prediction_param: Additional parameter passed to base_model.predict_proba or base_model.predict
 
     Returns:
         A Dataframe of predicted results. With 'index' the same as the input indexes.
     """
+    
     if model_x_names_tuple[0] is None:
         return None
 
@@ -453,9 +453,11 @@ def predict_one_stixel(
 
     # get test data
     if task == "regression":
-        pred = model_x_names_tuple[0].predict(np.array(X_test_stixel[model_x_names_tuple[1]]))
+        pred = model_x_names_tuple[0].predict(X_test_stixel[model_x_names_tuple[1]])
     else:
-        pred = model_x_names_tuple[0].predict_proba(np.array(X_test_stixel[model_x_names_tuple[1]]))[:, 1]
+        pred = model_x_names_tuple[0].predict_proba(X_test_stixel[model_x_names_tuple[1]], **base_model_prediction_param)
+        pred = pred[:,1]
+
 
     res = pd.DataFrame({"index": list(X_test_stixel.index), "pred": np.array(pred).flatten()}).set_index("index")
 

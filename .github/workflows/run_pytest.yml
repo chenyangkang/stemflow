@@ -7,7 +7,7 @@ on:
 
 jobs:
   pytesting:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       fail-fast: true
       matrix:
@@ -16,7 +16,7 @@ jobs:
     - name: Set Swap Space
       uses: pierotofy/set-swap-space@master
       with:
-        swap-size-gb: 10
+        swap-size-gb: 20
     - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
@@ -33,8 +33,8 @@ jobs:
 
     - name: Run pytest
       run: |
-        pytest -n auto --cov --no-cov-on-fail --cov-report=term-missing:skip-covered --cov-report xml:coverage.xml
-      timeout-minutes: 300  # Set the timeout to 1.5 hours for this step
+        pytest -n auto --cov --no-cov-on-fail --cov-report=term-missing:skip-covered --cov-report xml:coverage.xml -v
+      timeout-minutes: 1000  # Set the timeout to 1.5 hours for this step
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v4

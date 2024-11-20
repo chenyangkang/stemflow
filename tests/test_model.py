@@ -281,7 +281,7 @@ def test_SphereAdaSTEMRegressor():
 
 def test_AdaSTEMRegressor_Hurdle_for_AdaSTEM():
     model = make_AdaSTEMRegressor_Hurdle_for_AdaSTEM()
-    model = model.fit(X_train, np.where(y_train > 0, 1, 0))
+    model = model.fit(X_train, y_train)
 
     pred_mean = model.predict(X_test.reset_index(drop=True))
     assert np.sum(~np.isnan(pred_mean)) > 0

@@ -25,8 +25,9 @@ class dummy_model1(BaseEstimator):
         """Fake predict"""
         return np.array([self.the_value] * X_test.shape[0])
 
-    def predict_proba(self, X_test):
+    def predict_proba(self, X_test, **additional_parameters_for_base_model):
         """Fake predict_proba"""
+        
         if self.the_value == 0:
             return np.array([[1, 0]] * X_test.shape[0])
         elif self.the_value == 1:
