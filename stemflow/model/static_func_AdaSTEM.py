@@ -96,23 +96,8 @@ def train_one_stixel(
             trained_model.fit(sub_X_train[stixel_specific_x_names], sub_y_train, sample_weight=sample_weights)
             trained_model.my_class_weights = class_weights
             
-            # try:
-            #     trained_model.fit(sub_X_train[stixel_specific_x_names], sub_y_train, sample_weight=sample_weights)
-
-            # except Exception as e:
-            #     print(e)
-            #     # raise
-            #     return (None, [], "Base_model_fitting_error(non-regression, balanced weight)")
         else:
             trained_model.fit(sub_X_train[stixel_specific_x_names], sub_y_train)
-            
-            # try:
-            #     trained_model.fit(sub_X_train[stixel_specific_x_names], sub_y_train)
-
-            # except Exception as e:
-            #     print(e)
-            #     # raise
-            #     return (None, [], "Base_model_fitting_error(regression)")
 
     return (trained_model, stixel_specific_x_names, "Success")
 
