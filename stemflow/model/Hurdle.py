@@ -50,7 +50,7 @@ class Hurdle(BaseEstimator):
         """
         binary_ = np.unique(np.where(y_train > 0, 1, 0))
         if len(binary_) == 1:
-            warnings.warn("Warning: only one class presented. Replace with dummy classifier & regressor.")
+            # warnings.warn("Warning: only one class presented. Replace with dummy classifier & regressor.")
             self.classifier = dummy_model1(binary_[0])
             self.regressor = dummy_model1(binary_[0])
             return

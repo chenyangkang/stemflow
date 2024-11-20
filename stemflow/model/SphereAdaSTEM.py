@@ -674,3 +674,5 @@ class SphereAdaSTEMRegressor(SphereAdaSTEM):
             lazy_loading=lazy_loading,
             lazy_loading_dir=lazy_loading_dir
         )
+
+        self.predict = MethodType(AdaSTEMRegressor.predict, self)
