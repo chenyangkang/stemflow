@@ -49,8 +49,7 @@ class STEM(AdaSTEM):
         completely_random_rotation: bool = False,
         lazy_loading: bool = False,
         lazy_loading_dir: Union[str, None] = None,
-        min_class_sample: int = 1,
-        logit_agg: bool = False
+        min_class_sample: int = 1
     ):
         """Make a STEM object
 
@@ -122,9 +121,7 @@ class STEM(AdaSTEM):
                 If lazy_loading, the directory of the model to temporary save to. Default to None, where a random number will be generated as folder name.
             min_class_sample:
                 Minimum umber of samples needed to train the classifier in each stixel. If the sample does not satisfy, fit a dummy one. This parameter does not influence regression tasks.
-            logit_agg:
-                Whether to use logit aggregation for the classification task. If True, the model is averaging the probability prediction estimated by all ensembles in logit scale, and then back-tranform it to probability scale. It's recommened to be combinedly used with the CalibratedClassifierCV class in sklearn as a wrapper of the classifier to estimate the calibrated probability. If False, the output is the essentially the proportion of "1s" acorss the related ensembles; e.g., if 100 stixels covers this spatiotemporal points, and 90% of them predict that it is a "1", then the ouput probability is 0.9; Therefore it would be a probability estimated by the spatiotemporal neiborhood.
-                
+
         Raises:
             AttributeError: Base model do not have method 'fit' or 'predict'
             AttributeError: task not in one of ['regression', 'classification', 'hurdle']
@@ -182,8 +179,7 @@ class STEM(AdaSTEM):
             completely_random_rotation=completely_random_rotation,
             lazy_loading=lazy_loading,
             lazy_loading_dir=lazy_loading_dir,
-            min_class_sample=min_class_sample,
-            logit_agg=logit_agg
+            min_class_sample=min_class_sample
         )
 
         self.grid_len = grid_len
@@ -249,8 +245,7 @@ class STEMClassifier(AdaSTEMClassifier):
         completely_random_rotation: bool = False,
         lazy_loading: bool = False,
         lazy_loading_dir: Union[str, None] = None,
-        min_class_sample: int = 1,
-        logit_agg: bool = False
+        min_class_sample: int = 1
     ):
         super().__init__(
             base_model=base_model,
@@ -283,8 +278,7 @@ class STEMClassifier(AdaSTEMClassifier):
             completely_random_rotation=completely_random_rotation,
             lazy_loading=lazy_loading,
             lazy_loading_dir=lazy_loading_dir,
-            min_class_sample=min_class_sample,
-            logit_agg=logit_agg
+            min_class_sample=min_class_sample
         )
 
         self.grid_len = grid_len
