@@ -105,6 +105,7 @@ def get_one_ensemble_quadtree(
     plot_empty: bool = False,
     rng: np.random._generator.Generator = None,
     completely_random_rotation=False,
+    ensemble_bootstrap=False
 ):
     """Generate QuadTree gridding based on the input dataframe
 
@@ -157,6 +158,8 @@ def get_one_ensemble_quadtree(
             Whether to plot the empty grid
         rng:
             random number generator.
+        ensemble_bootstrap:
+            Whether to bootstrap the data at each ensemble level to account for uncertainty.
 
     Returns:
         A tuple of <br>
@@ -182,6 +185,11 @@ def get_one_ensemble_quadtree(
         temporal_bin_start_jitter=temporal_bin_start_jitter,
         rng=rng,
     )
+    
+    # ensemble_bootstrap
+    if ensemble_bootstrap:
+        bootstrap_random_state = rng.integers(1e9)
+        data = data.sample(frac=1, replace=True, random_state=bootstrap_random_state)
 
     ensemble_all_df_list = []
 
@@ -242,6 +250,9 @@ def get_one_ensemble_quadtree(
             str(i) + "_" + str(time_block_index) + "_" + str(k)
             for i, k in zip(this_slice["ensemble_index"].values, this_slice["stixel_indexes"].values)
         ]
+        
+        if ensemble_bootstrap:
+            this_slice['bootstrap_random_state'] = bootstrap_random_state
 
         # Post process
         this_slice.loc[:, "stixel_calibration_point_transformed_left_bound"] = [

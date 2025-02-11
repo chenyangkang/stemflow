@@ -78,7 +78,7 @@ from ..utils.lazyloading import LazyLoadingEnsembleDict
 
 
 class AdaSTEM(BaseEstimator):
-    """A AdaSTEM model class inherited by AdaSTEMClassifier and AdaSTEMRegressor"""
+    """An AdaSTEM model class inherited by AdaSTEMClassifier and AdaSTEMRegressor"""
 
     def __init__(
         self,
@@ -112,7 +112,9 @@ class AdaSTEM(BaseEstimator):
         completely_random_rotation: bool = False,
         lazy_loading: bool = False,
         lazy_loading_dir: Union[str, None] = None,
-        min_class_sample: int = 1
+        min_class_sample: int = 1,
+        ensemble_bootstrap: bool = False,
+        joblib_backend: str = 'loky'
     ):
         """Make an AdaSTEM object
 
@@ -186,6 +188,10 @@ class AdaSTEM(BaseEstimator):
                 If lazy_loading, the directory of the model to temporary save to. Default to None, where a random number will be generated as folder name.
             min_class_sample:
                 Minimum umber of samples needed to train the classifier in each stixel. If the sample does not satisfy, fit a dummy one. This parameter does not influence regression tasks.
+            ensemble_bootstrap:
+                Whether to bootstrap the data at each ensemble level to account for uncertainty. Defaults to False.
+            joblib_backend:
+                The backend of joblib. Defaults to 'loky'. Other options include 'multiprocessing', 'threading'.
         Raises:
             AttributeError: Base model do not have method 'fit' or 'predict'
             AttributeError: task not in one of ['regression', 'classification', 'hurdle']
@@ -255,10 +261,12 @@ class AdaSTEM(BaseEstimator):
         self.subset_x_names = subset_x_names
         self.sample_weights_for_classifier = sample_weights_for_classifier
         self.min_class_sample = min_class_sample
+        self.ensemble_bootstrap = ensemble_bootstrap
 
         # 6. Multi-processing params
         n_jobs = check_transform_n_jobs(self, n_jobs)
         self.n_jobs = n_jobs
+        self.joblib_backend = joblib_backend
 
         # 7. Plotting params
         self.plot_xlims = plot_xlims
@@ -362,10 +370,11 @@ class AdaSTEM(BaseEstimator):
             save_gridding_plot=self.save_gridding_plot,
             ax=ax,
             completely_random_rotation=self.completely_random_rotation,
+            ensemble_bootstrap=self.ensemble_bootstrap
         )
 
         if n_jobs > 1 and isinstance(n_jobs, int):
-            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator")
+            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend)
             output_generator = parallel(
                 joblib.delayed(partial_get_one_ensemble_quadtree)(
                     ensemble_count=ensemble_count, rng=np.random.default_rng(self.rng.integers(1e9) + ensemble_count)
@@ -471,6 +480,9 @@ class AdaSTEM(BaseEstimator):
 
         unique_start_indices = np.sort(index_df[f"{self.Temporal1}_start"].unique())
         # training, window by window
+        
+        if self.ensemble_bootstrap:
+            data = data.sample(frac=1, replace=True, random_state=index_df['bootstrap_random_state'].iloc[0])
 
         res_list = []
         for start in unique_start_indices:
@@ -546,7 +558,7 @@ class AdaSTEM(BaseEstimator):
                 res = self.SAC_ensemble_training(index_df=ensemble[1], data=data)
                 return res
 
-            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator")
+            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend)
             output_generator = parallel(joblib.delayed(mp_train)(i) for i in groups)
 
         # tqdm wrapper
@@ -773,7 +785,7 @@ class AdaSTEM(BaseEstimator):
                 res = self.SAC_ensemble_predict(index_df=ensemble[1], data=data)
                 return res
 
-            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator")
+            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend)
             output_generator = parallel(joblib.delayed(mp_predict)(i) for i in groups)
 
         # tqdm wrapper
@@ -1187,7 +1199,7 @@ class AdaSTEM(BaseEstimator):
     
         # assign input spatio-temporal points to stixels
         if n_jobs > 1:
-            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator")
+            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend)
             output_generator = parallel(joblib.delayed(partial_assign_func)(i) for i in list(range(self.ensemble_fold)))
             if verbosity > 0:
                 output_generator = tqdm(output_generator, total=self.ensemble_fold, desc="Querying ensembles: ")
@@ -1342,7 +1354,9 @@ class AdaSTEMClassifier(AdaSTEM):
         completely_random_rotation=False,
         lazy_loading = False,
         lazy_loading_dir = None,
-        min_class_sample = 1
+        min_class_sample = 1,
+        ensemble_bootstrap = False,
+        joblib_backend = 'loky'
     ):
         super().__init__(
             base_model=base_model,
@@ -1375,7 +1389,9 @@ class AdaSTEMClassifier(AdaSTEM):
             completely_random_rotation=completely_random_rotation,
             lazy_loading=lazy_loading,
             lazy_loading_dir=lazy_loading_dir,
-            min_class_sample=min_class_sample
+            min_class_sample=min_class_sample,
+            ensemble_bootstrap=ensemble_bootstrap,
+            joblib_backend=joblib_backend
         )
         
         self._estimator_type = 'classifier'
@@ -1519,9 +1535,11 @@ class AdaSTEMRegressor(AdaSTEM):
         verbosity=0,
         plot_empty=False,
         completely_random_rotation=False,
-        lazy_loading = False,
-        lazy_loading_dir = None,
-        min_class_sample = 1
+        lazy_loading=False,
+        lazy_loading_dir=None,
+        min_class_sample=1,
+        ensemble_bootstrap=False,
+        joblib_backend='loky'
     ):
         super().__init__(
             base_model=base_model,
@@ -1554,7 +1572,9 @@ class AdaSTEMRegressor(AdaSTEM):
             completely_random_rotation=completely_random_rotation,
             lazy_loading=lazy_loading,
             lazy_loading_dir=lazy_loading_dir,
-            min_class_sample=min_class_sample
+            min_class_sample=min_class_sample,
+            ensemble_bootstrap=ensemble_bootstrap,
+            joblib_backend=joblib_backend
         )
         
         self._estimator_type = 'regressor'
