@@ -672,7 +672,11 @@ class AdaSTEM(BaseEstimator):
         if model_x_names_tuple[0] is None:
             return None
 
-        pred = predict_one_stixel(stixel, self.task, model_x_names_tuple, **self.base_model_prediction_param)
+        pred = predict_one_stixel(X_test_stixel=stixel,
+                                  task=self.task,
+                                  model_x_names_tuple=model_x_names_tuple,
+                                  base_model_method=self.base_model_method,
+                                  **self.base_model_prediction_param)
 
         if pred is None:
             return None
@@ -814,6 +818,7 @@ class AdaSTEM(BaseEstimator):
         aggregation: str = "mean",
         return_by_separate_ensembles: bool = False,
         logit_agg: bool = False,
+        base_model_method: Union[None, str] = None,
         **base_model_prediction_param
     ) -> Union[np.ndarray, Tuple[np.ndarray]]:
         """Predict probability
@@ -836,7 +841,11 @@ class AdaSTEM(BaseEstimator):
             return_by_separate_ensembles (bool, optional):
                 Experimental function. return not by aggregation, but by separate ensembles.
             logit_agg:
-                Whether to use logit aggregation for the classification task. If True, the model is averaging the probability prediction estimated by all ensembles in logit scale, and then back-tranforms it to probability scale. It's recommended to be jointly used with the CalibratedClassifierCV class in sklearn as a wrapper of the classifier to estimate the calibrated probability. If False, the output is essentially the proportion of "1s" across the related ensembles; e.g., if 100 stixels covers this spatiotemporal points, and 90% of them predict that it is a "1", then the output probability is 0.9; Therefore it would be a probability estimated by the spatiotemporal neighborhood. Default is False, but can be set to truth for "real" probability averaging.
+                Whether to use logit aggregation for the classification task. Most likely only used when you are predicting "real" calibrated probability. If True, the model is averaging the probability prediction estimated by all ensembles in logit scale, and then back-tranforms it to probability scale. It's recommended to be jointly used with the CalibratedClassifierCV class in sklearn as a wrapper of the classifier to estimate the calibrated probability. Default is False, but can be set to true for "real" probability averaging.
+            base_model_method:
+                The name of the prediction method for base models. If None, `predict` or `predict_proba` will be used depending on the tasks. This argument is handy if you have a custom base model class that has a special prediction function. Notice that dummy model will still predict 0, so the ensemble-aggregated result is still an average of zeros and your special prediction function output. Therefore, it may only make sense if your special prediction function predicts 0 as the absense/control value. Defaults to None.
+            base_model_prediction_param:
+                Any other paramters to pass into the prediction method of the base models. e.g., base_model_prediction_param={'n_jobs':1}.
         Raises:
             TypeError:
                 X_test is not of type pd.core.frame.DataFrame.
@@ -855,6 +864,7 @@ class AdaSTEM(BaseEstimator):
         return_by_separate_ensembles, return_std = check_prediction_return(return_by_separate_ensembles, return_std)
         verbosity = check_verbosity(self, verbosity)
         n_jobs = check_transform_n_jobs(self, n_jobs)
+        self.base_model_method = base_model_method
         self.base_model_prediction_param = base_model_prediction_param
 
         # predict
@@ -889,7 +899,7 @@ class AdaSTEM(BaseEstimator):
                 res_mean = res.mean(axis=1, skipna=True)  # mean of all grid model that predicts this stixel
             elif aggregation == "median":
                 res_mean = res.median(axis=1, skipna=True)
-                
+        
         res_std = res.std(axis=1, skipna=True)
         
         # Nan count
@@ -935,6 +945,7 @@ class AdaSTEM(BaseEstimator):
         aggregation: str = "mean",
         return_by_separate_ensembles: bool = False,
         logit_agg: bool = False,
+        base_model_method: Union[None, str] = None,
         **base_model_prediction_param
     ) -> Union[np.ndarray, Tuple[np.ndarray]]:
         pass
@@ -1406,6 +1417,7 @@ class AdaSTEMClassifier(AdaSTEM):
         aggregation: str = "mean",
         return_by_separate_ensembles: bool = False,
         logit_agg: bool = False,
+        base_model_method: Union[None, str] = None,
         **base_model_prediction_param
     ) -> Union[np.ndarray, Tuple[np.ndarray]]:
         """A rewrite of predict_proba adapted for Classifier
@@ -1431,10 +1443,12 @@ class AdaSTEMClassifier(AdaSTEM):
                 'mean' or 'median' for aggregation method across ensembles.
             return_by_separate_ensembles (bool, optional):
                 Experimental function. return not by aggregation, but by separate ensembles.
-            base_model_prediction_param:
-                Additional parameter passed to base_model.predict_proba or base_model.predict
             logit_agg:
-                Whether to use logit aggregation for the classification task. If True, the model is averaging the probability prediction estimated by all ensembles in logit scale, and then back-tranform it to probability scale. It's recommened to be combinedly used with the CalibratedClassifierCV class in sklearn as a wrapper of the classifier to estimate the calibrated probability. If False, the output is the essentially the proportion of "1s" acorss the related ensembles; e.g., if 100 stixels covers this spatiotemporal points, and 90% of them predict that it is a "1", then the ouput probability is 0.9; Therefore it would be a probability estimated by the spatiotemporal neiborhood.
+                Whether to use logit aggregation for the classification task. If True, the model is averaging the probability prediction estimated by all ensembles in logit scale, and then back-tranform it to probability scale. It's recommened to be combinedly used with the CalibratedClassifierCV class in sklearn as a wrapper of the classifier to estimate the calibrated probability.
+            base_model_method:
+                The name of the prediction method for base models. If None, `predict` or `predict_proba` will be used depending on the tasks. This argument is handy if you have a custom base model class that has a special prediction function. Defaults to None.
+            base_model_prediction_param:
+                Any other paramters to pass into the prediction method of the base models. e.g., base_model_prediction_param={'n_jobs':1}.
         Raises:
             TypeError:
                 X_test is not of type pd.core.frame.DataFrame.
@@ -1457,6 +1471,7 @@ class AdaSTEMClassifier(AdaSTEM):
                 aggregation=aggregation,
                 return_by_separate_ensembles=return_by_separate_ensembles,
                 logit_agg=logit_agg,
+                base_model_method=base_model_method,
                 **base_model_prediction_param
             )
             mean = mean[:,1].flatten()
@@ -1473,6 +1488,7 @@ class AdaSTEMClassifier(AdaSTEM):
                 aggregation=aggregation,
                 return_by_separate_ensembles=return_by_separate_ensembles,
                 logit_agg=logit_agg,
+                base_model_method=base_model_method,
                 **base_model_prediction_param
             )
             mean = mean[:,1].flatten()
@@ -1588,6 +1604,7 @@ class AdaSTEMRegressor(AdaSTEM):
         n_jobs: Union[None, int] = 1,
         aggregation: str = "mean",
         return_by_separate_ensembles: bool = False,
+        base_model_method: Union[None, str] = None,
         **base_model_prediction_param
     ) -> Union[np.ndarray, Tuple[np.ndarray]]:
         """A rewrite of predict_proba
@@ -1609,8 +1626,10 @@ class AdaSTEMRegressor(AdaSTEM):
                 'mean' or 'median' for aggregation method across ensembles.
             return_by_separate_ensembles (bool, optional):
                 Experimental function. return not by aggregation, but by separate ensembles.
+            base_model_method:
+                The name of the prediction method for base models. If None, `predict` or `predict_proba` will be used depending on the tasks. This argument is handy if you have a custom base model class that has a special prediction function. Defaults to None.
             base_model_prediction_param:
-                Additional parameter passed to base_model.predict_proba or base_model.predict
+                Any other paramters to pass into the prediction method of the base models. e.g., base_model_prediction_param={'n_jobs':1}.
                 
         Raises:
             TypeError:
@@ -1633,6 +1652,7 @@ class AdaSTEMRegressor(AdaSTEM):
             n_jobs=n_jobs,
             aggregation=aggregation,
             return_by_separate_ensembles=return_by_separate_ensembles,
+            base_model_method = base_model_method,
             **base_model_prediction_param
         )
         

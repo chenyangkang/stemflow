@@ -366,3 +366,30 @@ def make_AdaSTEMClassifier_caliP(fold_=2, min_req=1, **kwargs):
         **kwargs
     )
     return model
+
+
+def make_AdaSTEMClassifier_custom_pred_method(base_model_class, fold_=2, min_req=1, **kwargs):
+    
+    model = AdaSTEMClassifier(
+        base_model=base_model_class(),
+        save_gridding_plot=True,
+        ensemble_fold=fold_,
+        min_ensemble_required=min_req,
+        grid_len_upper_threshold=50,
+        grid_len_lower_threshold=20,
+        temporal_start=1,
+        temporal_end=366,
+        temporal_step=40,
+        temporal_bin_interval=80,
+        points_lower_threshold=30,
+        Spatio1="longitude",
+        Spatio2="latitude",
+        Temporal1="DOY",
+        temporal_bin_start_jitter="adaptive",
+        spatio_bin_jitter_magnitude="adaptive",
+        use_temporal_to_train=True,
+        n_jobs=1,
+        sample_weights_for_classifier=False,
+        **kwargs
+    )
+    return model
