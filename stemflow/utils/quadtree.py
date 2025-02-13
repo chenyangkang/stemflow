@@ -189,14 +189,17 @@ def get_one_ensemble_quadtree(
     # ensemble_bootstrap
     if ensemble_bootstrap:
         bootstrap_random_state = rng.integers(1e9)
-        data = data.sample(frac=1, replace=True, random_state=bootstrap_random_state)
+        rng = np.random.default_rng(bootstrap_random_state)  # NumPy's random generator
+        bootstrap_indices = rng.choice(data.index, size=len(data), replace=True)  # Full bootstrap sample
 
     ensemble_all_df_list = []
 
     for time_block_index, bin_ in enumerate(temporal_bins):
         time_start = bin_[0]
         time_end = bin_[1]
-        sub_data = data[(data[Temporal1] >= time_start) & (data[Temporal1] < time_end)]
+        valid_index_sub_data = data.index[(data[Temporal1] >= time_start) & (data[Temporal1] < time_end)]
+        sub_data_index = bootstrap_indices[np.isin(bootstrap_indices, valid_index_sub_data)]
+        sub_data = data.loc[sub_data_index] # So that we don't need to make a whole copy of the data
 
         if len(sub_data) == 0:
             continue

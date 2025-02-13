@@ -482,13 +482,18 @@ class AdaSTEM(BaseEstimator):
         # training, window by window
         
         if self.ensemble_bootstrap:
-            data = data.sample(frac=1, replace=True, random_state=index_df['bootstrap_random_state'].iloc[0])
-
+            bootstrap_random_state = index_df['bootstrap_random_state'].iloc[0]
+            rng = np.random.default_rng(bootstrap_random_state)  # NumPy's random generator
+            bootstrap_indices = rng.choice(data.index, size=len(data), replace=True)  # Full bootstrap sample
+            
         res_list = []
         for start in unique_start_indices:
-            window_data_df = data[
+            valid_index_window_data_df = data.index[
                 (data[self.Temporal1] >= start) & (data[self.Temporal1] < start + self.temporal_bin_interval)
             ]
+            window_data_df_index = bootstrap_indices[np.isin(bootstrap_indices, valid_index_window_data_df)]
+            window_data_df = data.loc[window_data_df_index] # So that we don't need to make a whole copy of the data
+
             window_data_df = transform_pred_set_to_STEM_quad(self.Spatio1, self.Spatio2, window_data_df, index_df)
             window_index_df = index_df[index_df[f"{self.Temporal1}_start"] == start]
 
@@ -634,7 +639,7 @@ class AdaSTEM(BaseEstimator):
         self.store_x_names(X_train)
 
         # quadtree
-        X_train = X_train.reset_index(drop=True)  # I reset index here!! caution!
+        X_train = X_train.reset_index(drop=True)  # I reset index here!! caution! This step is important for the following indexing.
         X_train["true_y"] = np.array(y_train).flatten()
         self.split(X_train, verbosity=verbosity, ax=ax, n_jobs=n_jobs)
 
