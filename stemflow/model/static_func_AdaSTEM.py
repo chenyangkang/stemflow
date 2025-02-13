@@ -467,11 +467,12 @@ def predict_one_stixel(
             
     if pred is None:
         # Still haven't found the pred function
-        if task == "regression":
-            pred = model_x_names_tuple[0].predict(X_test_stixel[model_x_names_tuple[1]])
-        else:
+        if task == "classification":
             pred = model_x_names_tuple[0].predict_proba(X_test_stixel[model_x_names_tuple[1]], **base_model_prediction_param)
             pred = pred[:,1]
+        else:
+            pred = model_x_names_tuple[0].predict(X_test_stixel[model_x_names_tuple[1]], **base_model_prediction_param)
+
     
     res = pd.DataFrame({"index": list(X_test_stixel.index), "pred": np.array(pred).flatten()}).set_index("index")
 

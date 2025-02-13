@@ -1022,7 +1022,9 @@ class AdaSTEM(BaseEstimator):
             elif task == "hurdle":
                 cls_threshold = 0
 
-        if not task == "regression":
+        if task == "regression":
+            auc, kappa, f1, precision, recall, average_precision = [np.nan] * 6
+        else:
             a = pd.DataFrame({"y_true": np.array(y_test).flatten(), "pred": np.array(y_pred).flatten()}).dropna()
 
             y_test_b = np.where(a.y_true > cls_threshold, 1, 0)
@@ -1038,9 +1040,6 @@ class AdaSTEM(BaseEstimator):
                 precision = precision_score(y_test_b, y_pred_b)
                 recall = recall_score(y_test_b, y_pred_b)
                 average_precision = average_precision_score(y_test_b, y_pred_b)
-
-        else:
-            auc, kappa, f1, precision, recall, average_precision = [np.nan] * 6
 
         if not task == "classification":
             a = pd.DataFrame({"y_true": y_test, "pred": y_pred}).dropna()
