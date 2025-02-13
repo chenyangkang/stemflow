@@ -485,18 +485,28 @@ class AdaSTEM(BaseEstimator):
             bootstrap_random_state = index_df['bootstrap_random_state'].iloc[0]
             rng = np.random.default_rng(bootstrap_random_state)  # NumPy's random generator
             bootstrap_indices = rng.choice(data.index, size=len(data), replace=True)  # Full bootstrap sample
+        else:
+            bootstrap_indices = None # Place holder
             
         res_list = []
         for start in unique_start_indices:
-            valid_index_window_data_df = data.index[
-                (data[self.Temporal1] >= start) & (data[self.Temporal1] < start + self.temporal_bin_interval)
-            ]
-            window_data_df_index = bootstrap_indices[np.isin(bootstrap_indices, valid_index_window_data_df)]
-            window_data_df = data.loc[window_data_df_index] # So that we don't need to make a whole copy of the data
+            
+            if self.ensemble_bootstrap:
+                valid_index_window_data_df = data.index[
+                    (data[self.Temporal1] >= start) & (data[self.Temporal1] < start + self.temporal_bin_interval)
+                ]
+                window_data_df_index = bootstrap_indices[np.isin(bootstrap_indices, valid_index_window_data_df)]
+                window_data_df = data.loc[window_data_df_index] # So that we don't need to make a whole copy of the data
+                del window_data_df_index, valid_index_window_data_df
 
+            else:
+                window_data_df = data[
+                    (data[self.Temporal1] >= start) & (data[self.Temporal1] < start + self.temporal_bin_interval)
+                ]
+            
             window_data_df = transform_pred_set_to_STEM_quad(self.Spatio1, self.Spatio2, window_data_df, index_df)
             window_index_df = index_df[index_df[f"{self.Temporal1}_start"] == start]
-
+            
             # Merge
             def find_belonged_points(df, df_a):
                 return df_a[
