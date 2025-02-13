@@ -374,7 +374,7 @@ class AdaSTEM(BaseEstimator):
         )
 
         if n_jobs > 1 and isinstance(n_jobs, int):
-            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend)
+            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.lazy_loading_dir)
             output_generator = parallel(
                 joblib.delayed(partial_get_one_ensemble_quadtree)(
                     ensemble_count=ensemble_count, rng=np.random.default_rng(self.rng.integers(1e9) + ensemble_count)
@@ -573,7 +573,7 @@ class AdaSTEM(BaseEstimator):
                 res = self.SAC_ensemble_training(index_df=ensemble[1], data=data)
                 return res
 
-            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend)
+            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.lazy_loading_dir)
             output_generator = parallel(joblib.delayed(mp_train)(i) for i in groups)
 
         # tqdm wrapper
@@ -804,7 +804,7 @@ class AdaSTEM(BaseEstimator):
                 res = self.SAC_ensemble_predict(index_df=ensemble[1], data=data)
                 return res
 
-            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend)
+            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.lazy_loading_dir)
             output_generator = parallel(joblib.delayed(mp_predict)(i) for i in groups)
 
         # tqdm wrapper
@@ -1224,7 +1224,7 @@ class AdaSTEM(BaseEstimator):
     
         # assign input spatio-temporal points to stixels
         if n_jobs > 1:
-            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend)
+            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.lazy_loading_dir)
             output_generator = parallel(joblib.delayed(partial_assign_func)(i) for i in list(range(self.ensemble_fold)))
             if verbosity > 0:
                 output_generator = tqdm(output_generator, total=self.ensemble_fold, desc="Querying ensembles: ")
