@@ -49,7 +49,9 @@ class STEM(AdaSTEM):
         completely_random_rotation: bool = False,
         lazy_loading: bool = False,
         lazy_loading_dir: Union[str, None] = None,
-        min_class_sample: int = 1
+        min_class_sample: int = 1,
+        ensemble_bootstrap: bool = False,
+        joblib_backend: str = 'loky'
     ):
         """Make a STEM object
 
@@ -121,7 +123,10 @@ class STEM(AdaSTEM):
                 If lazy_loading, the directory of the model to temporary save to. Default to None, where a random number will be generated as folder name.
             min_class_sample:
                 Minimum umber of samples needed to train the classifier in each stixel. If the sample does not satisfy, fit a dummy one. This parameter does not influence regression tasks.
-
+            ensemble_bootstrap:
+                Whether to bootstrap the data at each ensemble level to account for uncertainty. Defaults to False.
+            joblib_backend:
+                The backend of joblib. Defaults to 'loky'. Other options include 'multiprocessing', 'threading'.
         Raises:
             AttributeError: Base model do not have method 'fit' or 'predict'
             AttributeError: task not in one of ['regression', 'classification', 'hurdle']
@@ -179,7 +184,9 @@ class STEM(AdaSTEM):
             completely_random_rotation=completely_random_rotation,
             lazy_loading=lazy_loading,
             lazy_loading_dir=lazy_loading_dir,
-            min_class_sample=min_class_sample
+            min_class_sample=min_class_sample,
+            ensemble_bootstrap=ensemble_bootstrap,
+            joblib_backend=joblib_backend
         )
 
         self.grid_len = grid_len
@@ -245,7 +252,9 @@ class STEMClassifier(AdaSTEMClassifier):
         completely_random_rotation: bool = False,
         lazy_loading: bool = False,
         lazy_loading_dir: Union[str, None] = None,
-        min_class_sample: int = 1
+        min_class_sample: int = 1,
+        ensemble_bootstrap: bool = False,
+        joblib_backend: str = 'loky'
     ):
         super().__init__(
             base_model=base_model,
@@ -278,7 +287,9 @@ class STEMClassifier(AdaSTEMClassifier):
             completely_random_rotation=completely_random_rotation,
             lazy_loading=lazy_loading,
             lazy_loading_dir=lazy_loading_dir,
-            min_class_sample=min_class_sample
+            min_class_sample=min_class_sample,
+            ensemble_bootstrap=ensemble_bootstrap,
+            joblib_backend=joblib_backend
         )
 
         self.grid_len = grid_len
@@ -344,7 +355,9 @@ class STEMRegressor(AdaSTEMRegressor):
         completely_random_rotation: bool = False,
         lazy_loading: bool = False,
         lazy_loading_dir: Union[str, None] = None,
-        min_class_sample: int = 1
+        min_class_sample: int = 1,
+        ensemble_bootstrap: bool = False,
+        joblib_backend: str = 'loky'
     ):
         super().__init__(
             base_model=base_model,
@@ -377,7 +390,9 @@ class STEMRegressor(AdaSTEMRegressor):
             completely_random_rotation=completely_random_rotation,
             lazy_loading=lazy_loading,
             lazy_loading_dir=lazy_loading_dir,
-            min_class_sample=min_class_sample
+            min_class_sample=min_class_sample,
+            ensemble_bootstrap=ensemble_bootstrap,
+            joblib_backend=joblib_backend
         )
 
         self.grid_len = grid_len
