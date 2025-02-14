@@ -51,7 +51,8 @@ class STEM(AdaSTEM):
         lazy_loading_dir: Union[str, None] = None,
         min_class_sample: int = 1,
         ensemble_bootstrap: bool = False,
-        joblib_backend: str = 'loky'
+        joblib_backend: str = 'loky',
+        joblib_temp_folder: Union[None, str] = None
     ):
         """Make a STEM object
 
@@ -127,6 +128,8 @@ class STEM(AdaSTEM):
                 Whether to bootstrap the data at each ensemble level to account for uncertainty. Defaults to False.
             joblib_backend:
                 The backend of joblib. Defaults to 'loky'. Other options include 'multiprocessing', 'threading'.
+            joblib_temp_folder:
+                The temporary folder for joblib. If None, falling back to joblib's default directory. If 'lazy_loading_dir', set as the same directory as lazy_loading_dir. If it's string, create a directory and store data into it. Defaults to None.
         Raises:
             AttributeError: Base model do not have method 'fit' or 'predict'
             AttributeError: task not in one of ['regression', 'classification', 'hurdle']
@@ -186,7 +189,8 @@ class STEM(AdaSTEM):
             lazy_loading_dir=lazy_loading_dir,
             min_class_sample=min_class_sample,
             ensemble_bootstrap=ensemble_bootstrap,
-            joblib_backend=joblib_backend
+            joblib_backend=joblib_backend,
+            joblib_temp_folder=joblib_temp_folder
         )
 
         self.grid_len = grid_len
@@ -254,7 +258,8 @@ class STEMClassifier(AdaSTEMClassifier):
         lazy_loading_dir: Union[str, None] = None,
         min_class_sample: int = 1,
         ensemble_bootstrap: bool = False,
-        joblib_backend: str = 'loky'
+        joblib_backend: str = 'loky',
+        joblib_temp_folder: Union[None, str] = None
     ):
         super().__init__(
             base_model=base_model,
@@ -289,7 +294,8 @@ class STEMClassifier(AdaSTEMClassifier):
             lazy_loading_dir=lazy_loading_dir,
             min_class_sample=min_class_sample,
             ensemble_bootstrap=ensemble_bootstrap,
-            joblib_backend=joblib_backend
+            joblib_backend=joblib_backend,
+            joblib_temp_folder=joblib_temp_folder
         )
 
         self.grid_len = grid_len
@@ -357,7 +363,8 @@ class STEMRegressor(AdaSTEMRegressor):
         lazy_loading_dir: Union[str, None] = None,
         min_class_sample: int = 1,
         ensemble_bootstrap: bool = False,
-        joblib_backend: str = 'loky'
+        joblib_backend: str = 'loky',
+        joblib_temp_folder: Union[None, str]= None
     ):
         super().__init__(
             base_model=base_model,
@@ -392,7 +399,8 @@ class STEMRegressor(AdaSTEMRegressor):
             lazy_loading_dir=lazy_loading_dir,
             min_class_sample=min_class_sample,
             ensemble_bootstrap=ensemble_bootstrap,
-            joblib_backend=joblib_backend
+            joblib_backend=joblib_backend,
+            joblib_temp_folder=joblib_temp_folder
         )
 
         self.grid_len = grid_len

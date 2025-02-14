@@ -114,7 +114,8 @@ class AdaSTEM(BaseEstimator):
         lazy_loading_dir: Union[str, None] = None,
         min_class_sample: int = 1,
         ensemble_bootstrap: bool = False,
-        joblib_backend: str = 'loky'
+        joblib_backend: str = 'loky',
+        joblib_temp_folder: Union[None, str] = None
     ):
         """Make an AdaSTEM object
 
@@ -192,6 +193,8 @@ class AdaSTEM(BaseEstimator):
                 Whether to bootstrap the data at each ensemble level to account for uncertainty. Defaults to False.
             joblib_backend:
                 The backend of joblib. Defaults to 'loky'. Other options include 'multiprocessing', 'threading'.
+            joblib_temp_folder:
+                The temporary folder for joblib. If None, falling back to joblib's default directory. If 'lazy_loading_dir', set as the same directory as lazy_loading_dir. If it's string, create a directory and store data into it. Defaults to None.
         Raises:
             AttributeError: Base model do not have method 'fit' or 'predict'
             AttributeError: task not in one of ['regression', 'classification', 'hurdle']
@@ -267,6 +270,7 @@ class AdaSTEM(BaseEstimator):
         n_jobs = check_transform_n_jobs(self, n_jobs)
         self.n_jobs = n_jobs
         self.joblib_backend = joblib_backend
+        self.joblib_temp_folder = joblib_temp_folder
 
         # 7. Plotting params
         self.plot_xlims = plot_xlims
@@ -374,7 +378,7 @@ class AdaSTEM(BaseEstimator):
         )
 
         if n_jobs > 1 and isinstance(n_jobs, int):
-            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.lazy_loading_dir)
+            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.joblib_temp_folder)
             output_generator = parallel(
                 joblib.delayed(partial_get_one_ensemble_quadtree)(
                     ensemble_count=ensemble_count, rng=np.random.default_rng(self.rng.integers(1e9) + ensemble_count)
@@ -573,7 +577,7 @@ class AdaSTEM(BaseEstimator):
                 res = self.SAC_ensemble_training(index_df=ensemble[1], data=data)
                 return res
 
-            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.lazy_loading_dir)
+            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.joblib_temp_folder)
             output_generator = parallel(joblib.delayed(mp_train)(i) for i in groups)
 
         # tqdm wrapper
@@ -641,6 +645,15 @@ class AdaSTEM(BaseEstimator):
             if os.path.exists(self.lazy_loading_dir):
                 shutil.rmtree(self.lazy_loading_dir)
         self.lazy_loading_dir = str(Path(self.lazy_loading_dir.rstrip('/\\')))
+        
+        # Setup joblib_temp_folder
+        if self.joblib_temp_folder is None:
+            pass
+        elif self.joblib_temp_folder=='lazy_loading_dir':
+            self.joblib_temp_folder = self.lazy_loading_dir
+        else:
+            if not os.path.exists(self.joblib_temp_folder):
+                os.makedirs(self.joblib_temp_folder)
         
         verbosity = check_verbosity(self, verbosity)
         check_X_train(X_train)
@@ -804,7 +817,7 @@ class AdaSTEM(BaseEstimator):
                 res = self.SAC_ensemble_predict(index_df=ensemble[1], data=data)
                 return res
 
-            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.lazy_loading_dir)
+            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.joblib_temp_folder)
             output_generator = parallel(joblib.delayed(mp_predict)(i) for i in groups)
 
         # tqdm wrapper
@@ -1224,7 +1237,7 @@ class AdaSTEM(BaseEstimator):
     
         # assign input spatio-temporal points to stixels
         if n_jobs > 1:
-            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.lazy_loading_dir)
+            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.joblib_temp_folder)
             output_generator = parallel(joblib.delayed(partial_assign_func)(i) for i in list(range(self.ensemble_fold)))
             if verbosity > 0:
                 output_generator = tqdm(output_generator, total=self.ensemble_fold, desc="Querying ensembles: ")
@@ -1381,7 +1394,8 @@ class AdaSTEMClassifier(AdaSTEM):
         lazy_loading_dir = None,
         min_class_sample = 1,
         ensemble_bootstrap = False,
-        joblib_backend = 'loky'
+        joblib_backend = 'loky',
+        joblib_temp_folder = None
     ):
         super().__init__(
             base_model=base_model,
@@ -1416,7 +1430,8 @@ class AdaSTEMClassifier(AdaSTEM):
             lazy_loading_dir=lazy_loading_dir,
             min_class_sample=min_class_sample,
             ensemble_bootstrap=ensemble_bootstrap,
-            joblib_backend=joblib_backend
+            joblib_backend=joblib_backend,
+            joblib_temp_folder = joblib_temp_folder
         )
         
         self._estimator_type = 'classifier'
@@ -1569,7 +1584,8 @@ class AdaSTEMRegressor(AdaSTEM):
         lazy_loading_dir=None,
         min_class_sample=1,
         ensemble_bootstrap=False,
-        joblib_backend='loky'
+        joblib_backend='loky',
+        joblib_temp_folder=None
     ):
         super().__init__(
             base_model=base_model,
@@ -1604,7 +1620,8 @@ class AdaSTEMRegressor(AdaSTEM):
             lazy_loading_dir=lazy_loading_dir,
             min_class_sample=min_class_sample,
             ensemble_bootstrap=ensemble_bootstrap,
-            joblib_backend=joblib_backend
+            joblib_backend=joblib_backend,
+            joblib_temp_folder=joblib_temp_folder
         )
         
         self._estimator_type = 'regressor'
