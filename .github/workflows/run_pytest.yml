@@ -7,7 +7,7 @@ on:
 
 jobs:
   pytesting:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: true
       matrix:
