@@ -78,7 +78,7 @@ from ..utils.lazyloading import LazyLoadingEnsembleDict
 
 
 class AdaSTEM(BaseEstimator):
-    """A AdaSTEM model class inherited by AdaSTEMClassifier and AdaSTEMRegressor"""
+    """An AdaSTEM model class inherited by AdaSTEMClassifier and AdaSTEMRegressor"""
 
     def __init__(
         self,
@@ -112,7 +112,10 @@ class AdaSTEM(BaseEstimator):
         completely_random_rotation: bool = False,
         lazy_loading: bool = False,
         lazy_loading_dir: Union[str, None] = None,
-        min_class_sample: int = 1
+        min_class_sample: int = 1,
+        ensemble_bootstrap: bool = False,
+        joblib_backend: str = 'loky',
+        joblib_temp_folder: Union[None, str] = None
     ):
         """Make an AdaSTEM object
 
@@ -186,6 +189,12 @@ class AdaSTEM(BaseEstimator):
                 If lazy_loading, the directory of the model to temporary save to. Default to None, where a random number will be generated as folder name.
             min_class_sample:
                 Minimum umber of samples needed to train the classifier in each stixel. If the sample does not satisfy, fit a dummy one. This parameter does not influence regression tasks.
+            ensemble_bootstrap:
+                Whether to bootstrap the data at each ensemble level to account for uncertainty. Defaults to False.
+            joblib_backend:
+                The backend of joblib. Defaults to 'loky'. Other options include 'multiprocessing', 'threading'.
+            joblib_temp_folder:
+                The temporary folder for joblib. If None, falling back to joblib's default directory. If 'lazy_loading_dir', set as the same directory as lazy_loading_dir. If it's string, create a directory and store data into it. Defaults to None.
         Raises:
             AttributeError: Base model do not have method 'fit' or 'predict'
             AttributeError: task not in one of ['regression', 'classification', 'hurdle']
@@ -255,10 +264,13 @@ class AdaSTEM(BaseEstimator):
         self.subset_x_names = subset_x_names
         self.sample_weights_for_classifier = sample_weights_for_classifier
         self.min_class_sample = min_class_sample
+        self.ensemble_bootstrap = ensemble_bootstrap
 
         # 6. Multi-processing params
         n_jobs = check_transform_n_jobs(self, n_jobs)
         self.n_jobs = n_jobs
+        self.joblib_backend = joblib_backend
+        self.joblib_temp_folder = joblib_temp_folder
 
         # 7. Plotting params
         self.plot_xlims = plot_xlims
@@ -362,10 +374,11 @@ class AdaSTEM(BaseEstimator):
             save_gridding_plot=self.save_gridding_plot,
             ax=ax,
             completely_random_rotation=self.completely_random_rotation,
+            ensemble_bootstrap=self.ensemble_bootstrap
         )
 
         if n_jobs > 1 and isinstance(n_jobs, int):
-            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator")
+            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.joblib_temp_folder)
             output_generator = parallel(
                 joblib.delayed(partial_get_one_ensemble_quadtree)(
                     ensemble_count=ensemble_count, rng=np.random.default_rng(self.rng.integers(1e9) + ensemble_count)
@@ -471,15 +484,33 @@ class AdaSTEM(BaseEstimator):
 
         unique_start_indices = np.sort(index_df[f"{self.Temporal1}_start"].unique())
         # training, window by window
-
+        
+        if self.ensemble_bootstrap:
+            bootstrap_random_state = index_df['bootstrap_random_state'].iloc[0]
+            rng = np.random.default_rng(bootstrap_random_state)  # NumPy's random generator
+            bootstrap_indices = rng.choice(data.index, size=len(data), replace=True)  # Full bootstrap sample
+        else:
+            bootstrap_indices = None # Place holder
+            
         res_list = []
         for start in unique_start_indices:
-            window_data_df = data[
-                (data[self.Temporal1] >= start) & (data[self.Temporal1] < start + self.temporal_bin_interval)
-            ]
+            
+            if self.ensemble_bootstrap:
+                valid_index_window_data_df = data.index[
+                    (data[self.Temporal1] >= start) & (data[self.Temporal1] < start + self.temporal_bin_interval)
+                ]
+                window_data_df_index = bootstrap_indices[np.isin(bootstrap_indices, valid_index_window_data_df)]
+                window_data_df = data.loc[window_data_df_index] # So that we don't need to make a whole copy of the data
+                del window_data_df_index, valid_index_window_data_df
+
+            else:
+                window_data_df = data[
+                    (data[self.Temporal1] >= start) & (data[self.Temporal1] < start + self.temporal_bin_interval)
+                ]
+            
             window_data_df = transform_pred_set_to_STEM_quad(self.Spatio1, self.Spatio2, window_data_df, index_df)
             window_index_df = index_df[index_df[f"{self.Temporal1}_start"] == start]
-
+            
             # Merge
             def find_belonged_points(df, df_a):
                 return df_a[
@@ -546,7 +577,7 @@ class AdaSTEM(BaseEstimator):
                 res = self.SAC_ensemble_training(index_df=ensemble[1], data=data)
                 return res
 
-            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator")
+            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.joblib_temp_folder)
             output_generator = parallel(joblib.delayed(mp_train)(i) for i in groups)
 
         # tqdm wrapper
@@ -615,6 +646,15 @@ class AdaSTEM(BaseEstimator):
                 shutil.rmtree(self.lazy_loading_dir)
         self.lazy_loading_dir = str(Path(self.lazy_loading_dir.rstrip('/\\')))
         
+        # Setup joblib_temp_folder
+        if self.joblib_temp_folder is None:
+            pass
+        elif self.joblib_temp_folder=='lazy_loading_dir':
+            self.joblib_temp_folder = self.lazy_loading_dir
+        else:
+            if not os.path.exists(self.joblib_temp_folder):
+                os.makedirs(self.joblib_temp_folder)
+        
         verbosity = check_verbosity(self, verbosity)
         check_X_train(X_train)
         check_y_train(y_train)
@@ -622,7 +662,7 @@ class AdaSTEM(BaseEstimator):
         self.store_x_names(X_train)
 
         # quadtree
-        X_train = X_train.reset_index(drop=True)  # I reset index here!! caution!
+        X_train = X_train.reset_index(drop=True)  # I reset index here!! caution! This step is important for the following indexing.
         X_train["true_y"] = np.array(y_train).flatten()
         self.split(X_train, verbosity=verbosity, ax=ax, n_jobs=n_jobs)
 
@@ -660,7 +700,11 @@ class AdaSTEM(BaseEstimator):
         if model_x_names_tuple[0] is None:
             return None
 
-        pred = predict_one_stixel(stixel, self.task, model_x_names_tuple, **self.base_model_prediction_param)
+        pred = predict_one_stixel(X_test_stixel=stixel,
+                                  task=self.task,
+                                  model_x_names_tuple=model_x_names_tuple,
+                                  base_model_method=self.base_model_method,
+                                  **self.base_model_prediction_param)
 
         if pred is None:
             return None
@@ -773,7 +817,7 @@ class AdaSTEM(BaseEstimator):
                 res = self.SAC_ensemble_predict(index_df=ensemble[1], data=data)
                 return res
 
-            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator")
+            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.joblib_temp_folder)
             output_generator = parallel(joblib.delayed(mp_predict)(i) for i in groups)
 
         # tqdm wrapper
@@ -802,6 +846,7 @@ class AdaSTEM(BaseEstimator):
         aggregation: str = "mean",
         return_by_separate_ensembles: bool = False,
         logit_agg: bool = False,
+        base_model_method: Union[None, str] = None,
         **base_model_prediction_param
     ) -> Union[np.ndarray, Tuple[np.ndarray]]:
         """Predict probability
@@ -824,7 +869,11 @@ class AdaSTEM(BaseEstimator):
             return_by_separate_ensembles (bool, optional):
                 Experimental function. return not by aggregation, but by separate ensembles.
             logit_agg:
-                Whether to use logit aggregation for the classification task. If True, the model is averaging the probability prediction estimated by all ensembles in logit scale, and then back-tranforms it to probability scale. It's recommended to be jointly used with the CalibratedClassifierCV class in sklearn as a wrapper of the classifier to estimate the calibrated probability. If False, the output is essentially the proportion of "1s" across the related ensembles; e.g., if 100 stixels covers this spatiotemporal points, and 90% of them predict that it is a "1", then the output probability is 0.9; Therefore it would be a probability estimated by the spatiotemporal neighborhood. Default is False, but can be set to truth for "real" probability averaging.
+                Whether to use logit aggregation for the classification task. Most likely only used when you are predicting "real" calibrated probability. If True, the model is averaging the probability prediction estimated by all ensembles in logit scale, and then back-tranforms it to probability scale. It's recommended to be jointly used with the CalibratedClassifierCV class in sklearn as a wrapper of the classifier to estimate the calibrated probability. Default is False, but can be set to true for "real" probability averaging.
+            base_model_method:
+                The name of the prediction method for base models. If None, `predict` or `predict_proba` will be used depending on the tasks. This argument is handy if you have a custom base model class that has a special prediction function. Notice that dummy model will still predict 0, so the ensemble-aggregated result is still an average of zeros and your special prediction function output. Therefore, it may only make sense if your special prediction function predicts 0 as the absense/control value. Defaults to None.
+            base_model_prediction_param:
+                Any other paramters to pass into the prediction method of the base models. e.g., base_model_prediction_param={'n_jobs':1}.
         Raises:
             TypeError:
                 X_test is not of type pd.core.frame.DataFrame.
@@ -843,6 +892,7 @@ class AdaSTEM(BaseEstimator):
         return_by_separate_ensembles, return_std = check_prediction_return(return_by_separate_ensembles, return_std)
         verbosity = check_verbosity(self, verbosity)
         n_jobs = check_transform_n_jobs(self, n_jobs)
+        self.base_model_method = base_model_method
         self.base_model_prediction_param = base_model_prediction_param
 
         # predict
@@ -877,7 +927,7 @@ class AdaSTEM(BaseEstimator):
                 res_mean = res.mean(axis=1, skipna=True)  # mean of all grid model that predicts this stixel
             elif aggregation == "median":
                 res_mean = res.median(axis=1, skipna=True)
-                
+        
         res_std = res.std(axis=1, skipna=True)
         
         # Nan count
@@ -923,6 +973,7 @@ class AdaSTEM(BaseEstimator):
         aggregation: str = "mean",
         return_by_separate_ensembles: bool = False,
         logit_agg: bool = False,
+        base_model_method: Union[None, str] = None,
         **base_model_prediction_param
     ) -> Union[np.ndarray, Tuple[np.ndarray]]:
         pass
@@ -984,7 +1035,9 @@ class AdaSTEM(BaseEstimator):
             elif task == "hurdle":
                 cls_threshold = 0
 
-        if not task == "regression":
+        if task == "regression":
+            auc, kappa, f1, precision, recall, average_precision = [np.nan] * 6
+        else:
             a = pd.DataFrame({"y_true": np.array(y_test).flatten(), "pred": np.array(y_pred).flatten()}).dropna()
 
             y_test_b = np.where(a.y_true > cls_threshold, 1, 0)
@@ -1000,9 +1053,6 @@ class AdaSTEM(BaseEstimator):
                 precision = precision_score(y_test_b, y_pred_b)
                 recall = recall_score(y_test_b, y_pred_b)
                 average_precision = average_precision_score(y_test_b, y_pred_b)
-
-        else:
-            auc, kappa, f1, precision, recall, average_precision = [np.nan] * 6
 
         if not task == "classification":
             a = pd.DataFrame({"y_true": y_test, "pred": y_pred}).dropna()
@@ -1187,7 +1237,7 @@ class AdaSTEM(BaseEstimator):
     
         # assign input spatio-temporal points to stixels
         if n_jobs > 1:
-            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator")
+            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.joblib_temp_folder)
             output_generator = parallel(joblib.delayed(partial_assign_func)(i) for i in list(range(self.ensemble_fold)))
             if verbosity > 0:
                 output_generator = tqdm(output_generator, total=self.ensemble_fold, desc="Querying ensembles: ")
@@ -1342,7 +1392,10 @@ class AdaSTEMClassifier(AdaSTEM):
         completely_random_rotation=False,
         lazy_loading = False,
         lazy_loading_dir = None,
-        min_class_sample = 1
+        min_class_sample = 1,
+        ensemble_bootstrap = False,
+        joblib_backend = 'loky',
+        joblib_temp_folder = None
     ):
         super().__init__(
             base_model=base_model,
@@ -1375,7 +1428,10 @@ class AdaSTEMClassifier(AdaSTEM):
             completely_random_rotation=completely_random_rotation,
             lazy_loading=lazy_loading,
             lazy_loading_dir=lazy_loading_dir,
-            min_class_sample=min_class_sample
+            min_class_sample=min_class_sample,
+            ensemble_bootstrap=ensemble_bootstrap,
+            joblib_backend=joblib_backend,
+            joblib_temp_folder = joblib_temp_folder
         )
         
         self._estimator_type = 'classifier'
@@ -1390,6 +1446,7 @@ class AdaSTEMClassifier(AdaSTEM):
         aggregation: str = "mean",
         return_by_separate_ensembles: bool = False,
         logit_agg: bool = False,
+        base_model_method: Union[None, str] = None,
         **base_model_prediction_param
     ) -> Union[np.ndarray, Tuple[np.ndarray]]:
         """A rewrite of predict_proba adapted for Classifier
@@ -1415,10 +1472,12 @@ class AdaSTEMClassifier(AdaSTEM):
                 'mean' or 'median' for aggregation method across ensembles.
             return_by_separate_ensembles (bool, optional):
                 Experimental function. return not by aggregation, but by separate ensembles.
-            base_model_prediction_param:
-                Additional parameter passed to base_model.predict_proba or base_model.predict
             logit_agg:
-                Whether to use logit aggregation for the classification task. If True, the model is averaging the probability prediction estimated by all ensembles in logit scale, and then back-tranform it to probability scale. It's recommened to be combinedly used with the CalibratedClassifierCV class in sklearn as a wrapper of the classifier to estimate the calibrated probability. If False, the output is the essentially the proportion of "1s" acorss the related ensembles; e.g., if 100 stixels covers this spatiotemporal points, and 90% of them predict that it is a "1", then the ouput probability is 0.9; Therefore it would be a probability estimated by the spatiotemporal neiborhood.
+                Whether to use logit aggregation for the classification task. If True, the model is averaging the probability prediction estimated by all ensembles in logit scale, and then back-tranform it to probability scale. It's recommened to be combinedly used with the CalibratedClassifierCV class in sklearn as a wrapper of the classifier to estimate the calibrated probability.
+            base_model_method:
+                The name of the prediction method for base models. If None, `predict` or `predict_proba` will be used depending on the tasks. This argument is handy if you have a custom base model class that has a special prediction function. Defaults to None.
+            base_model_prediction_param:
+                Any other paramters to pass into the prediction method of the base models. e.g., base_model_prediction_param={'n_jobs':1}.
         Raises:
             TypeError:
                 X_test is not of type pd.core.frame.DataFrame.
@@ -1441,6 +1500,7 @@ class AdaSTEMClassifier(AdaSTEM):
                 aggregation=aggregation,
                 return_by_separate_ensembles=return_by_separate_ensembles,
                 logit_agg=logit_agg,
+                base_model_method=base_model_method,
                 **base_model_prediction_param
             )
             mean = mean[:,1].flatten()
@@ -1457,6 +1517,7 @@ class AdaSTEMClassifier(AdaSTEM):
                 aggregation=aggregation,
                 return_by_separate_ensembles=return_by_separate_ensembles,
                 logit_agg=logit_agg,
+                base_model_method=base_model_method,
                 **base_model_prediction_param
             )
             mean = mean[:,1].flatten()
@@ -1519,9 +1580,12 @@ class AdaSTEMRegressor(AdaSTEM):
         verbosity=0,
         plot_empty=False,
         completely_random_rotation=False,
-        lazy_loading = False,
-        lazy_loading_dir = None,
-        min_class_sample = 1
+        lazy_loading=False,
+        lazy_loading_dir=None,
+        min_class_sample=1,
+        ensemble_bootstrap=False,
+        joblib_backend='loky',
+        joblib_temp_folder=None
     ):
         super().__init__(
             base_model=base_model,
@@ -1554,7 +1618,10 @@ class AdaSTEMRegressor(AdaSTEM):
             completely_random_rotation=completely_random_rotation,
             lazy_loading=lazy_loading,
             lazy_loading_dir=lazy_loading_dir,
-            min_class_sample=min_class_sample
+            min_class_sample=min_class_sample,
+            ensemble_bootstrap=ensemble_bootstrap,
+            joblib_backend=joblib_backend,
+            joblib_temp_folder=joblib_temp_folder
         )
         
         self._estimator_type = 'regressor'
@@ -1568,6 +1635,7 @@ class AdaSTEMRegressor(AdaSTEM):
         n_jobs: Union[None, int] = 1,
         aggregation: str = "mean",
         return_by_separate_ensembles: bool = False,
+        base_model_method: Union[None, str] = None,
         **base_model_prediction_param
     ) -> Union[np.ndarray, Tuple[np.ndarray]]:
         """A rewrite of predict_proba
@@ -1589,8 +1657,10 @@ class AdaSTEMRegressor(AdaSTEM):
                 'mean' or 'median' for aggregation method across ensembles.
             return_by_separate_ensembles (bool, optional):
                 Experimental function. return not by aggregation, but by separate ensembles.
+            base_model_method:
+                The name of the prediction method for base models. If None, `predict` or `predict_proba` will be used depending on the tasks. This argument is handy if you have a custom base model class that has a special prediction function. Defaults to None.
             base_model_prediction_param:
-                Additional parameter passed to base_model.predict_proba or base_model.predict
+                Any other paramters to pass into the prediction method of the base models. e.g., base_model_prediction_param={'n_jobs':1}.
                 
         Raises:
             TypeError:
@@ -1613,6 +1683,7 @@ class AdaSTEMRegressor(AdaSTEM):
             n_jobs=n_jobs,
             aggregation=aggregation,
             return_by_separate_ensembles=return_by_separate_ensembles,
+            base_model_method = base_model_method,
             **base_model_prediction_param
         )
         

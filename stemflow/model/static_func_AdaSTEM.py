@@ -431,6 +431,7 @@ def predict_one_stixel(
     X_test_stixel: pd.core.frame.DataFrame,
     task: str,
     model_x_names_tuple: Tuple[Union[None, BaseEstimator], list],
+    base_model_method: Union[None, str],
     **base_model_prediction_param
 ) -> pd.core.frame.DataFrame:
     """predict_one_stixel
@@ -439,6 +440,7 @@ def predict_one_stixel(
         X_test_stixel (pd.core.frame.DataFrame): Input testing variables
         task (str): One of 'regression', 'classification' and 'hurdle'
         model_x_names_tuple (tuple[Union[None, BaseEstimator], list]): A tuple of (model, stixel_specific_x_names)
+        base_model_method (Union[None, str]):  The name of the prediction method for base models. If None, `predict` or `predict_proba` will be used depending on the tasks. This argument is handy if you have a custom base model class that has a special prediction function.
         base_model_prediction_param: Additional parameter passed to base_model.predict_proba or base_model.predict
 
     Returns:
@@ -452,13 +454,26 @@ def predict_one_stixel(
         return None
 
     # get test data
-    if task == "regression":
-        pred = model_x_names_tuple[0].predict(X_test_stixel[model_x_names_tuple[1]])
-    else:
-        pred = model_x_names_tuple[0].predict_proba(X_test_stixel[model_x_names_tuple[1]], **base_model_prediction_param)
-        pred = pred[:,1]
+    pred = None
+    if base_model_method is not None:
+        if hasattr(model_x_names_tuple[0], base_model_method):
+            pred_func = getattr(model_x_names_tuple[0], base_model_method)
+            pred = pred_func(X_test_stixel[model_x_names_tuple[1]], **base_model_prediction_param)
+        else:
+            if isinstance(model_x_names_tuple[0], dummy_model1):
+                pass
+            else:
+                raise TypeError(f"{base_model_method} does not exists for base model {type(model_x_names_tuple[0])}")
+            
+    if pred is None:
+        # Still haven't found the pred function
+        if task == "classification":
+            pred = model_x_names_tuple[0].predict_proba(X_test_stixel[model_x_names_tuple[1]], **base_model_prediction_param)
+            pred = pred[:,1]
+        else:
+            pred = model_x_names_tuple[0].predict(X_test_stixel[model_x_names_tuple[1]], **base_model_prediction_param)
 
-
+    
     res = pd.DataFrame({"index": list(X_test_stixel.index), "pred": np.array(pred).flatten()}).set_index("index")
 
     return res

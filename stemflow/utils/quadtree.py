@@ -105,6 +105,7 @@ def get_one_ensemble_quadtree(
     plot_empty: bool = False,
     rng: np.random._generator.Generator = None,
     completely_random_rotation=False,
+    ensemble_bootstrap=False
 ):
     """Generate QuadTree gridding based on the input dataframe
 
@@ -157,6 +158,8 @@ def get_one_ensemble_quadtree(
             Whether to plot the empty grid
         rng:
             random number generator.
+        ensemble_bootstrap:
+            Whether to bootstrap the data at each ensemble level to account for uncertainty.
 
     Returns:
         A tuple of <br>
@@ -182,13 +185,27 @@ def get_one_ensemble_quadtree(
         temporal_bin_start_jitter=temporal_bin_start_jitter,
         rng=rng,
     )
+    
+    # ensemble_bootstrap
+    if ensemble_bootstrap:
+        bootstrap_random_state = rng.integers(1e9)
+        rng = np.random.default_rng(bootstrap_random_state)  # NumPy's random generator
+        bootstrap_indices = rng.choice(data.index, size=len(data), replace=True)  # Full bootstrap sample
+    else:
+        bootstrap_indices = None # Place holder
 
     ensemble_all_df_list = []
 
     for time_block_index, bin_ in enumerate(temporal_bins):
         time_start = bin_[0]
         time_end = bin_[1]
-        sub_data = data[(data[Temporal1] >= time_start) & (data[Temporal1] < time_end)]
+        
+        if ensemble_bootstrap:
+            valid_index_sub_data = data.index[(data[Temporal1] >= time_start) & (data[Temporal1] < time_end)]
+            sub_data_index = bootstrap_indices[np.isin(bootstrap_indices, valid_index_sub_data)]
+            sub_data = data.loc[sub_data_index] # So that we don't need to make a whole copy of the data
+        else:
+            sub_data = data[(data[Temporal1] >= time_start) & (data[Temporal1] < time_end)]
 
         if len(sub_data) == 0:
             continue
@@ -242,6 +259,9 @@ def get_one_ensemble_quadtree(
             str(i) + "_" + str(time_block_index) + "_" + str(k)
             for i, k in zip(this_slice["ensemble_index"].values, this_slice["stixel_indexes"].values)
         ]
+        
+        if ensemble_bootstrap:
+            this_slice['bootstrap_random_state'] = bootstrap_random_state
 
         # Post process
         this_slice.loc[:, "stixel_calibration_point_transformed_left_bound"] = [
