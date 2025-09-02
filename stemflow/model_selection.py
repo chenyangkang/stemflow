@@ -298,6 +298,11 @@ class ST_KFold:
             test_indexes = []
             start = cv_count * test_size
             end = np.min([(cv_count + 1) * test_size, len(unique_indexes) + 1])
+            
+            ## Use up all the samples
+            if cv_count == (self.n_splits - 1):
+                end = len(unique_indexes) + 1
+                
             test_cell = unique_indexes[start:end]
 
             tmp_this_CV_table = tmp_table[tmp_table["cell"].isin(test_cell)]
