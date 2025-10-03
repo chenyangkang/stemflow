@@ -14,7 +14,7 @@ from multiprocessing import Lock, Pool, Process, cpu_count, shared_memory
 from typing import Callable, Tuple, Union, Optional, List
 from abc import ABC, abstractmethod
 import string
-
+from joblib.externals.loky import get_reusable_executor
 
 import joblib
 import matplotlib.pyplot as plt
@@ -191,7 +191,7 @@ class AdaSTEM(BaseEstimator):
             ensemble_bootstrap:
                 Whether to bootstrap the data at each ensemble level to account for uncertainty. Defaults to False.
             joblib_backend:
-                The backend of joblib. Defaults to 'loky'. Other options include 'multiprocessing', 'threading'.
+                The backend of joblib. Defaults to 'loky'. Other options include 'threading'. ('multiprocessing' not supported because it does not allow generator format).
         Raises:
             AttributeError: Base model do not have method 'fit' or 'predict'
             AttributeError: task not in one of ['regression', 'classification', 'hurdle']
@@ -386,6 +386,7 @@ class AdaSTEM(BaseEstimator):
                 output_generator = tqdm(output_generator, total=self.ensemble_fold, desc="Generating Ensembles: ")
 
             ensemble_all_df_list = [i for i in output_generator]
+            get_reusable_executor().shutdown(wait=True)
 
         else:
             iter_func_ = (
@@ -599,7 +600,7 @@ class AdaSTEM(BaseEstimator):
             del data
             
             # Dump and load 1
-            temp_st_indexers_array_path = os.path.join(self.joblib_temp_dir, "st_indexers_array.mmap")
+            temp_st_indexers_array_path = os.path.join(self.joblib_temp_dir, "X_train_st_indexers_array.mmap")
             joblib.dump(st_indexers_array, temp_st_indexers_array_path)
             st_indexers_array = joblib.load(temp_st_indexers_array_path, mmap_mode="r")
             
@@ -612,7 +613,7 @@ class AdaSTEM(BaseEstimator):
                 res = self.SAC_ensemble_training(index_df=ensemble[1], data=None, st_indexers_array=st_indexers_array, var_cols=var_cols, var_array=var_array)
                 return res
             
-            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.joblib_temp_dir, pre_dispatch='all')
+            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.joblib_temp_dir, pre_dispatch='all') #pre_dispatch='all' to avoid serialization issue since "self" can change in this process
             output_generator = parallel(joblib.delayed(mp_train)(i) for i in groups)
 
         # tqdm wrapper
@@ -644,6 +645,7 @@ class AdaSTEM(BaseEstimator):
             if self.lazy_loading:
                 self.model_dict.dump_ensemble(ensemble_id)
 
+        get_reusable_executor().shutdown(wait=True)
         self.stixel_specific_x_names = stixel_specific_x_names
         return self
 
@@ -755,7 +757,8 @@ class AdaSTEM(BaseEstimator):
             return pred
 
     def SAC_ensemble_predict(
-        self, index_df: pd.core.frame.DataFrame, data: pd.core.frame.DataFrame
+        self, index_df: pd.core.frame.DataFrame, data: Optional[pd.core.frame.DataFrame] = None, 
+        st_indexers_array: Optional[np.memmap] = None, var_cols: Optional[List[str]] = None, var_array: Optional[np.memmap] = None
     ) -> pd.core.frame.DataFrame:
         """A sub-module of SAC prediction function.
         Predict only one ensemble.
@@ -766,16 +769,32 @@ class AdaSTEM(BaseEstimator):
         Returns:
             pd.core.frame.DataFrame: Prediction result of one ensemble.
         """
-
+        if data is None:
+            assert st_indexers_array is not None and var_cols is not None and var_array is not None
+        elif (st_indexers_array is None and var_cols is None and var_array is None):
+            assert data is not None
+        else:
+            raise AttributeError('Wrong specification. Either data is None or the other three are None.')
+            
         # Calculate the start indices for the sliding window
         start_indices = sorted(index_df[f"{self.Temporal1}_start"].unique())
 
         # prediction, window by window
         window_prediction_list = []
         for start in start_indices:
-            window_data_df = data[
-                (data[self.Temporal1] >= start) & (data[self.Temporal1] < start + self.temporal_bin_interval)
-            ]
+            if data is None:
+                iloc_positions = np.flatnonzero(
+                                        (st_indexers_array[:,2] >= start) &  # the third column is the temporal column
+                                        (st_indexers_array[:,2] < start + self.temporal_bin_interval)
+                                    )
+                window_data_df = pd.DataFrame(np.concatenate([st_indexers_array[iloc_positions, :], 
+                                                              var_array[iloc_positions, :]], axis=1), 
+                                              columns=[self.Spatio1, self.Spatio2, self.Temporal1] + var_cols)
+            else:
+                window_data_df = data[
+                    (data[self.Temporal1] >= start) & (data[self.Temporal1] < start + self.temporal_bin_interval)
+                ]
+                
             window_data_df = transform_pred_set_to_STEM_quad(self.Spatio1, self.Spatio2, window_data_df, index_df)
             window_index_df = index_df[index_df[f"{self.Temporal1}_start"] == start]
 
@@ -855,12 +874,27 @@ class AdaSTEM(BaseEstimator):
         if n_jobs == 1:
             output_generator = (self.SAC_ensemble_predict(index_df=ensemble[1], data=data) for ensemble in groups)
         else:
-
-            def mp_predict(ensemble, self=self, data=data):
-                res = self.SAC_ensemble_predict(index_df=ensemble[1], data=data)
+            st_indexers_array = data.loc[:,[self.Spatio1, self.Spatio2, self.Temporal1]].values
+            var_cols = [i for i in data.columns if not i in [self.Spatio1, self.Spatio2, self.Temporal1]]
+            var_array = data.loc[:,var_cols].values
+            del data
+            
+            # Dump and load 1
+            temp_st_indexers_array_path = os.path.join(self.joblib_temp_dir, "X_test_st_indexers_array.mmap")
+            joblib.dump(st_indexers_array, temp_st_indexers_array_path)
+            st_indexers_array = joblib.load(temp_st_indexers_array_path, mmap_mode="r")
+            
+            # Dump and load 2
+            temp_var_array_path = os.path.join(self.joblib_temp_dir, "X_test_features.mmap")
+            joblib.dump(var_array, temp_var_array_path)
+            var_array = joblib.load(temp_var_array_path, mmap_mode="r")
+            
+            
+            def mp_predict(ensemble, self=self):
+                res = self.SAC_ensemble_predict(index_df=ensemble[1], data=None, st_indexers_array=st_indexers_array, var_cols=var_cols, var_array=var_array)
                 return res
 
-            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.joblib_temp_dir)
+            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.joblib_temp_dir, pre_dispatch='all')  #pre_dispatch='all' to avoid serialization issue since "self" can change in this process
             output_generator = parallel(joblib.delayed(mp_predict)(i) for i in groups)
 
         # tqdm wrapper
@@ -871,6 +905,8 @@ class AdaSTEM(BaseEstimator):
 
         # Prediction
         pred = [i.set_index("index") for i in output_generator]
+        get_reusable_executor().shutdown(wait=True)
+
         pred = pd.concat(pred, axis=1)
         if len(pred) == 0:
             raise ValueError(
@@ -938,8 +974,21 @@ class AdaSTEM(BaseEstimator):
         self.base_model_method = base_model_method
         self.base_model_prediction_param = base_model_prediction_param
 
-        # predict
-        res = self.SAC_predict(self.ensemble_df, X_test, verbosity=verbosity, n_jobs=n_jobs)
+        # Setup joblib_temp_dir
+        self.joblib_temp_dir = os.path.join(self.lazy_loading_dir, 'joblib')
+        if not os.path.exists(self.joblib_temp_dir):
+            os.makedirs(self.joblib_temp_dir)
+            
+        try:
+            # predict
+            res = self.SAC_predict(self.ensemble_df, X_test, verbosity=verbosity, n_jobs=n_jobs)
+        except: # Remove the entire lazy_loading_dir since it includes failed models
+            # if os.path.exists(self.lazy_loading_dir):
+            #     shutil.rmtree(self.lazy_loading_dir)
+            raise
+        finally: # Remove the joblib_temp_dir anyway
+            if os.path.exists(self.joblib_temp_dir):
+                shutil.rmtree(self.joblib_temp_dir)
 
         # Experimental Function
         if return_by_separate_ensembles:
