@@ -8,10 +8,10 @@ from itertools import repeat
 import tarfile 
 from pathlib import Path
 import shutil
-
+import tempfile
 #
 from multiprocessing import Lock, Pool, Process, cpu_count, shared_memory
-from typing import Callable, Tuple, Union
+from typing import Callable, Tuple, Union, Optional, List
 from abc import ABC, abstractmethod
 import string
 
@@ -114,8 +114,7 @@ class AdaSTEM(BaseEstimator):
         lazy_loading_dir: Union[str, None] = None,
         min_class_sample: int = 1,
         ensemble_bootstrap: bool = False,
-        joblib_backend: str = 'loky',
-        joblib_temp_folder: Union[None, str] = None
+        joblib_backend: str = 'loky'
     ):
         """Make an AdaSTEM object
 
@@ -186,15 +185,13 @@ class AdaSTEM(BaseEstimator):
             lazy_loading:
                 If True, ensembles of models will be saved in disk, and only loaded when being used (e.g., prediction phase), and the ensembles of models are dump to disk once it is used.
             lazy_loading_dir:
-                If lazy_loading, the directory of the model to temporary save to. Default to None, where a random number will be generated as folder name.
+                If lazy_loading, the directory of the model to temporary save to. Default to None, where a folder in /tmp will be created and used. This folder can exist even with lazy_loading==False.
             min_class_sample:
                 Minimum umber of samples needed to train the classifier in each stixel. If the sample does not satisfy, fit a dummy one. This parameter does not influence regression tasks.
             ensemble_bootstrap:
                 Whether to bootstrap the data at each ensemble level to account for uncertainty. Defaults to False.
             joblib_backend:
                 The backend of joblib. Defaults to 'loky'. Other options include 'multiprocessing', 'threading'.
-            joblib_temp_folder:
-                The temporary folder for joblib. If None, falling back to joblib's default directory. If 'lazy_loading_dir', set as the same directory as lazy_loading_dir. If it's string, create a directory and store data into it. Defaults to None.
         Raises:
             AttributeError: Base model do not have method 'fit' or 'predict'
             AttributeError: task not in one of ['regression', 'classification', 'hurdle']
@@ -270,7 +267,6 @@ class AdaSTEM(BaseEstimator):
         n_jobs = check_transform_n_jobs(self, n_jobs)
         self.n_jobs = n_jobs
         self.joblib_backend = joblib_backend
-        self.joblib_temp_folder = joblib_temp_folder
 
         # 7. Plotting params
         self.plot_xlims = plot_xlims
@@ -281,6 +277,7 @@ class AdaSTEM(BaseEstimator):
         # X. miscellaneous
         self.lazy_loading = lazy_loading
         self.lazy_loading_dir = lazy_loading_dir
+        self.joblib_temp_dir = None
 
         if not verbosity == 0:
             self.verbosity = 1
@@ -378,7 +375,7 @@ class AdaSTEM(BaseEstimator):
         )
 
         if n_jobs > 1 and isinstance(n_jobs, int):
-            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.joblib_temp_folder)
+            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.joblib_temp_dir)
             output_generator = parallel(
                 joblib.delayed(partial_get_one_ensemble_quadtree)(
                     ensemble_count=ensemble_count, rng=np.random.default_rng(self.rng.integers(1e9) + ensemble_count)
@@ -471,7 +468,8 @@ class AdaSTEM(BaseEstimator):
         else:
             return (name, model, stixel_specific_x_names)
 
-    def SAC_ensemble_training(self, index_df: pd.core.frame.DataFrame, data: pd.core.frame.DataFrame):
+    def SAC_ensemble_training(self, index_df: pd.core.frame.DataFrame, data: Optional[pd.core.frame.DataFrame] = None, 
+                              st_indexers_array: Optional[np.memmap] = None, var_cols: Optional[List[str]] = None, var_array: Optional[np.memmap] = None):
         """A sub-module of SAC training function.
         Train only one ensemble.
 
@@ -479,35 +477,58 @@ class AdaSTEM(BaseEstimator):
             index_df (pd.core.frame.DataFrame): ensemble data (model.ensemble_df)
             data (pd.core.frame.DataFrame): input covariates to train
         """
-
+        if data is None:
+            assert st_indexers_array is not None and var_cols is not None and var_array is not None
+        elif (st_indexers_array is None and var_cols is None and var_array is None):
+            assert data is not None
+        else:
+            raise AttributeError('Wrong specification. Either data is None or the other three are None.')
+            
         # Calculate the start indices for the sliding window
-
         unique_start_indices = np.sort(index_df[f"{self.Temporal1}_start"].unique())
+        
         # training, window by window
+        if data is None:
+            total_length = st_indexers_array.shape[0]
+        else:
+            total_length = data.shape[0]
         
         if self.ensemble_bootstrap:
             bootstrap_random_state = index_df['bootstrap_random_state'].iloc[0]
             rng = np.random.default_rng(bootstrap_random_state)  # NumPy's random generator
-            bootstrap_indices = rng.choice(data.index, size=len(data), replace=True)  # Full bootstrap sample
+            bootstrap_indices = rng.choice(list(range(total_length)), size=total_length, replace=True)  # Full bootstrap sample
         else:
             bootstrap_indices = None # Place holder
             
         res_list = []
         for start in unique_start_indices:
-            
-            if self.ensemble_bootstrap:
-                valid_index_window_data_df = data.index[
-                    (data[self.Temporal1] >= start) & (data[self.Temporal1] < start + self.temporal_bin_interval)
-                ]
-                window_data_df_index = bootstrap_indices[np.isin(bootstrap_indices, valid_index_window_data_df)]
-                window_data_df = data.loc[window_data_df_index] # So that we don't need to make a whole copy of the data
-                del window_data_df_index, valid_index_window_data_df
-
+            # Select the temporal window
+            if data is None:
+                iloc_positions = np.flatnonzero(
+                                        (st_indexers_array[:,2] >= start) &  # the third column is the temporal column
+                                        (st_indexers_array[:,2] < start + self.temporal_bin_interval)
+                                    )
             else:
-                window_data_df = data[
-                    (data[self.Temporal1] >= start) & (data[self.Temporal1] < start + self.temporal_bin_interval)
-                ]
+                iloc_positions = np.flatnonzero(
+                                        (data[self.Temporal1] >= start) & 
+                                        (data[self.Temporal1] < start + self.temporal_bin_interval)
+                                    )
+            # Apply bootstrap
+            if self.ensemble_bootstrap:
+                window_data_df_index = bootstrap_indices[np.isin(bootstrap_indices, iloc_positions)]
+            else:
+                window_data_df_index = iloc_positions
+                
+            # Combine to get the final training data
+            if data is None:
+                window_data_df = pd.DataFrame(np.concatenate([st_indexers_array[window_data_df_index, :], 
+                                                              var_array[window_data_df_index, :]], axis=1), 
+                                              columns=[self.Spatio1, self.Spatio2, self.Temporal1] + var_cols)
+            else:
+                window_data_df = data.iloc[window_data_df_index]
+            del window_data_df_index, iloc_positions
             
+            # Transform to STEM gridding coordinates
             window_data_df = transform_pred_set_to_STEM_quad(self.Spatio1, self.Spatio2, window_data_df, index_df)
             window_index_df = index_df[index_df[f"{self.Temporal1}_start"] == start]
             
@@ -572,12 +593,26 @@ class AdaSTEM(BaseEstimator):
         if n_jobs == 1:
             output_generator = (self.SAC_ensemble_training(index_df=ensemble[1], data=data) for ensemble in groups)
         else:
-
-            def mp_train(ensemble, self=self, data=data):
-                res = self.SAC_ensemble_training(index_df=ensemble[1], data=data)
+            st_indexers_array = data.loc[:,[self.Spatio1, self.Spatio2, self.Temporal1]].values
+            var_cols = [i for i in data.columns if not i in [self.Spatio1, self.Spatio2, self.Temporal1]]
+            var_array = data.loc[:,var_cols].values
+            del data
+            
+            # Dump and load 1
+            temp_st_indexers_array_path = os.path.join(self.joblib_temp_dir, "st_indexers_array.mmap")
+            joblib.dump(st_indexers_array, temp_st_indexers_array_path)
+            st_indexers_array = joblib.load(temp_st_indexers_array_path, mmap_mode="r")
+            
+            # Dump and load 2
+            temp_var_array_path = os.path.join(self.joblib_temp_dir, "X_train_features.mmap")
+            joblib.dump(var_array, temp_var_array_path)
+            var_array = joblib.load(temp_var_array_path, mmap_mode="r")
+            
+            def mp_train(ensemble, self=self):
+                res = self.SAC_ensemble_training(index_df=ensemble[1], data=None, st_indexers_array=st_indexers_array, var_cols=var_cols, var_array=var_array)
                 return res
-
-            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.joblib_temp_folder)
+            
+            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.joblib_temp_dir, pre_dispatch='all')
             output_generator = parallel(joblib.delayed(mp_train)(i) for i in groups)
 
         # tqdm wrapper
@@ -634,45 +669,53 @@ class AdaSTEM(BaseEstimator):
             TypeError: X_train is not a type of pd.core.frame.DataFrame
             TypeError: y_train is not a type of np.ndarray or pd.core.frame.DataFrame
         """
-        # setup random state
+        # Input check
         self.rng = check_random_state(self.random_state)
-        
-        # Setup lazyloading dir
-        if self.lazy_loading_dir is None:
-            saving_code = ''.join(np.random.choice(list(string.ascii_letters + string.digits)) for _ in range(16))
-            self.lazy_loading_dir = f'./stemflow_model_{saving_code}'
-        else:
-            if os.path.exists(self.lazy_loading_dir):
-                shutil.rmtree(self.lazy_loading_dir)
-        self.lazy_loading_dir = str(Path(self.lazy_loading_dir.rstrip('/\\')))
-        
-        # Setup joblib_temp_folder
-        if self.joblib_temp_folder is None:
-            pass
-        elif self.joblib_temp_folder=='lazy_loading_dir':
-            self.joblib_temp_folder = self.lazy_loading_dir
-        else:
-            if not os.path.exists(self.joblib_temp_folder):
-                os.makedirs(self.joblib_temp_folder)
-        
         verbosity = check_verbosity(self, verbosity)
         check_X_train(X_train)
         check_y_train(y_train)
         n_jobs = check_transform_n_jobs(self, n_jobs)
         self.store_x_names(X_train)
+        
+        # Setup lazyloading dir
+        if self.lazy_loading_dir is None:
+            saving_code = ''.join(np.random.choice(list(string.ascii_letters + string.digits)) for _ in range(16))
+            self.lazy_loading_dir = os.path.join(tempfile.gettempdir(), f'stemflow_model_{saving_code}')
+            warnings.warn(f'lazy_loading_dir not specified during instance initiation. Using the temporary folder: {self.lazy_loading_dir}')
+        else:
+            if os.path.exists(self.lazy_loading_dir):
+                shutil.rmtree(self.lazy_loading_dir)
+                
+        self.lazy_loading_dir = str(Path(self.lazy_loading_dir.rstrip('/\\')))
+        if not os.path.exists(self.lazy_loading_dir):
+            os.makedirs(self.lazy_loading_dir)
+            
+        # Setup joblib_temp_dir
+        self.joblib_temp_dir = os.path.join(self.lazy_loading_dir, 'joblib')
+        if not os.path.exists(self.joblib_temp_dir):
+            os.makedirs(self.joblib_temp_dir)
 
-        # quadtree
-        X_train = X_train.reset_index(drop=True)  # I reset index here!! caution! This step is important for the following indexing.
-        X_train["true_y"] = np.array(y_train).flatten()
-        self.split(X_train, verbosity=verbosity, ax=ax, n_jobs=n_jobs)
+        try:
+            # Quadtree
+            X_train = X_train.reset_index(drop=True)  # I reset index here!! caution! This step is important for the following indexing.
+            X_train["true_y"] = np.array(y_train).flatten()
+            self.split(X_train, verbosity=verbosity, ax=ax, n_jobs=n_jobs)
 
-        # define model dict
-        self.model_dict = {}
-        # stixel specific x_names list
-        self.stixel_specific_x_names = {}
+            # define model dict
+            self.model_dict = {}
+            # stixel specific x_names list
+            self.stixel_specific_x_names = {}
 
-        self.SAC_training(self.ensemble_df, X_train, verbosity, n_jobs)
-        self.classes_ = np.unique(y_train)
+            # Training
+            self.SAC_training(self.ensemble_df, X_train, verbosity, n_jobs)
+            self.classes_ = np.unique(y_train)
+        except: # Remove the entire lazy_loading_dir since it includes failed models
+            if os.path.exists(self.lazy_loading_dir):
+                shutil.rmtree(self.lazy_loading_dir)
+            raise
+        finally: # Remove the joblib_temp_dir anyway
+            if os.path.exists(self.joblib_temp_dir):
+                shutil.rmtree(self.joblib_temp_dir)
 
         return self
 
@@ -817,7 +860,7 @@ class AdaSTEM(BaseEstimator):
                 res = self.SAC_ensemble_predict(index_df=ensemble[1], data=data)
                 return res
 
-            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.joblib_temp_folder)
+            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.joblib_temp_dir)
             output_generator = parallel(joblib.delayed(mp_predict)(i) for i in groups)
 
         # tqdm wrapper
@@ -1237,7 +1280,7 @@ class AdaSTEM(BaseEstimator):
     
         # assign input spatio-temporal points to stixels
         if n_jobs > 1:
-            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.joblib_temp_folder)
+            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.joblib_temp_dir)
             output_generator = parallel(joblib.delayed(partial_assign_func)(i) for i in list(range(self.ensemble_fold)))
             if verbosity > 0:
                 output_generator = tqdm(output_generator, total=self.ensemble_fold, desc="Querying ensembles: ")
@@ -1394,8 +1437,7 @@ class AdaSTEMClassifier(AdaSTEM):
         lazy_loading_dir = None,
         min_class_sample = 1,
         ensemble_bootstrap = False,
-        joblib_backend = 'loky',
-        joblib_temp_folder = None
+        joblib_backend = 'loky'
     ):
         super().__init__(
             base_model=base_model,
@@ -1430,8 +1472,7 @@ class AdaSTEMClassifier(AdaSTEM):
             lazy_loading_dir=lazy_loading_dir,
             min_class_sample=min_class_sample,
             ensemble_bootstrap=ensemble_bootstrap,
-            joblib_backend=joblib_backend,
-            joblib_temp_folder = joblib_temp_folder
+            joblib_backend=joblib_backend
         )
         
         self._estimator_type = 'classifier'
@@ -1584,8 +1625,7 @@ class AdaSTEMRegressor(AdaSTEM):
         lazy_loading_dir=None,
         min_class_sample=1,
         ensemble_bootstrap=False,
-        joblib_backend='loky',
-        joblib_temp_folder=None
+        joblib_backend='loky'
     ):
         super().__init__(
             base_model=base_model,
@@ -1620,8 +1660,7 @@ class AdaSTEMRegressor(AdaSTEM):
             lazy_loading_dir=lazy_loading_dir,
             min_class_sample=min_class_sample,
             ensemble_bootstrap=ensemble_bootstrap,
-            joblib_backend=joblib_backend,
-            joblib_temp_folder=joblib_temp_folder
+            joblib_backend=joblib_backend
         )
         
         self._estimator_type = 'regressor'
