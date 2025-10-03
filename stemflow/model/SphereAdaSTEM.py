@@ -2,7 +2,7 @@ import os
 import warnings
 from functools import partial
 from types import MethodType
-from typing import Callable, Tuple, Union
+from typing import Callable, Tuple, Union, Optional, List
 
 import joblib
 import matplotlib.pyplot as plt
@@ -226,7 +226,7 @@ class SphereAdaSTEM(AdaSTEM):
         if not self.Spatio2 == "latitude":
             warnings.warn('the input Spatio1 is not "latitude"! Set to "latitude"')
             self.Spatio2 = "latitude"
-
+            
         self.radius = radius
 
     def split(
@@ -332,7 +332,8 @@ class SphereAdaSTEM(AdaSTEM):
         else:
             self.ensemble_df, self.gridding_plot = ensemble_df, None
 
-    def SAC_ensemble_training(self, index_df: pd.core.frame.DataFrame, data: pd.core.frame.DataFrame):
+    def SAC_ensemble_training(self, index_df: pd.core.frame.DataFrame, data: Optional[pd.core.frame.DataFrame] = None, 
+                              st_indexers_array: Optional[np.memmap] = None, var_cols: Optional[List[str]] = None, var_array: Optional[np.memmap] = None):
         """A sub-module of SAC training function.
         Train only one ensemble.
 
@@ -340,15 +341,57 @@ class SphereAdaSTEM(AdaSTEM):
             index_df (pd.core.frame.DataFrame): ensemble data (model.ensemble_df)
             data (pd.core.frame.DataFrame): input covariates to train
         """
-
+        if data is None:
+            assert st_indexers_array is not None and var_cols is not None and var_array is not None
+        elif (st_indexers_array is None and var_cols is None and var_array is None):
+            assert data is not None
+        else:
+            raise AttributeError('Wrong specification. Either data is None or the other three are None.')
+            
         # Calculate the start indices for the sliding window
         unique_start_indices = np.sort(index_df[f"{self.Temporal1}_start"].unique())
+        
+        # training, window by window
+        if data is None:
+            total_length = st_indexers_array.shape[0]
+        else:
+            total_length = data.shape[0]
+        
+        if self.ensemble_bootstrap:
+            bootstrap_random_state = index_df['bootstrap_random_state'].iloc[0]
+            rng = np.random.default_rng(bootstrap_random_state)  # NumPy's random generator
+            bootstrap_indices = rng.choice(list(range(total_length)), size=total_length, replace=True)  # Full bootstrap sample
+        else:
+            bootstrap_indices = None # Place holder
+            
         # training, window by window
         res_list = []
         for start in unique_start_indices:
-            window_data_df = data[
-                (data[self.Temporal1] >= start) & (data[self.Temporal1] < start + self.temporal_bin_interval)
-            ]
+            # Select the temporal window
+            if data is None:
+                iloc_positions = np.flatnonzero(
+                                        (st_indexers_array[:,2] >= start) &  # the third column is the temporal column
+                                        (st_indexers_array[:,2] < start + self.temporal_bin_interval)
+                                    )
+            else:
+                iloc_positions = np.flatnonzero(
+                                        (data[self.Temporal1] >= start) & 
+                                        (data[self.Temporal1] < start + self.temporal_bin_interval)
+                                    )
+            # Apply bootstrap
+            if self.ensemble_bootstrap:
+                window_data_df_index = bootstrap_indices[np.isin(bootstrap_indices, iloc_positions)]
+            else:
+                window_data_df_index = iloc_positions
+            # Combine to get the final training data
+            if data is None:
+                window_data_df = pd.DataFrame(np.concatenate([st_indexers_array[window_data_df_index, :], 
+                                                              var_array[window_data_df_index, :]], axis=1), 
+                                              columns=[self.Spatio1, self.Spatio2, self.Temporal1] + var_cols)
+            else:
+                window_data_df = data.iloc[window_data_df_index]
+            del window_data_df_index, iloc_positions
+                
             window_data_df = transform_pred_set_to_Sphere_STEM_quad(
                 self.Spatio1, self.Spatio2, window_data_df, index_df
             )
@@ -403,7 +446,8 @@ class SphereAdaSTEM(AdaSTEM):
         return res_list
 
     def SAC_ensemble_predict(
-        self, index_df: pd.core.frame.DataFrame, data: pd.core.frame.DataFrame
+        self, index_df: pd.core.frame.DataFrame, data: Optional[pd.core.frame.DataFrame] = None, 
+        st_indexers_array: Optional[np.memmap] = None, var_cols: Optional[List[str]] = None, var_array: Optional[np.memmap] = None
     ) -> pd.core.frame.DataFrame:
         """A sub-module of SAC prediction function.
         Predict only one ensemble.
@@ -414,16 +458,32 @@ class SphereAdaSTEM(AdaSTEM):
         Returns:
             pd.core.frame.DataFrame: Prediction result of one ensemble.
         """
-
+        if data is None:
+            assert st_indexers_array is not None and var_cols is not None and var_array is not None
+        elif (st_indexers_array is None and var_cols is None and var_array is None):
+            assert data is not None
+        else:
+            raise AttributeError('Wrong specification. Either data is None or the other three are None.')
+            
         # Calculate the start indices for the sliding window
         start_indices = sorted(index_df[f"{self.Temporal1}_start"].unique())
 
         # prediction, window by window
         window_prediction_list = []
         for start in start_indices:
-            window_data_df = data[
-                (data[self.Temporal1] >= start) & (data[self.Temporal1] < start + self.temporal_bin_interval)
-            ]
+            if data is None:
+                iloc_positions = np.flatnonzero(
+                                        (st_indexers_array[:,2] >= start) &  # the third column is the temporal column
+                                        (st_indexers_array[:,2] < start + self.temporal_bin_interval)
+                                    )
+                window_data_df = pd.DataFrame(np.concatenate([st_indexers_array[iloc_positions, :], 
+                                                              var_array[iloc_positions, :]], axis=1), 
+                                              columns=[self.Spatio1, self.Spatio2, self.Temporal1] + var_cols)
+            else:
+                window_data_df = data[
+                    (data[self.Temporal1] >= start) & (data[self.Temporal1] < start + self.temporal_bin_interval)
+                ]
+                
             window_data_df = transform_pred_set_to_Sphere_STEM_quad(
                 self.Spatio1, self.Spatio2, window_data_df, index_df
             )
