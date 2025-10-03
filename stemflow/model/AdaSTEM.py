@@ -1061,7 +1061,7 @@ class AdaSTEM(BaseEstimator):
         X_test: pd.core.frame.DataFrame,
         verbosity: Union[None, int] = None,
         return_std: bool = False,
-        n_jobs: Union[None, int] = 1,
+        n_jobs: Union[None, int] = None,
         aggregation: str = "mean",
         return_by_separate_ensembles: bool = False,
         logit_agg: bool = False,
@@ -1532,7 +1532,7 @@ class AdaSTEMClassifier(AdaSTEM):
         verbosity: Union[None, int] = None,
         return_std: bool = False,
         cls_threshold: float = 0.5,
-        n_jobs: Union[int, None] = 1,
+        n_jobs: Union[int, None] = None,
         aggregation: str = "mean",
         return_by_separate_ensembles: bool = False,
         logit_agg: bool = False,
@@ -1553,11 +1553,9 @@ class AdaSTEMClassifier(AdaSTEM):
                 Values above cls_threshold will be labeled as 1 and 0 otherwise.
                 Defaults to 0.5.
             n_jobs (Union[int, None], optional):
-                Number of processes used in this task. If None, use the self.n_jobs. Default to 1.
-                I do not recommend setting value larger than 1.
-                In practice, multi-processing seems to slow down the process instead of speeding up.
+                Number of processes used in this task. If None, use the self.n_jobs. Default to None.
+                In practice, multi-processing might to slow down the process instead of speeding up. Suggest some adapted experiments.
                 Could be more practical with large amount of data.
-                Still in experiment.
             aggregation (str, optional):
                 'mean' or 'median' for aggregation method across ensembles.
             return_by_separate_ensembles (bool, optional):
@@ -1720,7 +1718,7 @@ class AdaSTEMRegressor(AdaSTEM):
         X_test: pd.core.frame.DataFrame,
         verbosity: Union[None, int] = None,
         return_std: bool = False,
-        n_jobs: Union[None, int] = 1,
+        n_jobs: Union[None, int] = None,
         aggregation: str = "mean",
         return_by_separate_ensembles: bool = False,
         base_model_method: Union[None, str] = None,
@@ -1736,11 +1734,9 @@ class AdaSTEMRegressor(AdaSTEM):
             return_std (bool, optional):
                 Whether return the standard deviation among ensembles. Defaults to False.
             n_jobs (Union[int, None], optional):
-                Number of processes used in this task. If None, use the self.n_jobs. Default to 1.
-                I do not recommend setting value larger than 1.
-                In practice, multi-processing seems to slow down the process instead of speeding up.
+                Number of processes used in this task. If None, use the self.n_jobs. Default to None.
+                In practice, multi-processing might to slow down the process instead of speeding up. Suggest some adapted experiments.
                 Could be more practical with large amount of data.
-                Still in experiment.
             aggregation (str, optional):
                 'mean' or 'median' for aggregation method across ensembles.
             return_by_separate_ensembles (bool, optional):
