@@ -223,8 +223,13 @@ def get_one_ensemble_quadtree(
         else:
             sub_data_index = con.sql(f"SELECT __index_level_0__ FROM data_df WHERE {Temporal1} >= {time_start} AND {Temporal1} < {time_end};").df().values.flatten()
             sub_data_index = bootstrap_indices[np.isin(bootstrap_indices, sub_data_index)] if ensemble_bootstrap else sub_data_index
-            sub_data_index_string = ",".join(str(x) for x in sub_data_index)
-            sub_data = con.sql(f"SELECT {Temporal1}, {Spatio1}, {Spatio2}, __index_level_0__ FROM data_df WHERE __index_level_0__ IN ({sub_data_index_string});").df().set_index('__index_level_0__')
+            sub_data_index = pd.DataFrame(sub_data_index, columns=['__index_level_0__'])
+            con.register("sub_data_index", sub_data_index)
+            sub_data = con.sql(f"""
+                               SELECT data_df.{Temporal1}, data_df.{Spatio1}, data_df.{Spatio2}, data_df.__index_level_0__ FROM data_df
+                               JOIN sub_data_index
+                               ON data_df.__index_level_0__ = sub_data_index.__index_level_0__
+                               """).df().set_index('__index_level_0__')
         
         if len(sub_data) == 0:
             continue

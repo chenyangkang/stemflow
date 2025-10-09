@@ -81,7 +81,7 @@ from .static_func_AdaSTEM import (  # predict_one_ensemble
 )
 
 from ..utils.lazyloading import LazyLoadingEnsembleDict
-
+from ..utils.generate_random import generate_random_saving_code
 
 class AdaSTEM(BaseEstimator):
     """An AdaSTEM model class inherited by AdaSTEMClassifier and AdaSTEMRegressor"""
@@ -336,6 +336,7 @@ class AdaSTEM(BaseEstimator):
         ## Open connection
         con = None
         X_train_df, con = open_db_connection(X_train, self.duckdb_config) # Here X_train_df can be either pd.DataFrame or duckdb.DuckDBPyRelation
+        con.register("X_train_df", X_train_df)
         
         # spatial & temporal min max   
         try:      
@@ -475,6 +476,7 @@ class AdaSTEM(BaseEstimator):
             X_train_df, con = open_db_connection(X_train, self.duckdb_config)
             con.register("X_train_df", X_train_df)
             self.x_names = [i for i in con.sql("DESCRIBE X_train_df").df()["column_name"].tolist() if not i=='__index_level_0__']
+            con.close()
             
         if not self.use_temporal_to_train:
             if self.Temporal1 in list(self.x_names):
@@ -483,6 +485,8 @@ class AdaSTEM(BaseEstimator):
         for i in [self.Spatio1, self.Spatio2]:
             if i in self.x_names:
                 del self.x_names[self.x_names.index(i)]
+        
+        
 
     def stixel_fitting(self, stixel):
         """A sub module of SAC training. Fit one stixel
@@ -491,6 +495,9 @@ class AdaSTEM(BaseEstimator):
             stixel (pd.DataFrame): data sjoined with ensemble_df.
             For a single stixel.
         """
+        
+        if '__index_level_0__' in stixel.columns:
+            raise AttributeError('__index_level_0__ should not apprear in the final training data!')
 
         unique_stixel_id = stixel["unique_stixel_id"].iloc[0]
         name = unique_stixel_id
@@ -512,56 +519,121 @@ class AdaSTEM(BaseEstimator):
         else:
             return (name, model, stixel_specific_x_names)
 
-    def SAC_ensemble_training(self, index_df: pd.DataFrame, X_train: Union[pd.DataFrame, str], y_train: Union[pd.DataFrame, str]):
+    def SAC_ensemble_training(self, single_ensemble_df: pd.DataFrame, X_train: Union[pd.DataFrame, str], y_train: Union[pd.DataFrame, str]):
         """A sub-module of SAC training function.
         Train only one ensemble.
 
         Args:
-            index_df (pd.DataFrame): ensemble data (model.ensemble_df)
+            single_ensemble_df (pd.DataFrame): ensemble data (from model.ensemble_df)
             X_train (pd.DataFrame, str): input covariates to train
             y_train (pd.DataFrame, str): input ground truth labels
         """
-        
+
         # Calculate the start indices for the sliding window
-        unique_start_indices = np.sort(index_df[f"{self.Temporal1}_start"].unique())
+        unique_start_indices = np.sort(single_ensemble_df[f"{self.Temporal1}_start"].unique())
         
+        # Initiate duckdb connection
+        duckdb_config = self.duckdb_config.copy()
+        duckdb_config['temp_directory'] = os.path.join(duckdb_config['temp_directory'], generate_random_saving_code())
+        con = None
+        X_train_df, con = open_db_connection(X_train, duckdb_config)
+        con.register("X_train_df", X_train_df)
+        y_train_df, con_y = open_db_connection(y_train, duckdb_config)
+        con_y.register("y_train_df", y_train_df)
+
+        # Get indexes and total_length
+        if isinstance(X_train_df, pd.DataFrame):
+            indexes = np.array(X_train_df.index)
+        else:
+            indexes = con.sql(f"SELECT __index_level_0__ FROM X_train_df;").df().values.flatten()
+        total_length = con.sql("SELECT COUNT(*) FROM X_train_df;").fetchone()[0]
+    
         # training, window by window
         if self.ensemble_bootstrap:
-            bootstrap_random_state = index_df['bootstrap_random_state'].iloc[0]
+            bootstrap_random_state = single_ensemble_df['bootstrap_random_state'].iloc[0]
             rng = np.random.default_rng(bootstrap_random_state)  # NumPy's random generator
-            bootstrap_indices = rng.choice(list(data.index), size=len(data.index), replace=True)  # Full bootstrap sample
+            bootstrap_indices = rng.choice(indexes, size=total_length, replace=True)  # Full bootstrap sample
         else:
             bootstrap_indices = None # Place holder
             
         res_list = []
         for start in unique_start_indices:
             # Select the temporal window
-            iloc_positions = np.flatnonzero(
-                                    (data[self.Temporal1] >= start) & 
-                                    (data[self.Temporal1] < start + self.temporal_bin_interval)
-                                )
-            # Apply bootstrap
-            window_data_df_index = bootstrap_indices[np.isin(bootstrap_indices, iloc_positions)] if self.ensemble_bootstrap else iloc_positions
+            if isinstance(X_train_df, pd.DataFrame):
+                temporal_window_indexes = np.array(X_train_df.index[
+                    (X_train_df[self.Temporal1] >= start) & 
+                    (X_train_df[self.Temporal1] < start + self.temporal_bin_interval)
+                    ])
+                # Apply bootstrap
+                temporal_window_indexes = bootstrap_indices[np.isin(bootstrap_indices, temporal_window_indexes)] if self.ensemble_bootstrap else temporal_window_indexes
+                window_X_df = X_train_df.loc[temporal_window_indexes]
+                window_y_df = y_train_df.loc[temporal_window_indexes]
+                window_X_df_indexes_only = window_X_df[[self.Temporal1, self.Spatio1, self.Spatio2]]
+            else:
+                temporal_window_indexes = con.sql(f"SELECT __index_level_0__ FROM X_train_df WHERE {self.Temporal1} >= {start} AND {self.Temporal1} < {start + self.temporal_bin_interval};").df().values.flatten()
+                # Apply bootstrap
+                temporal_window_indexes = bootstrap_indices[np.isin(bootstrap_indices, temporal_window_indexes)] if self.ensemble_bootstrap else temporal_window_indexes                
+                temporal_window_indexes_df = pd.DataFrame(temporal_window_indexes, columns=['__index_level_0__'])
+                con.register("temporal_window_indexes_df", temporal_window_indexes_df)
+                con_y.register("temporal_window_indexes_df", temporal_window_indexes_df)
+                window_X_df = con.sql(f"""
+                                      SELECT X_train_df.* FROM X_train_df 
+                                      JOIN temporal_window_indexes_df
+                                      ON X_train_df.__index_level_0__ = temporal_window_indexes_df.__index_level_0__
+                                      """)
+                window_y_df = con_y.sql(f"""
+                                      SELECT y_train_df.* FROM y_train_df 
+                                      JOIN temporal_window_indexes_df
+                                      ON y_train_df.__index_level_0__ = temporal_window_indexes_df.__index_level_0__
+                                      """)
+                window_X_df_indexes_only = con.sql(f"SELECT {self.Temporal1}, {self.Spatio1}, {self.Spatio2}, __index_level_0__ FROM window_X_df;").df().set_index('__index_level_0__')
+                con.unregister("temporal_window_indexes_df")
+                con_y.unregister("temporal_window_indexes_df")
                 
-            # Combine to get the final training data
-            window_data_df = data.loc[window_data_df_index]
-            del window_data_df_index, iloc_positions
-            
             # Transform to STEM gridding coordinates
-            window_data_df = transform_pred_set_to_STEM_quad(self.Spatio1, self.Spatio2, window_data_df, index_df)
-            window_index_df = index_df[index_df[f"{self.Temporal1}_start"] == start]
+            window_X_df_indexes_only = transform_pred_set_to_STEM_quad(self.Spatio1, self.Spatio2, window_X_df_indexes_only, single_ensemble_df)
+            window_single_ensemble_df = single_ensemble_df[single_ensemble_df[f"{self.Temporal1}_start"] == start]
             
             # Merge
-            def find_belonged_points(df, df_a):
-                return df_a[
-                    (df_a[f"{self.Spatio1}_new"] >= df["stixel_calibration_point_transformed_left_bound"].iloc[0])
-                    & (df_a[f"{self.Spatio1}_new"] < df["stixel_calibration_point_transformed_right_bound"].iloc[0])
-                    & (df_a[f"{self.Spatio2}_new"] >= df["stixel_calibration_point_transformed_lower_bound"].iloc[0])
-                    & (df_a[f"{self.Spatio2}_new"] < df["stixel_calibration_point_transformed_upper_bound"].iloc[0])
+            def find_belonged_points(df, st_indexes_df, X_df, y_df):
+                this_stixel_point_indexes = st_indexes_df.index[
+                    (st_indexes_df[f"{self.Spatio1}_new"] >= df["stixel_calibration_point_transformed_left_bound"].iloc[0])
+                    & (st_indexes_df[f"{self.Spatio1}_new"] < df["stixel_calibration_point_transformed_right_bound"].iloc[0])
+                    & (st_indexes_df[f"{self.Spatio2}_new"] >= df["stixel_calibration_point_transformed_lower_bound"].iloc[0])
+                    & (st_indexes_df[f"{self.Spatio2}_new"] < df["stixel_calibration_point_transformed_upper_bound"].iloc[0])
                 ]
+                
+                if isinstance(X_df, pd.DataFrame):
+                    X_y = pd.concat([X_df.loc[this_stixel_point_indexes], y_df.loc[this_stixel_point_indexes].set_axis(['true_y'], axis=1)], axis=1)
+                elif isinstance(X_df, duckdb.DuckDBPyRelation):      
+                    this_stixel_point_indexes_df = pd.DataFrame(this_stixel_point_indexes, columns=['__index_level_0__'])
+                    con.register("this_stixel_point_indexes_df", this_stixel_point_indexes_df)
+                    con_y.register("this_stixel_point_indexes_df", this_stixel_point_indexes_df)
+                    con.register('X_df', X_df)
+                    con_y.register('y_df', y_df)
+                    X_y = pd.concat([
+                        con.sql(f"""
+                                SELECT X_df.* FROM X_df 
+                                JOIN this_stixel_point_indexes_df
+                                ON X_df.__index_level_0__ = this_stixel_point_indexes_df.__index_level_0__
+                                """).df().set_index('__index_level_0__'),
+                        con_y.sql(f"""
+                                SELECT y_df.* FROM y_df 
+                                JOIN this_stixel_point_indexes_df
+                                ON y_df.__index_level_0__ = this_stixel_point_indexes_df.__index_level_0__
+                                """).df().set_index('__index_level_0__').set_axis(['true_y'], axis=1)
+                    ], axis=1)
+                    con.unregister("this_stixel_point_indexes_df")
+                    con.unregister("X_df")
+                    con.unregister("y_df")
+                    
+                else:
+                    raise
+                
+                return X_y
 
             query_results = (
-                window_index_df[
+                window_single_ensemble_df[
                     [
                         "ensemble_index",
                         "unique_stixel_id",
@@ -573,7 +645,7 @@ class AdaSTEM(BaseEstimator):
                 ]
                 .groupby(["ensemble_index", "unique_stixel_id"], as_index=True)
                 .pipe(lambda x: x[x.obj.columns]) # Explicitly select all the columns in the original df to include. To overcome the include_groups=True deprecation warning
-                .apply(find_belonged_points, df_a=window_data_df, include_groups=False)  # although ["ensemble_index", "unique_stixel_id"] will be passed into `find_belonged_points` due to `.pipe(lambda x: x[x.obj.columns])`, the output will not have them so we still set `as_index=True` in `groupby`
+                .apply(find_belonged_points, st_indexes_df=window_X_df_indexes_only, X_df=window_X_df, y_df=window_y_df, include_groups=False)  # although ["ensemble_index", "unique_stixel_id"] will be passed into `find_belonged_points` due to `.pipe(lambda x: x[x.obj.columns])`, the output will not have them so we still set `as_index=True` in `groupby`
                 .reset_index(level=["ensemble_index", "unique_stixel_id"]) # Turn these index into dataframe
             )
 
@@ -591,7 +663,12 @@ class AdaSTEM(BaseEstimator):
             ).values
 
             res_list.append(list(res))
-
+            
+        if con is not None:
+            con.close()
+        if con_y is not None:
+            con_y.close()
+            
         return res_list
 
     def SAC_training(
@@ -614,10 +691,10 @@ class AdaSTEM(BaseEstimator):
 
         # Parallel wrapper
         if n_jobs == 1:
-            output_generator = (self.SAC_ensemble_training(index_df=ensemble[1], X_train=X_train, y_train=y_train) for ensemble in groups)
+            output_generator = (self.SAC_ensemble_training(single_ensemble_df=ensemble[1], X_train=X_train, y_train=y_train) for ensemble in groups)
         else:
             def mp_train(ensemble, self=self):
-                res = self.SAC_ensemble_training(index_df=ensemble[1], X_train=X_train, y_train=y_train)
+                res = self.SAC_ensemble_training(single_ensemble_df=ensemble[1], X_train=X_train, y_train=y_train)
                 return res
             
             parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.joblib_tmp_dir, pre_dispatch='all') #pre_dispatch='all' to avoid serialization issue since "self" can change in this process
@@ -696,7 +773,6 @@ class AdaSTEM(BaseEstimator):
         check_X_y_indexes_match(X_train, y_train, self)
         n_jobs = check_transform_n_jobs(self, n_jobs)
         self.store_x_names(X_train)
-
     
         try:
             # Quadtree            
