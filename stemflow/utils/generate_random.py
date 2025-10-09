@@ -2,7 +2,7 @@ import random
 
 import matplotlib
 import numpy as np
-
+import string
 
 def generate_soft_color() -> np.ndarray:
     """generating random soft colors
@@ -23,3 +23,9 @@ def generate_soft_color() -> np.ndarray:
     rgb = matplotlib.colors.hsv_to_rgb([hue, saturation, brightness])
 
     return rgb
+
+def generate_random_saving_code():
+    """Generate random saving code
+    """
+    saving_code = ''.join(np.random.choice(list(string.ascii_letters + string.digits)) for _ in range(16))
+    return saving_code

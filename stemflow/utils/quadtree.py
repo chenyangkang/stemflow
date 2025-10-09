@@ -13,6 +13,7 @@ import numpy as np
 import pandas
 import pandas as pd
 from tqdm import tqdm
+import string
 
 from ..gridding.QTree import QTree
 from ..gridding.QuadGrid import QuadGrid
@@ -21,7 +22,8 @@ from .validation import (
     check_transform_spatio_bin_jitter_magnitude,
     check_transform_temporal_bin_start_jitter,
 )
-
+from .open_db_connection import open_db_connection
+from .generate_random import generate_random_saving_code
 # from tqdm.contrib.concurrent import process_map
 
 
@@ -83,7 +85,8 @@ def generate_temporal_bins(
 
 def get_one_ensemble_quadtree(
     ensemble_count,
-    data: pandas.core.frame.DataFrame,
+    data: Union[pd.DataFrame, str],
+    duckdb_config: dict,
     Spatio1: str = "longitude",
     Spatio2: str = "latitude",
     Temporal1: str = "DOY",
@@ -113,7 +116,7 @@ def get_one_ensemble_quadtree(
         ensemble_count:
             The index of ensemble
         data:
-            Input pandas-like dataframe
+            Training variables. Can be either a pd.DataFrame object or a string that indicate the path to the database (.duckdb or .parquet).
         Spatio1:
             Spatial column name 1 in data
         Spatio2:
@@ -168,6 +171,9 @@ def get_one_ensemble_quadtree(
 
     """
     rng = check_random_state(rng)
+    if isinstance(data, pd.DataFrame):
+        if len(set(data.columns) - set([Temporal1, Spatio1, Spatio2])) > 0:
+            raise AttributeError('Information redundant. To reduce memory use, only pass in columns Temporal1, Spatio1, Spatio2.')
 
     if completely_random_rotation:
         rotation_angle = rng.uniform(0, 90)
@@ -186,11 +192,20 @@ def get_one_ensemble_quadtree(
         rng=rng,
     )
     
+    duckdb_config['temp_directory'] = os.path.join(duckdb_config['temp_directory'], generate_random_saving_code())
+    con = None
+    open_table, con = open_db_connection(data, duckdb_config)
+    if isinstance(open_table, pd.DataFrame):
+        indexes = np.array(open_table.index)
+    else:
+        indexes = con.sql(f"SELECT __index_level_0__ FROM open_table;").df().values.flatten()
+    total_length = con.sql("SELECT COUNT(*) FROM open_table;").fetchone()[0]
+    
     # ensemble_bootstrap
     if ensemble_bootstrap:
         bootstrap_random_state = rng.integers(1e9)
         rng = np.random.default_rng(bootstrap_random_state)  # NumPy's random generator
-        bootstrap_indices = rng.choice(data.index, size=len(data), replace=True)  # Full bootstrap sample
+        bootstrap_indices = rng.choice(indexes, size=total_length, replace=True)  # Full bootstrap sample
     else:
         bootstrap_indices = None # Place holder
 
@@ -200,13 +215,16 @@ def get_one_ensemble_quadtree(
         time_start = bin_[0]
         time_end = bin_[1]
         
-        if ensemble_bootstrap:
-            valid_index_sub_data = data.index[(data[Temporal1] >= time_start) & (data[Temporal1] < time_end)]
-            sub_data_index = bootstrap_indices[np.isin(bootstrap_indices, valid_index_sub_data)]
-            sub_data = data.loc[sub_data_index] # So that we don't need to make a whole copy of the data
+        if isinstance(open_table, pd.DataFrame):
+            sub_data_index = data.index[(data[Temporal1]>=time_start) & (data[Temporal1]<=time_end)]
+            sub_data_index = bootstrap_indices[np.isin(bootstrap_indices, sub_data_index)] if ensemble_bootstrap else sub_data_index
+            sub_data = data.loc[sub_data_index]
         else:
-            sub_data = data[(data[Temporal1] >= time_start) & (data[Temporal1] < time_end)]
-
+            sub_data_index = con.sql(f"SELECT __index_level_0__ FROM open_table WHERE {Temporal1} >= {time_start} AND {Temporal1} <= {time_end};").df().values.flatten()
+            sub_data_index = bootstrap_indices[np.isin(bootstrap_indices, sub_data_index)] if ensemble_bootstrap else sub_data_index
+            sub_data_index_string = ",".join(str(x) for x in sub_data_index)
+            sub_data = con.sql(f"SELECT {Temporal1}, {Spatio1}, {Spatio2}, __index_level_0__ FROM open_table WHERE __index_level_0__ IN ({sub_data_index_string});").df().set_index('__index_level_0__')
+        
         if len(sub_data) == 0:
             continue
 
@@ -287,4 +305,8 @@ def get_one_ensemble_quadtree(
         ensemble_all_df_list.append(this_slice)
 
     this_ensemble_df = pd.concat(ensemble_all_df_list).reset_index(drop=True)
+    
+    if con is not None:
+        con.close()
+        
     return this_ensemble_df

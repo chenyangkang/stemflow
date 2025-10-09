@@ -15,7 +15,7 @@ import pandas as pd
 import plotly.express as px
 from tqdm import tqdm
 
-from ..utils.generate_soft_colors import generate_soft_color
+from ..utils.generate_random import generate_soft_color
 from ..utils.jitterrotation.jitterrotator import Sphere_Jitterrotator
 from ..utils.sphere.coordinate_transform import (
     continuous_interpolation_3D_plotting,
