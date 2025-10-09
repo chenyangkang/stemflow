@@ -194,12 +194,13 @@ def get_one_ensemble_quadtree(
     
     duckdb_config['temp_directory'] = os.path.join(duckdb_config['temp_directory'], generate_random_saving_code())
     con = None
-    open_table, con = open_db_connection(data, duckdb_config)
-    if isinstance(open_table, pd.DataFrame):
-        indexes = np.array(open_table.index)
+    data_df, con = open_db_connection(data, duckdb_config)
+    con.register("data_df", data_df)
+    if isinstance(data_df, pd.DataFrame):
+        indexes = np.array(data_df.index)
     else:
-        indexes = con.sql(f"SELECT __index_level_0__ FROM open_table;").df().values.flatten()
-    total_length = con.sql("SELECT COUNT(*) FROM open_table;").fetchone()[0]
+        indexes = con.sql(f"SELECT __index_level_0__ FROM data_df;").df().values.flatten()
+    total_length = con.sql("SELECT COUNT(*) FROM data_df;").fetchone()[0]
     
     # ensemble_bootstrap
     if ensemble_bootstrap:
@@ -215,15 +216,15 @@ def get_one_ensemble_quadtree(
         time_start = bin_[0]
         time_end = bin_[1]
         
-        if isinstance(open_table, pd.DataFrame):
-            sub_data_index = data.index[(data[Temporal1]>=time_start) & (data[Temporal1]<=time_end)]
+        if isinstance(data_df, pd.DataFrame):
+            sub_data_index = data.index[(data[Temporal1]>=time_start) & (data[Temporal1]<time_end)]
             sub_data_index = bootstrap_indices[np.isin(bootstrap_indices, sub_data_index)] if ensemble_bootstrap else sub_data_index
             sub_data = data.loc[sub_data_index]
         else:
-            sub_data_index = con.sql(f"SELECT __index_level_0__ FROM open_table WHERE {Temporal1} >= {time_start} AND {Temporal1} <= {time_end};").df().values.flatten()
+            sub_data_index = con.sql(f"SELECT __index_level_0__ FROM data_df WHERE {Temporal1} >= {time_start} AND {Temporal1} < {time_end};").df().values.flatten()
             sub_data_index = bootstrap_indices[np.isin(bootstrap_indices, sub_data_index)] if ensemble_bootstrap else sub_data_index
             sub_data_index_string = ",".join(str(x) for x in sub_data_index)
-            sub_data = con.sql(f"SELECT {Temporal1}, {Spatio1}, {Spatio2}, __index_level_0__ FROM open_table WHERE __index_level_0__ IN ({sub_data_index_string});").df().set_index('__index_level_0__')
+            sub_data = con.sql(f"SELECT {Temporal1}, {Spatio1}, {Spatio2}, __index_level_0__ FROM data_df WHERE __index_level_0__ IN ({sub_data_index_string});").df().set_index('__index_level_0__')
         
         if len(sub_data) == 0:
             continue
