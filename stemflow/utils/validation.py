@@ -360,8 +360,8 @@ def check_X_y_indexes_match(X_train, y_train, self, index_col='__index_level_0__
             raise ValueError("Indexes of X and y must be identical.")
 
 
-def check_X_test(X_test):
-    check_X_train(X_test)
+def check_X_test(X_test, self):
+    check_X_train(X_test, self)
 
 
 def check_prediciton_aggregation(aggregation):
@@ -444,7 +444,7 @@ def initiate_lazy_loading_dir(lazy_loading_dir):
 
 
 def initiate_joblib_tmp_dir(lazy_loading_dir):
-    joblib_tmp_dir = os.path.join(lazy_loading_dir, 'joblib')
+    joblib_tmp_dir = os.path.join(lazy_loading_dir, 'joblib_' + str(generate_random_saving_code()))
     if not os.path.exists(joblib_tmp_dir):
         os.makedirs(joblib_tmp_dir)
     return joblib_tmp_dir
