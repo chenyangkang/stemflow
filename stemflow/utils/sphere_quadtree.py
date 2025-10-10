@@ -94,6 +94,9 @@ def get_one_ensemble_sphere_quadtree(
 
     """
     rng = check_random_state(rng)
+    if isinstance(data, pd.DataFrame):
+        if len(set(data.columns) - set([Temporal1, 'longitude', 'latitude'])) > 0:
+            raise AttributeError('Information redundant. To reduce memory use, only pass in columns Temporal1, longitude, and latitude.')
 
     if spatio_bin_jitter_magnitude == "adaptive":
         rotation_angle = rng.uniform(0, 90)

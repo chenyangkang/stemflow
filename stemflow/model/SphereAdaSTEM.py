@@ -174,7 +174,7 @@ class SphereAdaSTEM(AdaSTEM):
                 stixel specific x_names (predictor variable names) for each stixel.
                 We remove the variables that have no variation for each stixel.
                 Therefore, the x_names are different for each stixel.
-            ensemble_df (pd.core.frame.DataFrame):
+            ensemble_df (pd.DataFrame):
                 A dataframe storing the stixel gridding information.
             gridding_plot (matplotlib.figure.Figure):
                 Ensemble plot.
@@ -182,7 +182,7 @@ class SphereAdaSTEM(AdaSTEM):
                 Dictionary of {stixel_index: trained_model}.
             grid_dict (dict):
                 An array of stixels assigned to each ensemble.
-            feature_importances_ (pd.core.frame.DataFrame):
+            feature_importances_ (pd.DataFrame):
                 feature importance dataframe for each stixel.
 
         """
@@ -230,7 +230,7 @@ class SphereAdaSTEM(AdaSTEM):
         self.radius = radius
 
     def split(
-        self, X_train: pd.core.frame.DataFrame, verbosity: Union[None, int] = None, ax=None, n_jobs: int = 1
+        self, X_train: pd.DataFrame, verbosity: Union[None, int] = None, ax=None, n_jobs: int = 1
     ) -> dict:
         """QuadTree indexing the input data
 
@@ -246,9 +246,8 @@ class SphereAdaSTEM(AdaSTEM):
         verbosity = check_verbosity(self, verbosity)
         n_jobs = check_transform_n_jobs(self, n_jobs)
 
-        if "grid_len" not in self.__dir__():
+        if self.grid_len is None:
             # We are using AdaSTEM
-            self.grid_len = None
             check_spatial_scale(
                 X_train[self.Spatio1].min(),
                 X_train[self.Spatio1].max(),
@@ -274,7 +273,9 @@ class SphereAdaSTEM(AdaSTEM):
                 X_train[self.Temporal1].min(), X_train[self.Temporal1].min(), self.temporal_bin_interval
             )
             pass
-
+        
+        X_train = X_train[[self.Temporal1, self.Spatio1, self.Spatio2]]
+        
         partial_get_one_ensemble_sphere_quadtree = partial(
             get_one_ensemble_sphere_quadtree,
             data=X_train,
@@ -332,35 +333,29 @@ class SphereAdaSTEM(AdaSTEM):
         else:
             self.ensemble_df, self.gridding_plot = ensemble_df, None
 
-    def SAC_ensemble_training(self, index_df: pd.core.frame.DataFrame, data: Optional[pd.core.frame.DataFrame] = None, 
-                              st_indexers_array: Optional[np.memmap] = None, var_cols: Optional[List[str]] = None, var_array: Optional[np.memmap] = None):
+    def SAC_ensemble_training(self, single_ensemble_df: pd.DataFrame, X_train: Union[pd.DataFrame, str], y_train: Union[pd.DataFrame, str]):
         """A sub-module of SAC training function.
         Train only one ensemble.
 
         Args:
-            index_df (pd.core.frame.DataFrame): ensemble data (model.ensemble_df)
-            data (pd.core.frame.DataFrame): input covariates to train
+            single_ensemble_df (pd.DataFrame): ensemble data (model.ensemble_df)
+            data (pd.DataFrame): input covariates to train
         """
-        if data is None:
-            assert st_indexers_array is not None and var_cols is not None and var_array is not None
-        elif (st_indexers_array is None and var_cols is None and var_array is None):
-            assert data is not None
-        else:
-            raise AttributeError('Wrong specification. Either data is None or the other three are None.')
-            
+        
+        if not (isinstance(X_train, pd.DataFrame) or isinstance(y_train, pd.DataFrame)):
+            raise NotImplementedError('Currently, SphereAdaSTEM does not support lazyloading of data. Make sure the input X and y are pd.DataFrame.')
+
         # Calculate the start indices for the sliding window
-        unique_start_indices = np.sort(index_df[f"{self.Temporal1}_start"].unique())
+        unique_start_indices = np.sort(single_ensemble_df[f"{self.Temporal1}_start"].unique())
         
         # training, window by window
-        if data is None:
-            total_length = st_indexers_array.shape[0]
-        else:
-            total_length = data.shape[0]
+        total_length = X_train.shape[0]
+        indexes = np.array(X_train.index)
         
         if self.ensemble_bootstrap:
-            bootstrap_random_state = index_df['bootstrap_random_state'].iloc[0]
+            bootstrap_random_state = single_ensemble_df['bootstrap_random_state'].iloc[0]
             rng = np.random.default_rng(bootstrap_random_state)  # NumPy's random generator
-            bootstrap_indices = rng.choice(list(range(total_length)), size=total_length, replace=True)  # Full bootstrap sample
+            bootstrap_indices = rng.choice(indexes, size=total_length, replace=True)  # Full bootstrap sample
         else:
             bootstrap_indices = None # Place holder
             
@@ -368,50 +363,42 @@ class SphereAdaSTEM(AdaSTEM):
         res_list = []
         for start in unique_start_indices:
             # Select the temporal window
-            if data is None:
-                iloc_positions = np.flatnonzero(
-                                        (st_indexers_array[:,2] >= start) &  # the third column is the temporal column
-                                        (st_indexers_array[:,2] < start + self.temporal_bin_interval)
-                                    )
-            else:
-                iloc_positions = np.flatnonzero(
-                                        (data[self.Temporal1] >= start) & 
-                                        (data[self.Temporal1] < start + self.temporal_bin_interval)
-                                    )
-            # Apply bootstrap
-            if self.ensemble_bootstrap:
-                window_data_df_index = bootstrap_indices[np.isin(bootstrap_indices, iloc_positions)]
-            else:
-                window_data_df_index = iloc_positions
-            # Combine to get the final training data
-            if data is None:
-                window_data_df = pd.DataFrame(np.concatenate([st_indexers_array[window_data_df_index, :], 
-                                                              var_array[window_data_df_index, :]], axis=1), 
-                                              columns=[self.Spatio1, self.Spatio2, self.Temporal1] + var_cols)
-            else:
-                window_data_df = data.iloc[window_data_df_index]
-            del window_data_df_index, iloc_positions
+            if isinstance(X_train, pd.DataFrame):
+                temporal_window_indexes = np.array(X_train.index[
+                    (X_train[self.Temporal1] >= start) & 
+                    (X_train[self.Temporal1] < start + self.temporal_bin_interval)
+                    ])
+                # Apply bootstrap
+                temporal_window_indexes = bootstrap_indices[np.isin(bootstrap_indices, temporal_window_indexes)] if self.ensemble_bootstrap else temporal_window_indexes
+                window_X_df = X_train.loc[temporal_window_indexes]
+                window_y_df = y_train.loc[temporal_window_indexes]
+                window_X_df_indexes_only = window_X_df[[self.Temporal1, self.Spatio1, self.Spatio2]]
                 
-            window_data_df = transform_pred_set_to_Sphere_STEM_quad(
-                self.Spatio1, self.Spatio2, window_data_df, index_df
+            window_X_df_indexes_only = transform_pred_set_to_Sphere_STEM_quad(
+                self.Spatio1, self.Spatio2, window_X_df_indexes_only, single_ensemble_df
             )
-            window_index_df = index_df[index_df[f"{self.Temporal1}_start"] == start]
+            window_single_ensemble_df = single_ensemble_df[single_ensemble_df[f"{self.Temporal1}_start"] == start]
 
             # Merge
-            def find_belonged_points(df, df_a):
+            def find_belonged_points(df, st_indexes_df, X_df, y_df):
                 P0 = np.array([0, 0, 0]).reshape(1, -1)
                 A = np.array(df[["p1x", "p1y", "p1z"]].iloc[0])
                 B = np.array(df[["p2x", "p2y", "p2z"]].iloc[0])
                 C = np.array(df[["p3x", "p3y", "p3z"]].iloc[0])
 
                 intersect = intersect_triangle_plane(
-                    P0=P0, V=df_a[["x_3D_transformed", "y_3D_transformed", "z_3D_transformed"]].values, A=A, B=B, C=C
+                    P0=P0, V=st_indexes_df[["x_3D_transformed", "y_3D_transformed", "z_3D_transformed"]].values, A=A, B=B, C=C
                 )
+                indexes = np.where(intersect)[0]
+                X_y = pd.concat([
+                    X_df.iloc[indexes, :],
+                    y_df.iloc[indexes, :].set_axis(['true_y'], axis=1)
+                ], axis=1)
 
-                return df_a.iloc[np.where(intersect)[0], :]
+                return X_y
 
             query_results = (
-                window_index_df[
+                window_single_ensemble_df[
                     [
                         "ensemble_index",
                         "unique_stixel_id",
@@ -426,8 +413,10 @@ class SphereAdaSTEM(AdaSTEM):
                         "p3z",
                     ]
                 ]
-                .groupby(["ensemble_index", "unique_stixel_id"])
-                .apply(find_belonged_points, df_a=window_data_df)
+                .groupby(["ensemble_index", "unique_stixel_id"], as_index=True)
+                .pipe(lambda x: x[x.obj.columns])
+                .apply(find_belonged_points, st_indexes_df=window_X_df_indexes_only, X_df=window_X_df, y_df=window_y_df, include_groups=False)
+                .reset_index(level=["ensemble_index", "unique_stixel_id"])
             )
 
             if len(query_results) == 0:
@@ -436,73 +425,64 @@ class SphereAdaSTEM(AdaSTEM):
 
             # train
             res = (
-                query_results.reset_index(drop=False, level=[0, 1])
-                .dropna(subset="unique_stixel_id")
-                .groupby("unique_stixel_id")
-                .apply(lambda stixel: self.stixel_fitting(stixel))
-            )
+                query_results
+                .dropna(subset=["ensemble_index", "unique_stixel_id"])
+                .groupby(["ensemble_index", "unique_stixel_id"], as_index=True)
+                .pipe(lambda x: x[x.obj.columns])
+                .apply(lambda stixel: self.stixel_fitting(stixel), include_groups=False)
+            ).values
             res_list.append(list(res))
 
         return res_list
 
     def SAC_ensemble_predict(
-        self, index_df: pd.core.frame.DataFrame, data: Optional[pd.core.frame.DataFrame] = None, 
-        st_indexers_array: Optional[np.memmap] = None, var_cols: Optional[List[str]] = None, var_array: Optional[np.memmap] = None
-    ) -> pd.core.frame.DataFrame:
+        self, single_ensemble_df: pd.DataFrame, data: Optional[pd.DataFrame] = None
+    ) -> pd.DataFrame:
         """A sub-module of SAC prediction function.
         Predict only one ensemble.
 
         Args:
-            index_df (pd.core.frame.DataFrame): ensemble data (model.ensemble_df)
-            data (pd.core.frame.DataFrame): input covariates to predict
+            single_ensemble_df (pd.DataFrame): ensemble data (model.ensemble_df)
+            data (pd.DataFrame): input covariates to predict
         Returns:
-            pd.core.frame.DataFrame: Prediction result of one ensemble.
+            pd.DataFrame: Prediction result of one ensemble.
         """
-        if data is None:
-            assert st_indexers_array is not None and var_cols is not None and var_array is not None
-        elif (st_indexers_array is None and var_cols is None and var_array is None):
-            assert data is not None
-        else:
-            raise AttributeError('Wrong specification. Either data is None or the other three are None.')
-            
+
+        if not (isinstance(data, pd.DataFrame) or isinstance(data, pd.DataFrame)):
+            raise NotImplementedError('Currently, SphereAdaSTEM does not support lazyloading of data. Make sure the input X and y are pd.DataFrame.')
+
         # Calculate the start indices for the sliding window
-        start_indices = sorted(index_df[f"{self.Temporal1}_start"].unique())
+        start_indices = sorted(single_ensemble_df[f"{self.Temporal1}_start"].unique())
 
         # prediction, window by window
         window_prediction_list = []
         for start in start_indices:
-            if data is None:
-                iloc_positions = np.flatnonzero(
-                                        (st_indexers_array[:,2] >= start) &  # the third column is the temporal column
-                                        (st_indexers_array[:,2] < start + self.temporal_bin_interval)
-                                    )
-                window_data_df = pd.DataFrame(np.concatenate([st_indexers_array[iloc_positions, :], 
-                                                              var_array[iloc_positions, :]], axis=1), 
-                                              columns=[self.Spatio1, self.Spatio2, self.Temporal1] + var_cols)
-            else:
-                window_data_df = data[
-                    (data[self.Temporal1] >= start) & (data[self.Temporal1] < start + self.temporal_bin_interval)
-                ]
-                
-            window_data_df = transform_pred_set_to_Sphere_STEM_quad(
-                self.Spatio1, self.Spatio2, window_data_df, index_df
+            temporal_window_indexes = np.array(data.index[
+                (data[self.Temporal1] >= start) & 
+                (data[self.Temporal1] < start + self.temporal_bin_interval)
+                ])
+            window_X_df = data.loc[temporal_window_indexes]
+            window_X_df_indexes_only = window_X_df[[self.Temporal1, self.Spatio1, self.Spatio2]]
+            
+            window_X_df_indexes_only = transform_pred_set_to_Sphere_STEM_quad(
+                self.Spatio1, self.Spatio2, window_X_df_indexes_only, single_ensemble_df
             )
-            window_index_df = index_df[index_df[f"{self.Temporal1}_start"] == start]
+            window_single_ensemble_df = single_ensemble_df[single_ensemble_df[f"{self.Temporal1}_start"] == start]
 
-            def find_belonged_points(df, df_a):
+            def find_belonged_points(df, st_indexes_df, X_df):
                 P0 = np.array([0, 0, 0]).reshape(1, -1)
                 A = np.array(df[["p1x", "p1y", "p1z"]].iloc[0])
                 B = np.array(df[["p2x", "p2y", "p2z"]].iloc[0])
                 C = np.array(df[["p3x", "p3y", "p3z"]].iloc[0])
 
                 intersect = intersect_triangle_plane(
-                    P0=P0, V=df_a[["x_3D_transformed", "y_3D_transformed", "z_3D_transformed"]].values, A=A, B=B, C=C
+                    P0=P0, V=st_indexes_df[["x_3D_transformed", "y_3D_transformed", "z_3D_transformed"]].values, A=A, B=B, C=C
                 )
 
-                return df_a.iloc[np.where(intersect)[0], :]
+                return X_df.iloc[np.where(intersect)[0], :]
 
             query_results = (
-                window_index_df[
+                window_single_ensemble_df[
                     [
                         "ensemble_index",
                         "unique_stixel_id",
@@ -517,8 +497,10 @@ class SphereAdaSTEM(AdaSTEM):
                         "p3z",
                     ]
                 ]
-                .groupby(["ensemble_index", "unique_stixel_id"])
-                .apply(find_belonged_points, df_a=window_data_df)
+                .groupby(["ensemble_index", "unique_stixel_id"], as_index=True)
+                .pipe(lambda x: x[x.obj.columns])
+                .apply(find_belonged_points, st_indexes_df=window_X_df_indexes_only, X_df=window_X_df, include_groups=False)
+                .reset_index(level=["ensemble_index", "unique_stixel_id"])
             )
 
             if len(query_results) == 0:
@@ -527,20 +509,21 @@ class SphereAdaSTEM(AdaSTEM):
 
             # predict
             window_prediction = (
-                query_results.reset_index(drop=False, level=[0, 1])
+                query_results
                 .dropna(subset="unique_stixel_id")
-                .groupby("unique_stixel_id")
-                .apply(lambda stixel: self.stixel_predict(stixel))
+                .groupby("unique_stixel_id", as_index=False)
+                .pipe(lambda x: x[x.obj.columns])
+                .apply(lambda stixel: self.stixel_predict(stixel), include_groups=False)
+                .droplevel(0)
             )
             # print('window_prediction:',window_prediction)
             window_prediction_list.append(window_prediction)
 
         if any([i is not None for i in window_prediction_list]):
             ensemble_prediction = pd.concat(window_prediction_list, axis=0)
-            ensemble_prediction = ensemble_prediction.droplevel(0, axis=0)
             ensemble_prediction = ensemble_prediction.groupby("index").mean().reset_index(drop=False)
         else:
-            ensmeble_index = list(window_index_df["ensemble_index"])[0]
+            ensmeble_index = list(window_single_ensemble_df["ensemble_index"])[0]
             warnings.warn(f"No prediction for this ensemble: {ensmeble_index}")
             ensemble_prediction = None
 
@@ -548,12 +531,12 @@ class SphereAdaSTEM(AdaSTEM):
 
     def assign_feature_importances_by_points(
         self,
-        Sample_ST_df: Union[pd.core.frame.DataFrame, None] = None,
+        Sample_ST_df: Union[pd.DataFrame, None] = None,
         verbosity: Union[None, int] = None,
         aggregation: str = "mean",
         n_jobs: Union[int, None] = 1,
         assign_function: Callable = assign_points_to_one_ensemble_sphere,
-    ) -> pd.core.frame.DataFrame:
+    ) -> pd.DataFrame:
         return super().assign_feature_importances_by_points(
             Sample_ST_df, verbosity, aggregation, n_jobs, assign_function
         )

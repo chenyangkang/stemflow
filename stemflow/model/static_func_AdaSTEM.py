@@ -294,6 +294,7 @@ def transform_pred_set_to_STEM_quad(
         Projected X_train
 
     """
+    X_train = X_train.copy()
 
     angle = float(ensemble_info["rotation"].iloc[0])
     calibration_point_x_jitter = float(ensemble_info["calibration_point_x_jitter"].iloc[0])
@@ -332,6 +333,8 @@ def transform_pred_set_to_Sphere_STEM_quad(
 
     """
 
+    X_train = X_train.copy()
+    
     angle = float(ensemble_info["rotation_angle"].iloc[0])
     axis = np.array(
         [

@@ -8,7 +8,7 @@ from itertools import repeat
 import tarfile 
 from pathlib import Path
 import shutil
-
+import weakref
 #
 from multiprocessing import Lock, Pool, Process, cpu_count, shared_memory
 from typing import Callable, Tuple, Union, Optional, List
@@ -61,15 +61,17 @@ from ..utils.validation import (
     check_X_test,
     check_X_train,
     check_y_train,
-    check_sql_backend,
     check_mem_string,
     check_X_y_format_match,
     check_X_y_indexes_match,
+    transform_y,
     initiate_lazy_loading_dir,
     initiate_joblib_tmp_dir
 )
 from ..utils.wrapper import model_wrapper
-from ..utils.open_db_connection import open_db_connection
+from ..lazyloading.open_db_connection import open_db_connection, duckdb_config
+from ..lazyloading.lazyloading import LazyLoadingEstimator
+    
 from .dummy_model import dummy_model1
 from .Hurdle import Hurdle
 from .static_func_AdaSTEM import (  # predict_one_ensemble
@@ -80,7 +82,6 @@ from .static_func_AdaSTEM import (  # predict_one_ensemble
     transform_pred_set_to_STEM_quad,
 )
 
-from ..utils.lazyloading import LazyLoadingEstimator
 from ..utils.generate_random import generate_random_saving_code
 
 class AdaSTEM(BaseEstimator):
@@ -121,8 +122,7 @@ class AdaSTEM(BaseEstimator):
         min_class_sample: int = 1,
         ensemble_bootstrap: bool = False,
         joblib_backend: str = 'loky',
-        sql_backend: str ='duckdb',
-        max_mem: str = '8GB'
+        max_mem: str = '4GB'
     ):
         """Make an AdaSTEM object
 
@@ -200,8 +200,6 @@ class AdaSTEM(BaseEstimator):
                 Whether to bootstrap the data at each ensemble level to account for uncertainty. Defaults to False.
             joblib_backend:
                 The backend of joblib. Defaults to 'loky'. Other options include 'threading'. ('multiprocessing' not supported because it does not allow generator format).
-            sql_backend:
-                The backend of database query method. Defaults to 'duckdb'. Other options include 'pandas'.
             max_mem:
                 The maximum memory use during the training or prediction process. Should be format like '60GB', '512MB', '1.5GB'.
         Raises:
@@ -252,6 +250,7 @@ class AdaSTEM(BaseEstimator):
         self.min_ensemble_required = min_ensemble_required
         self.grid_len_upper_threshold = grid_len_upper_threshold
         self.grid_len_lower_threshold = grid_len_lower_threshold
+        self.grid_len = None # Just a place holder. This will not be used for AdaSTEM and will be override by grid_len in STEM for fixed grid size.
         self.points_lower_threshold = points_lower_threshold
         self.temporal_start = temporal_start
         self.temporal_end = temporal_end
@@ -290,7 +289,7 @@ class AdaSTEM(BaseEstimator):
         self.lazy_loading = lazy_loading
         self.lazy_loading_dir = lazy_loading_dir
         self.joblib_tmp_dir = None
-        self.sql_backend = check_sql_backend(sql_backend)
+        self.duckdb_config = None
         check_mem_string(max_mem)
         self.max_mem = max_mem
 
@@ -312,20 +311,23 @@ class AdaSTEM(BaseEstimator):
         """
         self.rng = check_random_state(self.random_state)
         n_jobs = check_transform_n_jobs(self, n_jobs)
-
+        
+        # If the .split is being called by itself, need to initiate the joblib_tmp_dir and duckdb_config
+        remove_joblib_tmp_dir = False
+        if self.lazy_loading_dir is None:
+            self.lazy_loading_dir = initiate_lazy_loading_dir(self.lazy_loading_dir)
+            self._finalizer = weakref.finalize(self, self._cleanup, self.lazy_loading_dir) # run self._cleanup when the object is being garbage collected
+        if self.duckdb_config is None:
+            self.joblib_tmp_dir = initiate_joblib_tmp_dir(self.lazy_loading_dir)
+            self.duckdb_config = duckdb_config(self.max_mem, self.joblib_tmp_dir)
+            remove_joblib_tmp_dir = True
+            
         if verbosity is None:
             verbosity = self.verbosity
             
-        # X_train = X_train[[self.Temporal1, self.Spatio1, self.Spatio2]].compute()
-
         # Determine grid_len based on conditions
-        if "grid_len" not in self.__dir__():
+        if self.grid_len is None:
             # We are using AdaSTEM
-            self.grid_len = None
-            grid_len_upper = self.grid_len_upper_threshold
-            grid_len_lower = self.grid_len_lower_threshold
-        elif self.grid_len is None:
-            # AdaSTEM with predefined thresholds
             grid_len_upper = self.grid_len_upper_threshold
             grid_len_lower = self.grid_len_lower_threshold
         else:
@@ -442,7 +444,6 @@ class AdaSTEM(BaseEstimator):
 
         # concat
         ensemble_df = pd.concat(ensemble_all_df_list).reset_index(drop=True)
-
         del ensemble_all_df_list
 
         # processing
@@ -463,6 +464,12 @@ class AdaSTEM(BaseEstimator):
         else:
             self.ensemble_df, self.gridding_plot = ensemble_df, np.nan
 
+        # Finally, if joblib_tmp_dir is created only for this .split, clean it up
+        if remove_joblib_tmp_dir:
+            if os.path.exists(self.joblib_tmp_dir):
+                shutil.rmtree(self.joblib_tmp_dir)
+            
+            
     def store_x_names(self, X_train: Union[pd.DataFrame, str]):
         """Store the training variables
 
@@ -735,7 +742,7 @@ class AdaSTEM(BaseEstimator):
     def fit(
         self,
         X_train: Union[pd.DataFrame, str],
-        y_train: Union[pd.DataFrame, pd.Series, str],
+        y_train: Union[pd.DataFrame, pd.Series, np.ndarray, str],
         verbosity: Union[None, int] = None,
         ax=None,
         n_jobs: Union[None, int] = None,
@@ -744,7 +751,7 @@ class AdaSTEM(BaseEstimator):
 
         Args:
             X_train: Training variables. Can be either a pd.DataFrame object or a string that indicate the path to the database (.duckdb or .parquet).
-            y_train: Training target. Can be either a pd.DataFrame object, a pd.Series object, or a string that indicate the path to the database (.duckdb or .parquet). It has to have indexes that match with the X_train.
+            y_train: Training target. Can be either a pd.DataFrame object, a pd.Series object, a np.ndarray, or a string that indicate the path to the database (.duckdb or .parquet). It has to have indexes that match with the X_train.
             ax: matplotlib Axes to add to
             verbosty: whether to show progress bar. 0 for no and 1 for yes.
             ax: matplotlib ax for adding grid plot on that.
@@ -756,12 +763,9 @@ class AdaSTEM(BaseEstimator):
         """
         # Setup lazy_loading_dir and joblib_tmp_dir
         self.lazy_loading_dir = initiate_lazy_loading_dir(self.lazy_loading_dir)
+        self._finalizer = weakref.finalize(self, self._cleanup, self.lazy_loading_dir) # run self._cleanup when the object is being garbage collected
         self.joblib_tmp_dir = initiate_joblib_tmp_dir(self.lazy_loading_dir)
-        self.duckdb_config = {
-            "threads": "1",
-            "memory_limit": self.max_mem,
-            "temp_directory": os.path.join(self.joblib_tmp_dir, 'duckdb'),
-        }
+        self.duckdb_config = duckdb_config(self.max_mem, self.joblib_tmp_dir)
         
         # Input check
         self.rng = check_random_state(self.random_state)
@@ -769,7 +773,7 @@ class AdaSTEM(BaseEstimator):
         self.data_format = check_X_y_format_match(X_train, y_train)
         check_X_train(X_train, self)
         check_y_train(y_train, self)
-        check_X_y_indexes_match(X_train, y_train, self)
+        X_train, y_train = check_X_y_indexes_match(X_train, y_train, self)
         n_jobs = check_transform_n_jobs(self, n_jobs)
         self.store_x_names(X_train)
     
@@ -862,7 +866,6 @@ class AdaSTEM(BaseEstimator):
                     (data_df[self.Temporal1] < start + self.temporal_bin_interval)
                     ])
                 window_X_df = data_df.loc[temporal_window_indexes]
-                window_y_df = data_df.loc[temporal_window_indexes]
                 window_X_df_indexes_only = window_X_df[[self.Temporal1, self.Spatio1, self.Spatio2]]
             else:
                 temporal_window_indexes = con.sql(f"SELECT __index_level_0__ FROM data_df WHERE {self.Temporal1} >= {start} AND {self.Temporal1} < {start + self.temporal_bin_interval};").df().values.flatten()
@@ -940,7 +943,6 @@ class AdaSTEM(BaseEstimator):
 
         if any([i is not None for i in window_prediction_list]):
             ensemble_prediction = pd.concat(window_prediction_list, axis=0)
-            ensemble_prediction = ensemble_prediction
             ensemble_prediction = ensemble_prediction.groupby("index").mean().reset_index(drop=False)
         else:
             ensmeble_index = list(window_single_ensemble_df["ensemble_index"])[0]
@@ -1059,11 +1061,7 @@ class AdaSTEM(BaseEstimator):
 
         # Setup joblib_tmp_dir
         self.joblib_tmp_dir = initiate_joblib_tmp_dir(self.lazy_loading_dir)
-        self.duckdb_config = {
-            "threads": "1",
-            "memory_limit": self.max_mem,
-            "temp_directory": os.path.join(self.joblib_tmp_dir, 'duckdb'),
-        }
+        self.duckdb_config = duckdb_config(self.max_mem, self.joblib_tmp_dir)
         
         try:
             # predict
@@ -1506,6 +1504,12 @@ class AdaSTEM(BaseEstimator):
             if self.lazy_loading:
                 shutil.rmtree(self.lazy_loading_dir)
 
+    @staticmethod
+    def _cleanup(lazy_loading_dir):
+        if lazy_loading_dir is not None:
+            if os.path.exists(lazy_loading_dir):
+                shutil.rmtree(lazy_loading_dir)
+
 class AdaSTEMClassifier(AdaSTEM):
     """AdaSTEM model Classifier interface
 
@@ -1564,7 +1568,8 @@ class AdaSTEMClassifier(AdaSTEM):
         lazy_loading_dir = None,
         min_class_sample = 1,
         ensemble_bootstrap = False,
-        joblib_backend = 'loky'
+        joblib_backend = 'loky',
+        max_mem = '4GB'
     ):
         super().__init__(
             base_model=base_model,
@@ -1599,7 +1604,8 @@ class AdaSTEMClassifier(AdaSTEM):
             lazy_loading_dir=lazy_loading_dir,
             min_class_sample=min_class_sample,
             ensemble_bootstrap=ensemble_bootstrap,
-            joblib_backend=joblib_backend
+            joblib_backend=joblib_backend,
+            max_mem=max_mem
         )
         
         self._estimator_type = 'classifier'
@@ -1750,7 +1756,8 @@ class AdaSTEMRegressor(AdaSTEM):
         lazy_loading_dir=None,
         min_class_sample=1,
         ensemble_bootstrap=False,
-        joblib_backend='loky'
+        joblib_backend='loky',
+        max_mem='4GB'
     ):
         super().__init__(
             base_model=base_model,
@@ -1785,7 +1792,8 @@ class AdaSTEMRegressor(AdaSTEM):
             lazy_loading_dir=lazy_loading_dir,
             min_class_sample=min_class_sample,
             ensemble_bootstrap=ensemble_bootstrap,
-            joblib_backend=joblib_backend
+            joblib_backend=joblib_backend,
+            max_mem=max_mem
         )
         
         self._estimator_type = 'regressor'

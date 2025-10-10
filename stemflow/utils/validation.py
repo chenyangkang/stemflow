@@ -299,15 +299,25 @@ def check_y_train(y_train, self, index_col='__index_level_0__'):
                 con.close()
         else:
             raise AttributeError('Not possible! Must be .duckdb or .parquet')
-        
+    elif isinstance(y_train, np.ndarray):
+        return y_train
     else:
         raise TypeError(
-            f"Input y_train should be either type 'pd.DataFrame' or 'pd.Series', or string (path to file with postfix .duckdb or .parquet). Got {str(type_y_train)}"
+            f"Input y_train should be either type 'pd.DataFrame', 'pd.Series', 'np.ndarray', or string (path to file with postfix .duckdb or .parquet). Got {str(type_y_train)}"
         )
 
+def transform_y(X_train, y_train):
+    """If y_train is not str, but also not a dataframe, transform it into a dataframe
+    """
+    if isinstance(X_train, pd.DataFrame):
+        if isinstance(y_train, (np.ndarray, pd.Series)):
+            return pd.DataFrame(y_train, columns=['y_true'], index=X_train.index)
+    
+    return y_train
+    
 def check_X_y_format_match(X_train, y_train):
     # 01. Format match, both pandas, both duckdb, or both parquet
-    if isinstance(X_train, (pd.DataFrame)) and isinstance(y_train, (pd.DataFrame, pd.Series)):
+    if isinstance(X_train, (pd.DataFrame)) and isinstance(y_train, (pd.DataFrame, pd.Series, np.ndarray)):
         return 'pandas'
     elif isinstance(X_train, str) and isinstance(y_train, str):
         if X_train.endswith('.duckdb') and X_train.endswith('.duckdb'):
@@ -322,6 +332,7 @@ def check_X_y_indexes_match(X_train, y_train, self, index_col='__index_level_0__
     
     # 01. Format match, both pandas, both duckdb, or both parquet
     if self.data_format == 'pandas':
+        y_train = transform_y(X_train, y_train) # If y_train is numpy array, tranform it into pandas
         if not X_train.index.equals(y_train.index):
             raise ValueError("Indexes of X and y must be identical.")
     elif self.data_format == 'duckdb':
@@ -358,6 +369,8 @@ def check_X_y_indexes_match(X_train, y_train, self, index_col='__index_level_0__
             
         if not index1.equals(index2):
             raise ValueError("Indexes of X and y must be identical.")
+
+    return X_train, y_train
 
 
 def check_X_test(X_test, self):
@@ -408,13 +421,6 @@ def check_temporal_scale(t_min, t_max, temporal_bin_interval):
         warnings.warn(
             "The temporal_bin_interval is larger than the scale of temporal parameters in provided data. Be sure if this is desired."
         )
-
-
-def check_sql_backend(sql_backend):
-    if sql_backend in ['duckdb', 'pandas']:
-        return sql_backend
-    else:
-        raise ValueError("The sql_backend can only be 'duckdb' or 'pandas'!")
 
 def check_mem_string(mem_str: str) -> bool:
     """

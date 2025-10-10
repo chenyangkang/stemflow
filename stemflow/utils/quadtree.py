@@ -22,7 +22,7 @@ from .validation import (
     check_transform_spatio_bin_jitter_magnitude,
     check_transform_temporal_bin_start_jitter,
 )
-from .open_db_connection import open_db_connection
+from ..lazyloading.open_db_connection import open_db_connection
 from .generate_random import generate_random_saving_code
 # from tqdm.contrib.concurrent import process_map
 
