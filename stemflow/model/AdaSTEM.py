@@ -1458,7 +1458,7 @@ class AdaSTEM(BaseEstimator):
     def load(tar_gz_file, new_lazy_loading_path=None, remove_original_file=False):
         
         if new_lazy_loading_path is None:
-            new_lazy_loading_path = f'./stemflow_model_{generate_random_saving_code()}' 
+            new_lazy_loading_path = initiate_lazy_loading_dir(new_lazy_loading_path)
         new_lazy_loading_path = str(Path(new_lazy_loading_path.rstrip('/\\')))
             
         file = tarfile.open(tar_gz_file) 
@@ -1468,16 +1468,14 @@ class AdaSTEM(BaseEstimator):
         with open(os.path.join(new_lazy_loading_path, 'model.pkl'), 'rb') as f:
             model = pickle.load(f)
             
-        if model.lazy_loading:
-            # then this is lazy loading
-            if not len(os.listdir(new_lazy_loading_path))>1:
-                raise FileExistsError('Your model is not a lazy_loading model, but more than 1 files/folders are found in the .tar.gz file?')
-            else:
-                model.set_params(lazy_loading_dir=new_lazy_loading_path)
-                for model_name in model.model_dict:
-                    if isinstance(model.model_dict[model_name], LazyLoadingEstimator):
-                        model.model_dict[model_name].dump_dir = Path(os.path.join(new_lazy_loading_path, 'models', 'ensemble_' + model_name.split('_')[1]))
+        model.set_params(lazy_loading_dir=new_lazy_loading_path)
+        model._finalizer = weakref.finalize(model, model._cleanup, model.lazy_loading_dir)
         
+        if model.lazy_loading:
+            for model_name in model.model_dict:
+                if isinstance(model.model_dict[model_name], LazyLoadingEstimator):
+                    model.model_dict[model_name].dump_dir = Path(os.path.join(new_lazy_loading_path, 'models', 'ensemble_' + model_name.split('_')[1]))
+    
         if remove_original_file:
             os.remove(tar_gz_file)
             
@@ -1500,9 +1498,9 @@ class AdaSTEM(BaseEstimator):
                     tar.add(os.path.join(self.lazy_loading_dir, pieces), arcname=pieces)
 
         if remove_temporary_file:
-            os.remove(model_path)
-            if self.lazy_loading:
-                shutil.rmtree(self.lazy_loading_dir)
+            if self.lazy_loading_dir is not None:
+                if os.path.exists(self.lazy_loading):
+                    shutil.rmtree(self.lazy_loading_dir)
 
     @staticmethod
     def _cleanup(lazy_loading_dir):
