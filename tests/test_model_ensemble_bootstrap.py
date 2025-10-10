@@ -36,7 +36,7 @@ def test_STEMClassifier_ensemble_bootstrap():
     assert np.sum(np.isnan(pred)) / len(pred) <= 0.3
 
     pred_df = pd.DataFrame(
-        {"y_true": y_test.flatten(), "y_pred": np.where(pred.flatten() < 0, 0, pred.flatten())}
+        {"y_true": np.array(y_test).flatten(), "y_pred": np.where(pred.flatten() < 0, 0, pred.flatten())}
     ).dropna()
     assert len(pred_df) > 0
 
@@ -66,7 +66,7 @@ def test_parallel_STEMClassifier_ensemble_bootstrap():
     assert np.sum(np.isnan(pred)) / len(pred) <= 0.3
 
     pred_df = pd.DataFrame(
-        {"y_true": y_test.flatten(), "y_pred": np.where(pred.flatten() < 0, 0, pred.flatten())}
+        {"y_true": np.array(y_test).flatten(), "y_pred": np.where(pred.flatten() < 0, 0, pred.flatten())}
     ).dropna()
     assert len(pred_df) > 0
 
@@ -95,7 +95,7 @@ def test_AdaSTEMClassifier_ensemble_bootstrap():
     assert np.sum(np.isnan(pred)) / len(pred) <= 0.3
 
     pred_df = pd.DataFrame(
-        {"y_true": y_test.flatten(), "y_pred": np.where(pred.flatten() < 0, 0, pred.flatten())}
+        {"y_true": np.array(y_test).flatten(), "y_pred": np.where(pred.flatten() < 0, 0, pred.flatten())}
     ).dropna()
     assert len(pred_df) > 0
 

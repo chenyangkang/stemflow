@@ -23,14 +23,14 @@ X_train, X_test, y_train, y_test = ST_train_test_split(
 )
 
 
-def test_AdaSTEMRegressor_custom_temp_folder1():
-    model = make_AdaSTEMRegressor(lazy_loading=True, joblib_temp_folder='lazy_loading_dir')
+def test_AdaSTEMRegressor_default_tmp_folder1():
+    model = make_AdaSTEMRegressor(lazy_loading=True)
     model = model.fit(X_train, np.where(y_train > 0, 1, 0))
 
     pred_mean, pred_std = model.predict(X_test.reset_index(drop=True), return_std=True, verbosity=1, n_jobs=1)
 
-def test_AdaSTEMRegressor_custom_temp_folder2():
-    model = make_AdaSTEMRegressor(lazy_loading=True, joblib_temp_folder='./test_tmp_folder')
+def test_AdaSTEMRegressor_custom_tmp_folder2():
+    model = make_AdaSTEMRegressor(lazy_loading=True, lazy_loading_dir='./test_tmp_folder')
     model = model.fit(X_train, np.where(y_train > 0, 1, 0))
     assert os.path.exists('./test_tmp_folder')
 

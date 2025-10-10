@@ -24,7 +24,8 @@ X_train, X_test, y_train, y_test = ST_train_test_split(
 
 def test_parallel_STEMClassifier_lazy():
     model = make_parallel_STEMClassifier(lazy_loading=True)
-    model = model.fit(X_train, np.where(y_train > 0, 1, 0))
+    y_train.loc[:] = np.where(y_train > 0, 1, 0)
+    model = model.fit(X_train, y_train)
 
     pred_mean, pred_std = model.predict(X_test.reset_index(drop=True), return_std=True, verbosity=1)
     assert np.sum(~np.isnan(pred_mean)) > 0
@@ -35,7 +36,7 @@ def test_parallel_STEMClassifier_lazy():
     assert np.sum(np.isnan(pred)) / len(pred) <= 0.3
 
     pred_df = pd.DataFrame(
-        {"y_true": y_test.flatten(), "y_pred": np.where(pred.flatten() < 0, 0, pred.flatten())}
+        {"y_true": np.array(y_test).flatten(), "y_pred": np.where(pred.flatten() < 0, 0, pred.flatten())}
     ).dropna()
     assert len(pred_df) > 0
 
@@ -58,7 +59,8 @@ def test_parallel_STEMClassifier_lazy():
 
 def test_STEMRegressor_lazy():
     model = make_STEMRegressor(lazy_loading=True)
-    model = model.fit(X_train, np.where(y_train > 0, 1, 0))
+    y_train.loc[:] = np.where(y_train > 0, 1, 0)
+    model = model.fit(X_train, y_train)
 
     pred_mean, pred_std = model.predict(X_test.reset_index(drop=True), return_std=True, verbosity=1, n_jobs=1)
     assert np.sum(~np.isnan(pred_mean)) > 0
@@ -69,7 +71,7 @@ def test_STEMRegressor_lazy():
     assert np.sum(np.isnan(pred)) / len(pred) <= 0.3
 
     pred_df = pd.DataFrame(
-        {"y_true": y_test.flatten(), "y_pred": np.where(pred.flatten() < 0, 0, pred.flatten())}
+        {"y_true": np.array(y_test).flatten(), "y_pred": np.where(pred.flatten() < 0, 0, pred.flatten())}
     ).dropna()
     assert len(pred_df) > 0
 
@@ -92,7 +94,8 @@ def test_STEMRegressor_lazy():
 
 def test_AdaSTEMRegressor_lazy():
     model = make_AdaSTEMRegressor(lazy_loading=True)
-    model = model.fit(X_train, np.where(y_train > 0, 1, 0))
+    y_train.loc[:] = np.where(y_train > 0, 1, 0)
+    model = model.fit(X_train, y_train)
 
     pred_mean, pred_std = model.predict(X_test.reset_index(drop=True), return_std=True, verbosity=1, n_jobs=1)
     assert np.sum(~np.isnan(pred_mean)) > 0
@@ -103,7 +106,7 @@ def test_AdaSTEMRegressor_lazy():
     assert np.sum(np.isnan(pred)) / len(pred) <= 0.3
 
     pred_df = pd.DataFrame(
-        {"y_true": y_test.flatten(), "y_pred": np.where(pred.flatten() < 0, 0, pred.flatten())}
+        {"y_true": np.array(y_test).flatten(), "y_pred": np.where(pred.flatten() < 0, 0, pred.flatten())}
     ).dropna()
     assert len(pred_df) > 0
 
@@ -133,7 +136,7 @@ def test_parallel_SphereAdaClassifier_lazy():
     assert np.sum(np.isnan(pred)) / len(pred) <= 0.3
 
     pred_df = pd.DataFrame(
-        {"y_true": y_test.flatten(), "y_pred": np.where(pred.flatten() < 0, 0, pred.flatten())}
+        {"y_true": np.array(y_test).flatten(), "y_pred": np.where(pred.flatten() < 0, 0, pred.flatten())}
     ).dropna()
     assert len(pred_df) > 0
 
@@ -163,7 +166,7 @@ def test_SphereAdaSTEMRegressor_lazy():
     assert np.sum(np.isnan(pred)) / len(pred) <= 0.3
 
     pred_df = pd.DataFrame(
-        {"y_true": y_test.flatten(), "y_pred": np.where(pred.flatten() < 0, 0, pred.flatten())}
+        {"y_true": np.array(y_test).flatten(), "y_pred": np.where(pred.flatten() < 0, 0, pred.flatten())}
     ).dropna()
     assert len(pred_df) > 0
 
