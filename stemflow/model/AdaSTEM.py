@@ -80,7 +80,7 @@ from .static_func_AdaSTEM import (  # predict_one_ensemble
     transform_pred_set_to_STEM_quad,
 )
 
-from ..utils.lazyloading import LazyLoadingEnsembleDict
+from ..utils.lazyloading import LazyLoadingEstimator
 from ..utils.generate_random import generate_random_saving_code
 
 class AdaSTEM(BaseEstimator):
@@ -113,7 +113,7 @@ class AdaSTEM(BaseEstimator):
         subset_x_names: bool = False,
         plot_xlims: Tuple[Union[float, int], Union[float, int]] = None,
         plot_ylims: Tuple[Union[float, int], Union[float, int]] = None,
-        verbosity: int = 0,
+        verbosity: int = 1,
         plot_empty: bool = False,
         completely_random_rotation: bool = False,
         lazy_loading: bool = False,
@@ -185,7 +185,7 @@ class AdaSTEM(BaseEstimator):
             plot_ylims:
                 If save_gridding_plot=true, what is the ylims of the plot. Defaults to the extent of input Y varibale.
             verbosity:
-                0 to output nothing and everything otherwise.
+                Verbosity of the logging information to print. 0 to output nothing and everything otherwise.
             plot_empty:
                 Whether to plot the empty grid
             completely_random_rotation:
@@ -486,7 +486,6 @@ class AdaSTEM(BaseEstimator):
             if i in self.x_names:
                 del self.x_names[self.x_names.index(i)]
         
-        
 
     def stixel_fitting(self, stixel):
         """A sub module of SAC training. Fit one stixel
@@ -502,11 +501,19 @@ class AdaSTEM(BaseEstimator):
         unique_stixel_id = stixel["unique_stixel_id"].iloc[0]
         name = unique_stixel_id
 
+        if self.lazy_loading:
+            base_model = LazyLoadingEstimator(estimator=self.base_model, 
+                                               dump_dir=os.path.join(self.lazy_loading_dir, 'models', 'ensemble_' + name.split('_')[1]), 
+                                               filename=f"model_{name}.pkl", 
+                                               auto_dump=True, auto_load=True, keep_loaded=False)
+        else:
+            base_model = self.base_model
+            
         model, stixel_specific_x_names, status = train_one_stixel(
             stixel_training_size_threshold=self.stixel_training_size_threshold,
             x_names=self.x_names,
             task=self.task,
-            base_model=self.base_model,
+            base_model=base_model,
             sample_weights_for_classifier=self.sample_weights_for_classifier,
             subset_x_names=self.subset_x_names,
             stixel_X_train=stixel,
@@ -706,10 +713,7 @@ class AdaSTEM(BaseEstimator):
             )
 
         # iterate through
-        if self.lazy_loading:
-            self.model_dict = LazyLoadingEnsembleDict(self.lazy_loading_dir)
-        else:
-            self.model_dict = {}
+        self.model_dict = {}
             
         stixel_specific_x_names = {}
 
@@ -723,10 +727,6 @@ class AdaSTEM(BaseEstimator):
                     x_names = feature_tuple[2]
                     self.model_dict[f"{name}_model"] = model
                     stixel_specific_x_names[name] = x_names
-                    
-            # dump here if lazy_loading_ensemble = True
-            if self.lazy_loading:
-                self.model_dict.dump_ensemble(ensemble_id)
 
         get_reusable_executor().shutdown(wait=True)
         self.stixel_specific_x_names = stixel_specific_x_names
@@ -937,10 +937,6 @@ class AdaSTEM(BaseEstimator):
             )
 
             window_prediction_list.append(window_prediction)
-        
-        if self.lazy_loading:
-            ensemble_id = single_ensemble_df['ensemble_index'].iloc[0]
-            self.model_dict.dump_ensemble(ensemble_id)
 
         if any([i is not None for i in window_prediction_list]):
             ensemble_prediction = pd.concat(window_prediction_list, axis=0)
@@ -1336,9 +1332,6 @@ class AdaSTEM(BaseEstimator):
                 except Exception as e:
                     warnings.warn(f"{e}")
                     continue
-                
-            if self.lazy_loading:
-                self.model_dict.dump_ensemble(ensemble_id)
         
         self.feature_importances_ = (
             pd.DataFrame(feature_importance_list).set_index("stixel_index").reset_index(drop=False).fillna(0)
@@ -1467,8 +1460,7 @@ class AdaSTEM(BaseEstimator):
     def load(tar_gz_file, new_lazy_loading_path=None, remove_original_file=False):
         
         if new_lazy_loading_path is None:
-            saving_code = int(np.random.uniform(1, 1e8))
-            new_lazy_loading_path = f'./stemflow_model_{saving_code}'
+            new_lazy_loading_path = f'./stemflow_model_{generate_random_saving_code()}' 
         new_lazy_loading_path = str(Path(new_lazy_loading_path.rstrip('/\\')))
             
         file = tarfile.open(tar_gz_file) 
@@ -1484,8 +1476,9 @@ class AdaSTEM(BaseEstimator):
                 raise FileExistsError('Your model is not a lazy_loading model, but more than 1 files/folders are found in the .tar.gz file?')
             else:
                 model.set_params(lazy_loading_dir=new_lazy_loading_path)
-                model.model_dict.directory = new_lazy_loading_path
-                model.lazy_loading_dir = new_lazy_loading_path
+                for model_name in model.model_dict:
+                    if isinstance(model.model_dict[model_name], LazyLoadingEstimator):
+                        model.model_dict[model_name].dump_dir = Path(os.path.join(new_lazy_loading_path, 'models', 'ensemble_' + model_name.split('_')[1]))
         
         if remove_original_file:
             os.remove(tar_gz_file)
@@ -1495,20 +1488,7 @@ class AdaSTEM(BaseEstimator):
     def save(self, tar_gz_file, remove_temporary_file = True):
         if not os.path.exists(self.lazy_loading_dir):
             os.makedirs(self.lazy_loading_dir, exist_ok=False)
-            
-        if self.lazy_loading:
-            ensemble_ids = list(self.model_dict.ensemble_models.keys())
-            for current_in_memory_ensemble in ensemble_ids:
-                self.model_dict.dump_ensemble(current_in_memory_ensemble)
-                
-            # check all ensemble on disk
-            for ensemble_id in range(self.ensemble_fold):
-                if not f'ensemble_{ensemble_id}_dict.pkl' in os.listdir(self.lazy_loading_dir):
-                    raise FileNotFoundError(f'Ensemble models file ensemble_{ensemble_id}_dict.pkl is missing in lazyloading directory {self.lazy_loading_dir}!')
-            
-        #
-        path_tar_gz_file, basename_tar_gz_file = os.path.split(Path(tar_gz_file.rstrip('/\\')))
-        
+
         # temporary save the model using pickle
         model_path = os.path.join(self.lazy_loading_dir, f'model.pkl')
         with open(model_path, 'wb') as f:
@@ -1516,7 +1496,7 @@ class AdaSTEM(BaseEstimator):
                 
         # save the main model class and potentially lazyloading pieces to the tar.gz file
         with tarfile.open(tar_gz_file, "w:gz") as tar:
-            tar.add(model_path, arcname=basename_tar_gz_file)
+            tar.add(model_path, arcname=os.path.basename(model_path))
             if self.lazy_loading:
                 for pieces in os.listdir(self.lazy_loading_dir):
                     tar.add(os.path.join(self.lazy_loading_dir, pieces), arcname=pieces)
