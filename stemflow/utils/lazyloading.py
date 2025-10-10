@@ -1,203 +1,242 @@
-import os
+from __future__ import annotations
+from pathlib import Path
+import time
+import tempfile
+import shutil
+from typing import Optional, Any, Callable
+import threading
 import joblib
-from collections.abc import MutableMapping
+from contextlib import contextmanager
+from sklearn.base import BaseEstimator, MetaEstimatorMixin
 
+class LazyLoadingEstimator(BaseEstimator, MetaEstimatorMixin):
+    """
+    A thin wrapper around any scikit-learn estimator that supports
+    dumping and loading from disk, with optional lazy auto-load
+    and auto-dump behavior.
 
-class LazyLoadingEnsembleDict(MutableMapping):
-    def __init__(self, directory='./tmp_models'):
+    Args:
+        estimator (BaseEstimator | None): The sklearn estimator
+            (e.g., RandomForestClassifier). Can be None if the model
+            will be loaded from disk before first use.
+        dump_dir (str | Path | None): Directory where model dumps are
+            saved and loaded.
+        filename (str | None): Base filename for dumps ('.pkl' auto-added).
+            If None, a name is generated automatically.
+        compress (Any): Compression option passed to joblib.dump.
+            Default is 3.
+        auto_load (bool): Whether to automatically load from disk when
+            estimator is None. Default is True.
+        auto_dump (bool): Whether to automatically dump after each call
+            and clear estimator from memory. Default is False.
+        keep_loaded (bool): Whether to keep estimator in memory after
+            calls even if auto_dump is True. Default is False.
+
+    Returns:
+        LazyLoadingEstimator: The initialized wrapper instance.
+    """
+
+    def __init__(
+        self,
+        estimator: Optional[BaseEstimator],
+        dump_dir: Optional[Path | str] = None,
+        filename: Optional[str] = None,
+        compress: Any = 3,
+        auto_load: bool = True,
+        auto_dump: bool = False,
+        keep_loaded: bool = False,
+    ):
+        self.estimator = estimator
+        self.dump_dir = None if dump_dir is None else Path(dump_dir)
+        self.filename = filename
+        self.compress = compress
+        self.auto_load = auto_load
+        self.auto_dump = auto_dump
+        self.keep_loaded = keep_loaded
+
+        # intra-process safety (not cross-process)
+        self._lock = threading.RLock()
+
+    # ---------- Core sklearn API (delegate with lazy load / optional dump) ----------
+    def fit(self, X, y=None, **fit_params):
+        with self._loaded_estimator(write_intent=True) as est:
+            est.fit(X, y, **fit_params)
+        return self
+
+    def predict(self, X):
+        with self._loaded_estimator() as est:
+            return est.predict(X)
+
+    def score(self, X, y=None):
+        with self._loaded_estimator() as est:
+            if hasattr(est, "score"):
+                return est.score(X, y)
+            raise AttributeError(f"{type(est).__name__} has no .score")
+
+    def predict_proba(self, X):
+        with self._loaded_estimator() as est:
+            if hasattr(est, "predict_proba"):
+                return est.predict_proba(X)
+            raise AttributeError(f"{type(est).__name__} has no .predict_proba")
+
+    def decision_function(self, X):
+        with self._loaded_estimator() as est:
+            if hasattr(est, "decision_function"):
+                return est.decision_function(X)
+            raise AttributeError(f"{type(est).__name__} has no .decision_function")
+
+    # Make other attributes/methods transparently available (autoload if needed)
+    def __getattr__(self, name):
+        # Only called if attribute not found on self
+        # Try autoloading and then delegate
+        if name.startswith("__"):  # avoid dunder recursion
+            raise AttributeError(name)
+        with self._lock:
+            if self.estimator is None and self.auto_load:
+                self._load_inplace()
+            if self.estimator is not None and hasattr(self.estimator, name):
+                return getattr(self.estimator, name)
+        # Fallback to default behavior
+        raise AttributeError(f"{type(self).__name__} has no attribute '{name}'")
+
+    # ---------- Persistence helpers ----------
+    def _resolve_path(self) -> Path:
+        if self.dump_dir is None:
+            raise ValueError("dump_dir is not set. Set wrapper.dump_dir or pass it in __init__.")
+        self.dump_dir.mkdir(parents=True, exist_ok=True)
+        fname = self.filename
+        if not fname:
+            ts = time.strftime("%Y%m%d-%H%M%S")
+            base = type(self.estimator).__name__ if self.estimator is not None else "Estimator"
+            fname = f"{base}-{ts}.pkl"
+            self.filename = fname
+        if not fname.endswith(".pkl"):
+            fname += ".pkl"
+        return self.dump_dir / fname
+
+    def dump(self) -> Path:
         """
-        Initialize the LazyLoadingEnsembleDict with a directory to save and load models.
-        
-        Args:
-            directory:
-                The directory to save and load model files.
+        Dump ONLY the inner estimator to disk (not the wrapper).
+        Atomic write: write to temp file then replace.
+        After dump, sets self.estimator=None (frees RAM).
         """
-        self.directory = directory
-        self.ensemble_models = {}
-        self.key_to_ensemble = {}
-        if not os.path.exists(self.directory):
-            os.makedirs(self.directory, exist_ok=False)
-        self._build_key_index()
+        with self._lock:
+            if self.estimator is None:
+                # Nothing to dump; ensure file exists?
+                raise ValueError("No estimator in memory to dump (self.estimator is None).")
+            path = self._resolve_path()
+            tmp_dir = Path(tempfile.mkdtemp(dir=self.dump_dir))
+            tmp_path = tmp_dir / (path.name + ".tmp")
+            try:
+                joblib.dump(self.estimator, tmp_path, compress=self.compress)
+                # Atomic on same filesystem
+                shutil.move(str(tmp_path), str(path))
+                # Free memory
+                self.estimator = None
+            finally:
+                # Best-effort cleanup
+                try:
+                    tmp_path.unlink(missing_ok=True)
+                except Exception:
+                    pass
+                try:
+                    tmp_dir.rmdir()
+                except Exception:
+                    pass
+            return path
 
-    def _build_key_index(self):
+    def load(self, path: Optional[Path | str] = None) -> "LazyLoadingEstimator":
         """
-        Build an index mapping keys to ensemble IDs from saved ensemble files.
+        Load the inner estimator from disk into this wrapper (in-place).
         """
-        for filename in os.listdir(self.directory):
-            if filename.startswith('ensemble_') and filename.endswith('_dict.pkl'):
-                ensemble_id = filename[len('ensemble_'):-len('_dict.pkl')]
-                ensemble_path = os.path.join(self.directory, filename)
-                # Load the ensemble to get the keys
-                ensemble = joblib.load(ensemble_path)
-                for key in ensemble:
-                    self.key_to_ensemble[key] = ensemble_id
+        with self._lock:
+            path = Path(path) if path is not None else self._resolve_path()
+            self.estimator = joblib.load(path)
+        return self
 
-    def _get_ensemble_id(self, key):
+    @classmethod
+    def load_from_dir(
+        cls,
+        dump_dir: Path | str,
+        filename: Optional[str] = None,
+        compress: Any = 3,
+        **kwargs,
+    ) -> "LazyLoadingEstimator":
+        dump_dir = Path(dump_dir)
+        if filename is None:
+            pkls = sorted(dump_dir.glob("*.pkl"))
+            if not pkls:
+                raise FileNotFoundError(f"No .pkl files in {dump_dir}")
+            filename = pkls[-1].name
+        wrapper = cls(
+            estimator=None,
+            dump_dir=dump_dir,
+            filename=filename,
+            compress=compress,
+            **kwargs,
+        )
+        return wrapper.load(dump_dir / filename)
+
+    # ---------- sklearn compatibility niceties ----------
+    def _more_tags(self):
+        tags = {}
+        with self._lock:
+            if self.estimator is not None and hasattr(self.estimator, "_get_tags"):
+                tags.update(self.estimator._get_tags())
+        return tags
+
+    # ---------- internals ----------
+    def _load_inplace(self):
+        # helper that assumes lock is held
+        path = self._resolve_path()
+        if not path.exists():
+            raise FileNotFoundError(f"Expected to auto-load, but no model file at {path}")
+        self.estimator = joblib.load(path)
+
+    @contextmanager
+    def _loaded_estimator(self, write_intent: bool = False):
         """
-        Extract the ensemble ID from the key.
+        Context manager that:
+          1) auto-loads estimator if needed,
+          2) yields it,
+          3) auto-dumps after use if configured.
         """
-        if not isinstance(key, str):
-            raise ValueError("Key must be a string.")
-        parts = key.split('_')
-        if len(parts) < 2:
-            raise ValueError(f"Key '{key}' does not contain an ensemble ID.")
-        return parts[0]
+        with self._lock:
+            if self.estimator is None and self.auto_load:
+                self._load_inplace()
+            if self.estimator is None:
+                raise ValueError(
+                    "Estimator is not loaded. Set auto_load=True or call .load() first."
+                )
+            est = self.estimator
 
-    def __getitem__(self, key):
-        ensemble_id = self.key_to_ensemble.get(key)
-        if not ensemble_id:
-            raise KeyError(key)
-        if ensemble_id not in self.ensemble_models:
-            self.load_ensemble(ensemble_id)
-        
-        if key not in self.ensemble_models[ensemble_id]:
-            if self.check_file_exists(ensemble_id):
-                self.load_ensemble(ensemble_id, force=True)
-            else:
-                raise ValueError(f'Ensemble {key} (ensemble {ensemble_id}) not found in memory nor on disk.')
-            
-        return self.ensemble_models[ensemble_id][key]
-
-    def __setitem__(self, key, value):
-        ensemble_id = self._get_ensemble_id(key)
-        if ensemble_id not in self.ensemble_models:
-            self.ensemble_models[ensemble_id] = {}
-        self.ensemble_models[ensemble_id][key] = value
-        self.key_to_ensemble[key] = ensemble_id
-
-    def __delitem__(self, key):
-        ensemble_id = self.key_to_ensemble.get(key)
-        if not ensemble_id:
-            raise KeyError(key)
-        if ensemble_id not in self.ensemble_models:
-            self.load_ensemble(ensemble_id)
-        del self.ensemble_models[ensemble_id][key]
-        del self.key_to_ensemble[key]
-        if not self.ensemble_models[ensemble_id]:
-            del self.ensemble_models[ensemble_id]
-
-    def __iter__(self):
-        return iter(self.key_to_ensemble)
-
-    def __len__(self):
-        return len(self.key_to_ensemble)
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}({list(self.keys())})"
-
-    def __contains__(self, key):
-        return key in self.key_to_ensemble
-
-    def get(self, key, default=None):
         try:
-            return self[key]
-        except KeyError:
-            return default
+            yield est
+        finally:
+            # Auto-dump logic: dump after operations that likely changed state OR if user requests aggressive RAM saving
+            # We dump after .fit (write_intent=True), or if auto_dump=True (always), unless keep_loaded=True.
+            if (write_intent or self.auto_dump) and not self.keep_loaded:
+                try:
+                    self.dump()
+                except Exception as e:
+                    # Don't hide exceptions during user calls; re-raise to surface issues.
+                    raise
 
-    def keys(self):
-        return self.key_to_ensemble.keys()
-
-    def values(self):
-        for key in self:
-            yield self[key]
-
-    def items(self):
-        for key in self:
-            yield (key, self[key])
-
-    def pop(self, key, default=None):
-        try:
-            value = self[key]
-            del self[key]
-            return value
-        except KeyError:
-            if default is not None:
-                return default
-            else:
-                raise
-
-    def clear(self):
-        self.ensemble_models.clear()
-        self.key_to_ensemble.clear()
-        for filename in os.listdir(self.directory):
-            if filename.startswith('ensemble_') and filename.endswith('_dict.pkl'):
-                os.remove(os.path.join(self.directory, filename))
-
-    def update(self, *args, **kwargs):
-        for mapping in args:
-            for key, value in mapping.items():
-                self[key] = value
-        for key, value in kwargs.items():
-            self[key] = value
-
-    def copy(self):
-        new_copy = LazyLoadingEnsembleDict(self.directory)
-        new_copy.ensemble_models = self.ensemble_models.copy()
-        new_copy.key_to_ensemble = self.key_to_ensemble.copy()
-        return new_copy
-
-    def dump_ensemble(self, ensemble_id):
+    def __getstate__(self):
         """
-        Dump the ensemble to disk and remove it from memory.
+        Exclude unpicklable runtime-only attributes from pickling.
+        Locks (and similar OS handles) cannot be pickled.
         """
-        ensemble_id = str(ensemble_id)
-        if ensemble_id in self.ensemble_models:
-            ensemble_path = os.path.join(self.directory, f"ensemble_{ensemble_id}_dict.pkl")
-            if not os.path.exists(ensemble_path):
-                joblib.dump(self.ensemble_models[ensemble_id], ensemble_path)
-            del self.ensemble_models[ensemble_id]
-        else:
-            raise ValueError(f'Ensemble {ensemble_id} does not exist in the current dictionary')
+        state = self.__dict__.copy()
+        # Drop the RLock so pickle/joblib won’t choke on it
+        state["_lock"] = None
+        return state
 
-    def load_model(self, key):
+    def __setstate__(self, state):
         """
-        Load the model corresponding to the key from disk into memory.
+        Rebuild runtime-only attributes after unpickling.
         """
-        ensemble_id = self.key_to_ensemble.get(key)
-        if not ensemble_id:
-            raise KeyError(f"Key '{key}' not found.")
-        self.load_ensemble(ensemble_id)
+        self.__dict__.update(state)
+        # Recreate a fresh lock for this process
+        self._lock = threading.RLock()
         
-    def check_file_exists(self, ensemble_id):
-        ensemble_path = os.path.join(self.directory, f"ensemble_{ensemble_id}_dict.pkl")
-        if os.path.exists(ensemble_path):
-            return True
-        else:
-            return False
-
-    def load_ensemble(self, ensemble_id, force=False):
-        """
-        Load the entire ensemble from disk into memory.
-        """
-        ensemble_id = str(ensemble_id)
-        if ((not force) and (ensemble_id not in self.ensemble_models)) or force:
-            ensemble_path = os.path.join(self.directory, f"ensemble_{ensemble_id}_dict.pkl")
-            if not os.path.exists(ensemble_path):
-                raise FileNotFoundError(f"Ensemble file for ID {ensemble_id} not found at {ensemble_path}.")
-            
-            loaded_ensemble = joblib.load(ensemble_path)
-            if ensemble_id in self.ensemble_models:
-                loaded_ensemble = {**loaded_ensemble, **self.ensemble_models[ensemble_id]}
-            
-            self.ensemble_models[ensemble_id] = loaded_ensemble
-            
-            # Update key_to_ensemble mapping
-            for key in self.ensemble_models[ensemble_id]:
-                self.key_to_ensemble[key] = ensemble_id
-
-    def delete_ensemble(self, ensemble_id):
-        """
-        Delete an ensemble from memory and disk.
-        """
-        ensemble_id = str(ensemble_id)
-        if ensemble_id in self.ensemble_models:
-            # Remove keys from key_to_ensemble
-            for key in self.ensemble_models[ensemble_id]:
-                del self.key_to_ensemble[key]
-            del self.ensemble_models[ensemble_id]
-        
-        ensemble_path = os.path.join(self.directory, f"ensemble_{ensemble_id}_dict.pkl")
-        if os.path.exists(ensemble_path):
-            os.remove(ensemble_path)
-        else:
-            raise ValueError(f'Ensemble {ensemble_id} not found on disk.')
