@@ -440,11 +440,15 @@ def initiate_lazy_loading_dir(lazy_loading_dir):
         lazy_loading_dir = os.path.join(tempfile.gettempdir(), f'stemflow_model_{saving_code}')
         warnings.warn(f'lazy_loading_dir not specified during instance initiation. Using the temporary folder: {lazy_loading_dir}')
     else:
+        lazy_loading_dir = str(Path(lazy_loading_dir.rstrip('/\\')))
         if os.path.exists(lazy_loading_dir):
-            shutil.rmtree(lazy_loading_dir)
-    lazy_loading_dir = str(Path(lazy_loading_dir.rstrip('/\\')))
-    if not os.path.exists(lazy_loading_dir):
-        os.makedirs(lazy_loading_dir)
+            contents = os.listdir(lazy_loading_dir)
+            if contents:
+                raise FileExistsError(f"The lazy_loading_dir {lazy_loading_dir} is not empty! Please use an empty directory.")
+            else:
+                pass
+        else:
+            os.makedirs(lazy_loading_dir)
         
     return lazy_loading_dir
 
