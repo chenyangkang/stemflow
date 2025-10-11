@@ -103,6 +103,9 @@ nav:
       - 'QTree': API_Documentation/gridding/stemflow.gridding.QTree.md
       - 'Sphere_QTree': API_Documentation/gridding/stemflow.gridding.Sphere_QTree.md
       - 'QuadGrid': API_Documentation/gridding/stemflow.gridding.QuadGrid.md
+    - stemflow.lazyloading:
+      - 'lazyloading': API_Documentation/gridding/stemflow.lazyloading.lazyloading.md
+      - 'open_db_connection': API_Documentation/gridding/stemflow.lazyloading.open_db_connection.md
     - stemflow.utils:
       - 'jitterrotation':
         - 'jitterrotator': API_Documentation/utils/jitterrotation/stemflow.utils.jitterrotation.jitterrotator.md
@@ -114,7 +117,7 @@ nav:
       - 'quadtree': API_Documentation/utils/stemflow.utils.quadtree.md
       - 'sphere_quadtree': API_Documentation/utils/stemflow.utils.sphere_quadtree.md
       - 'plot_gif': API_Documentation/utils/stemflow.utils.plot_gif.md
-      - 'generate_soft_colors': API_Documentation/utils/stemflow.utils.generate_soft_colors.md
+      - 'generate_random': API_Documentation/utils/stemflow.utils.generate_random.md
       - 'validation': API_Documentation/utils/stemflow.utils.validation.md
       - 'wrapper': API_Documentation/utils/stemflow.utils.wrapper.md
       - 'lazyloading': API_Documentation/utils/stemflow.utils.lazyloading.md
@@ -159,4 +162,4 @@ markdown_extensions:
 
 
 copyright: |
-  &copy; 2024 <a href="https://github.com/chenyangkang"  target="_blank" rel="noopener">Yangkang Chen</a>
+  &copy; 2025 <a href="https://github.com/chenyangkang"  target="_blank" rel="noopener">Yangkang Chen</a>

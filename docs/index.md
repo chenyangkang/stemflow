@@ -179,7 +179,7 @@ print(eval_metrics)
 Where the `pred` is the mean of the predicted values across ensembles.
 
 See [AdaSTEM demo](https://chenyangkang.github.io/stemflow/Examples/01.AdaSTEM_demo.html) for further functionality.<br>
-See [Optimizing stixel size](https://chenyangkang.github.io/stemflow/Examples/07.Optimizing_stixel_size.html) for why and how you should tune the important gridding parameters.
+Besides, `stemflow` also support [lazy loading](https://chenyangkang.github.io/stemflow/Examples/08.Lazy_loading.html) and [database query](https://chenyangkang.github.io/stemflow/Examples/09.Database_query.html) to reduce memory load during parallel computing.
 
 -----
 
