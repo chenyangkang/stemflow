@@ -766,19 +766,20 @@ class AdaSTEM(BaseEstimator):
         self.lazy_loading_dir = initiate_lazy_loading_dir(self.lazy_loading_dir)
         self._finalizer = weakref.finalize(self, self._cleanup, self.lazy_loading_dir) # run self._cleanup when the object is being garbage collected
         self.joblib_tmp_dir = initiate_joblib_tmp_dir(self.lazy_loading_dir)
-        self.duckdb_config = duckdb_config(self.max_mem, self.joblib_tmp_dir)
-        
-        # Input check
-        self.rng = check_random_state(self.random_state)
-        verbosity = check_verbosity(self, verbosity)
-        self.data_format = check_X_y_format_match(X_train, y_train)
-        check_X_train(X_train, self)
-        check_y_train(y_train, self)
-        X_train, y_train = check_X_y_indexes_match(X_train, y_train, self)
-        n_jobs = check_transform_n_jobs(self, n_jobs)
-        self.store_x_names(X_train)
-    
+
         try:
+            self.duckdb_config = duckdb_config(self.max_mem, self.joblib_tmp_dir)
+            
+            # Input check
+            self.rng = check_random_state(self.random_state)
+            verbosity = check_verbosity(self, verbosity)
+            self.data_format = check_X_y_format_match(X_train, y_train)
+            check_X_train(X_train, self)
+            check_y_train(y_train, self)
+            X_train, y_train = check_X_y_indexes_match(X_train, y_train, self)
+            n_jobs = check_transform_n_jobs(self, n_jobs)
+            self.store_x_names(X_train)
+            
             # Quadtree            
             self.split(X_train, verbosity=verbosity, ax=ax, n_jobs=n_jobs)
             # define model dict
