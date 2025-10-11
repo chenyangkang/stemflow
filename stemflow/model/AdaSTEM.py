@@ -710,7 +710,8 @@ class AdaSTEM(BaseEstimator):
                 res = self.SAC_ensemble_training(single_ensemble_df=ensemble[1], X_train=X_train, y_train=y_train)
                 return res
             
-            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.joblib_tmp_dir, pre_dispatch='all') #pre_dispatch='all' to avoid serialization issue since "self" can change in this process
+            pre_dispatch = "2*n_jobs" if isinstance(X_train) else "all" #pre_dispatch='all' to avoid serialization issue since "self" can change in this process
+            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.joblib_tmp_dir, pre_dispatch=pre_dispatch) 
             output_generator = parallel(joblib.delayed(mp_train)(i) for i in groups)
 
         # tqdm wrapper
@@ -978,7 +979,8 @@ class AdaSTEM(BaseEstimator):
                 res = self.SAC_ensemble_predict(single_ensemble_df=ensemble[1], data=data)
                 return res
 
-            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.joblib_tmp_dir, pre_dispatch='all')  #pre_dispatch='all' to avoid serialization issue since "self" can change in this process
+            pre_dispatch = "2*n_jobs" if isinstance(data) else "all" #pre_dispatch='all' to avoid serialization issue since "self" can change in this process
+            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.joblib_tmp_dir, pre_dispatch=pre_dispatch) 
             output_generator = parallel(joblib.delayed(mp_predict)(i) for i in groups)
 
         # tqdm wrapper
