@@ -735,6 +735,7 @@ class AdaSTEM(BaseEstimator):
         verbosity: Union[None, int] = None,
         ax=None,
         n_jobs: Union[None, int] = None,
+        overwrite = False
     ):
         """Fitting method
 
@@ -745,12 +746,17 @@ class AdaSTEM(BaseEstimator):
             verbosty: whether to show progress bar. 0 for no and 1 for yes.
             ax: matplotlib ax for adding grid plot on that.
             n_jobs: multiprocessing thread count. Default the n_jobs of model object.
+            overwrite: overwrite files in lazy_loading_dir. If set to False and any file exists in lazy_loading_dir, an error will be raise.
 
         Raises:
             TypeError: X_train is not a type of pd.DataFrame
             TypeError: y_train is not a type of np.ndarray or pd.DataFrame
         """
         # Setup lazy_loading_dir and joblib_tmp_dir
+        if overwrite and self.lazy_loading_dir and os.path.isdir(self.lazy_loading_dir):
+            for file in os.listdir(self.lazy_loading_dir):
+                shutil.rmtree(os.path.join(self.lazy_loading_dir, file))
+                    
         self.lazy_loading_dir = initiate_lazy_loading_dir(self.lazy_loading_dir)
         self._finalizer = weakref.finalize(self, self._cleanup, self.lazy_loading_dir) # run self._cleanup when the object is being garbage collected
         self.joblib_tmp_dir = initiate_joblib_tmp_dir(self.lazy_loading_dir)
