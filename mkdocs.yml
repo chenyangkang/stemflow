@@ -98,7 +98,6 @@ nav:
       - 'static_func_AdaSTEM': API_Documentation/model/stemflow.model.static_func_AdaSTEM.md
       - 'Hurdle': API_Documentation/model/stemflow.model.Hurdle.md
       - 'dummy_model': API_Documentation/model/stemflow.model.dummy_model.md
-      - 'special_hurdle': API_Documentation/model/stemflow.model.special_hurdle.md
     - stemflow.gridding:
       - 'Q_blocks': API_Documentation/gridding/stemflow.gridding.Q_blocks.md
       - 'QTree': API_Documentation/gridding/stemflow.gridding.QTree.md
