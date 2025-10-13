@@ -56,12 +56,21 @@ def _as_relation(con, obj, view_name, attach_alias):
     if isinstance(obj, str) and obj.endswith(".duckdb"):
         # attach the DB file under its own alias, then expose its (first) table as a view
         con.execute(f"ATTACH '{obj}' AS {attach_alias} (READ_ONLY)")
-        tbl = con.sql(
-            f"""
-            SELECT table_name FROM {attach_alias}.information_schema.tables
-            WHERE table_schema='main' LIMIT 1
-            """
-        ).fetchone()[0]
+        row = con.sql(f"""
+            SELECT table_name
+            FROM duckdb_tables()
+            WHERE database_name = '{attach_alias}'
+              AND schema_name   = 'main'
+            ORDER BY table_name
+            LIMIT 1
+        """).fetchone()
+
+        if not row:
+            raise RuntimeError(
+                f"No tables found in attached database '{obj}' (alias {attach_alias})."
+            )
+
+        tbl = row[0]
         rel = con.sql(f"SELECT * FROM {attach_alias}.main.{tbl}")
         rel.create_view(view_name)
         return rel
