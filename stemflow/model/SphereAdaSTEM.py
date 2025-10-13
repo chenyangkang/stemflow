@@ -333,7 +333,8 @@ class SphereAdaSTEM(AdaSTEM):
         else:
             self.ensemble_df, self.gridding_plot = ensemble_df, None
 
-    def SAC_ensemble_training(self, single_ensemble_df: pd.DataFrame, X_train: Union[pd.DataFrame, str], y_train: Union[pd.DataFrame, str]):
+    def SAC_ensemble_training(self, single_ensemble_df: pd.DataFrame, X_train: Union[pd.DataFrame, str], y_train: Union[pd.DataFrame, str],
+                              temporal_window_prequery: bool = False):
         """A sub-module of SAC training function.
         Train only one ensemble.
 
