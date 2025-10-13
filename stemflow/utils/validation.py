@@ -444,7 +444,7 @@ def initiate_lazy_loading_dir(lazy_loading_dir):
         if os.path.exists(lazy_loading_dir):
             contents = os.listdir(lazy_loading_dir)
             if contents:
-                raise FileExistsError(f"The lazy_loading_dir {lazy_loading_dir} is not empty! Please use an empty directory.")
+                raise FileExistsError(f"The lazy_loading_dir {lazy_loading_dir} is not empty! Please use an empty directory. If you have called '.fit' before, set overwrite=True in '.fit' to overwrite the previous models.")
             else:
                 pass
         else:
