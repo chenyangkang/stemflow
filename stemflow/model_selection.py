@@ -3,14 +3,12 @@ from typing import Generator, Tuple, Union
 
 import numpy as np
 import pandas as pd
-from numpy import ndarray
-from pandas.core.frame import DataFrame
 
 from .utils.validation import check_random_state
 
 
 def ST_train_test_split(
-    X: DataFrame,
+    X: pd.DataFrame,
     y: Sequence,
     Spatio1: str = "longitude",
     Spatio2: str = "latitude",
@@ -19,7 +17,7 @@ def ST_train_test_split(
     Temporal_blocks_count: int = 10,
     test_size: float = 0.3,
     random_state: Union[None, int] = None,
-) -> Tuple[DataFrame, DataFrame, ndarray, ndarray]:
+) -> Tuple[pd.DataFrame, pd.DataFrame, np.ndarray, np.ndarray]:
     """Spatial Temporal train-test split
 
     Args:
@@ -49,12 +47,15 @@ def ST_train_test_split(
     rng = check_random_state(random_state)
 
     # validate
-    if not isinstance(X, DataFrame):
+    if not isinstance(X, pd.DataFrame):
         type_x = str(type(X))
-        raise TypeError(f"X input should be pandas.core.frame.DataFrame, Got {type_x}")
-    if not (isinstance(y, DataFrame) or isinstance(y, ndarray)):
+        raise TypeError(f"X input should be pd.DataFrame, Got {type_x}")
+    if not isinstance(y, (pd.DataFrame, pd.Series, np.ndarray)):
         type_y = str(type(y))
-        raise TypeError(f"y input should be pandas.core.frame.DataFrame or numpy.ndarray, Got {type_y}")
+        raise TypeError(f"y input should be pd.DataFrame or pd.Series, or np.ndarray, Got {type_y}")
+    
+    input_X_type = type(X)
+    input_y_type = type(y)
 
     # check shape match
     y_size = np.array(y).flatten().shape[0]
@@ -95,12 +96,24 @@ def ST_train_test_split(
     y_train = np.array(y).flatten()[train_indexes].reshape(-1, 1)
     X_test = X.iloc[test_indexes, :]
     y_test = np.array(y).flatten()[test_indexes].reshape(-1, 1)
-
+    
+    if isinstance(y, pd.DataFrame):
+        y_train = pd.DataFrame(y_train, columns=y.columns, index=X_train.index)
+        y_test = pd.DataFrame(y_test, columns=y.columns, index=X_test.index)
+    elif isinstance(y, pd.Series):
+        y_train = pd.Series(y_train, name=y.name, index=X_train.index)
+        y_test = pd.Series(y_test, name=y.name, index=X_test.index)
+        
+    assert type(X_train)==type(X)
+    assert type(X_test)==type(X)
+    assert type(y_train)==type(y)
+    assert type(y_test)==type(y)
+    
     return X_train, X_test, y_train, y_test
 
 
 def ST_CV(
-    X: DataFrame,
+    X: pd.DataFrame,
     y: Sequence,
     Spatio1: str = "longitude",
     Spatio2: str = "latitude",
@@ -109,7 +122,7 @@ def ST_CV(
     Temporal_blocks_count: int = 10,
     random_state: Union[np.random.RandomState, None, int] = None,
     CV: int = 3,
-) -> Generator[Tuple[DataFrame, DataFrame, ndarray, ndarray], None, None]:
+) -> Generator[Tuple[pd.DataFrame, pd.DataFrame, np.ndarray, np.ndarray], None, None]:
     """A function to generate spatiotemporal train-test-split data. To only generate indexes, see class `ST_Kfold`.
 
     Args:
@@ -140,12 +153,12 @@ def ST_CV(
     rng = check_random_state(random_state)
 
     # validate
-    if not isinstance(X, DataFrame):
+    if not isinstance(X, pd.DataFrame):
         type_x = str(type(X))
-        raise TypeError(f"X input should be pandas.core.frame.DataFrame, Got {type_x}")
-    if not (isinstance(y, DataFrame) or isinstance(y, ndarray)):
+        raise TypeError(f"X input should be pd.DataFrame, Got {type_x}")
+    if not isinstance(y, (pd.DataFrame, np.ndarray, pd.Series)):
         type_y = str(type(y))
-        raise TypeError(f"y input should be pandas.core.frame.DataFrame or numpy.ndarray, Got {type_y}")
+        raise TypeError(f"y input should be pd.DataFrame or numpy.ndarray, Got {type_y}")
     if not (isinstance(CV, int) and CV > 0):
         raise ValueError("CV should be a positive integer")
 
@@ -258,7 +271,7 @@ class ST_KFold:
         if not (isinstance(n_splits, int) and n_splits > 0):
             raise ValueError("CV should be a positive integer")
 
-    def split(self, X: DataFrame) -> Generator[Tuple[ndarray, ndarray], None, None]:
+    def split(self, X: pd.DataFrame) -> Generator[Tuple[np.ndarray, np.ndarray], None, None]:
         """split
 
         Args:
@@ -269,9 +282,9 @@ class ST_KFold:
         """
 
         # validate
-        if not isinstance(X, DataFrame):
+        if not isinstance(X, pd.DataFrame):
             type_x = str(type(X))
-            raise TypeError(f"X input should be pandas.core.frame.DataFrame, Got {type_x}")
+            raise TypeError(f"X input should be pd.DataFrame, Got {type_x}")
 
         # indexing
         Sindex1 = np.linspace(X[self.Spatio1].min(), X[self.Spatio1].max(), self.Spatio_blocks_count)

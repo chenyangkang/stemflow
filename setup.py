@@ -28,7 +28,7 @@ setup(
     long_description=long_description,
     packages=find_packages(),
     package_dir={"stemflow": "stemflow"},
-    python_requires=">=3.8.0",
+    python_requires=">=3.9.0",
     install_requires=requirements,
     platforms="any",
     keywords=[
@@ -45,10 +45,10 @@ setup(
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Operating System :: Unix",
         "Operating System :: MacOS :: MacOS X",
         "Operating System :: Microsoft :: Windows",

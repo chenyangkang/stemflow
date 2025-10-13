@@ -38,7 +38,7 @@ class Hurdle(BaseEstimator):
         self.classifier = classifier
         self.regressor = regressor
 
-    def fit(self, X_train: Union[pd.core.frame.DataFrame, np.ndarray], y_train: Sequence, sample_weight=None):
+    def fit(self, X_train: Union[pd.DataFrame, np.ndarray], y_train: Sequence, sample_weight=None):
         """Fitting model
 
         Args:
@@ -67,15 +67,16 @@ class Hurdle(BaseEstimator):
         else:
             self.regressor.fit(new_dat[new_dat[:, -1] > 0, :][:, :-1], np.array(regressor_y))
 
-        try:
-            self.feature_importances_ = (
-                np.array(self.classifier.feature_importances_) + np.array(self.regressor.feature_importances_)
-            ) / 2
-        except Exception as e:
-            warnings.warn(f"Cannot calculate feature importance: {e}")
-            pass
+        if not (isinstance(self.classifier, dummy_model1) or isinstance(self.regressor, dummy_model1)):
+            try:
+                self.feature_importances_ = (
+                    np.array(self.classifier.feature_importances_) + np.array(self.regressor.feature_importances_)
+                ) / 2
+            except Exception as e:
+                warnings.warn(f"Cannot calculate feature importance: {e}")
+                pass
 
-    def predict(self, X_test: Union[pd.core.frame.DataFrame, np.ndarray]) -> np.ndarray:
+    def predict(self, X_test: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
         """Predicting
 
         Args:
@@ -90,7 +91,7 @@ class Hurdle(BaseEstimator):
         res = np.where(cls_res > 0, reg_res, cls_res)
         return res.flatten()
 
-    def predict_proba(self, X_test: Union[pd.core.frame.DataFrame, np.ndarray]) -> np.ndarray:
+    def predict_proba(self, X_test: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
         """Predicting probability
 
         This method output a numpy array with shape (n_sample, 2)
@@ -177,7 +178,7 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
         self.classifier = classifier
         self.regressor = regressor
 
-    def fit(self, X_train: Union[pd.core.frame.DataFrame, np.ndarray], y_train: Sequence, verbosity: int = 1):
+    def fit(self, X_train: Union[pd.DataFrame, np.ndarray], y_train: Sequence, verbosity: int = 1):
         """Fitting model
         Args:
             X_train:
@@ -195,20 +196,33 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
             self.regressor = dummy_model1(binary_[0])
             return
 
+        X_train = X_train.copy()
         X_train["y_train"] = y_train
 
         if verbosity == 0:
-            self.classifier.fit(X_train.iloc[:, :-1], np.where(X_train.iloc[:, -1].values > 0, 1, 0), verbosity=0)
+            self.classifier.fit(X_train.iloc[:, :-1],
+                                pd.DataFrame(
+                                    np.where(X_train.iloc[:, -1].values > 0, 1, 0),
+                                    index=X_train.index,
+                                    columns=["y_train"]
+                                ),
+                                verbosity=0)
             self.regressor.fit(
                 X_train[X_train["y_train"] > 0].iloc[:, :-1],
-                np.array(X_train[X_train["y_train"] > 0].iloc[:, -1]),
+                pd.DataFrame(X_train[X_train["y_train"] > 0].iloc[:, -1]),
                 verbosity=0,
             )
         else:
-            self.classifier.fit(X_train.iloc[:, :-1], np.where(X_train.iloc[:, -1].values > 0, 1, 0), verbosity=1)
+            self.classifier.fit(X_train.iloc[:, :-1],
+                                pd.DataFrame(
+                                    np.where(X_train.iloc[:, -1].values > 0, 1, 0),
+                                    index=X_train.index,
+                                    columns=["y_train"]
+                                ),
+                                verbosity=1)
             self.regressor.fit(
                 X_train[X_train["y_train"] > 0].iloc[:, :-1],
-                np.array(X_train[X_train["y_train"] > 0].iloc[:, -1]),
+                pd.DataFrame(X_train[X_train["y_train"] > 0].iloc[:, -1]),
                 verbosity=1,
             )
         
@@ -216,7 +230,7 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
 
     def predict(
         self,
-        X_test: Union[pd.core.frame.DataFrame, np.ndarray],
+        X_test: Union[pd.DataFrame, np.ndarray],
         n_jobs: int = 1,
         verbosity: int = 1,
         return_by_separate_ensembles: bool = False,
@@ -257,7 +271,7 @@ class Hurdle_for_AdaSTEM(BaseEstimator):
 
     def predict_proba(
         self,
-        X_test: Union[pd.core.frame.DataFrame, np.ndarray],
+        X_test: Union[pd.DataFrame, np.ndarray],
         n_jobs: int = 1,
         verbosity: int = 0,
         return_by_separate_ensembles: bool = False,

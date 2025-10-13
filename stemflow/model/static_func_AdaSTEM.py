@@ -32,7 +32,7 @@ def train_one_stixel(
     base_model: BaseEstimator,
     sample_weights_for_classifier: bool,
     subset_x_names: bool,
-    stixel_X_train: pd.core.frame.DataFrame,
+    stixel_X_train: pd.DataFrame,
     min_class_sample: int,
 ) -> Tuple[Union[None, BaseEstimator], list]:
     """Train one stixel
@@ -44,7 +44,7 @@ def train_one_stixel(
         base_model (BaseEstimator): Base model estimator.
         sample_weights_for_classifier (bool): Whether to balance the sample weights in classifier for imbalanced samples.
         subset_x_names (bool): Whether to only store variables with std > 0 for each stixel.
-        sub_X_train (pd.core.frame.DataFrame): Input training dataframe for THE stixel.
+        sub_X_train (pd.DataFrame): Input training dataframe for THE stixel.
         min_class_sample (int): Minimum umber of samples needed to train the classifier in each stixel. If the sample does not satisfy, fit a dummy one.
 
     Returns:
@@ -104,23 +104,23 @@ def train_one_stixel(
 
 def assign_points_to_one_ensemble(
     ensemble: str,
-    ensemble_df: pd.core.frame.DataFrame,
-    Sample_ST_df: pd.core.frame.DataFrame,
+    ensemble_df: pd.DataFrame,
+    Sample_ST_df: pd.DataFrame,
     Temporal1: str,
     Spatio1: str,
     Spatio2: str,
-    feature_importances_: pd.core.frame.DataFrame,
-) -> pd.core.frame.DataFrame:
+    feature_importances_: pd.DataFrame,
+) -> pd.DataFrame:
     """assign points to one ensemble
 
     Args:
-        ensemble_df (pd.core.frame.DataFrame): ensemble_df
+        ensemble_df (pd.DataFrame): ensemble_df
         ensemble (str): name of the ensemble
-        Sample_ST_df (pd.core.frame.DataFrame): input sample spatio-temporal points of interest
+        Sample_ST_df (pd.DataFrame): input sample spatio-temporal points of interest
         Temporal1 (str): Temporal variable name 1
         Spatio1 (str): Spatio variable name 1
         Spatio2 (str): Spatio variable name 2
-        feature_importances_ (pd.core.frame.DataFrame): feature_importances_ dataframe
+        feature_importances_ (pd.DataFrame): feature_importances_ dataframe
 
     Returns:
         A DataFrame containing the aggregated feature importance
@@ -189,24 +189,24 @@ def assign_points_to_one_ensemble(
 
 def assign_points_to_one_ensemble_sphere(
     ensemble: str,
-    ensemble_df: pd.core.frame.DataFrame,
-    Sample_ST_df: pd.core.frame.DataFrame,
+    ensemble_df: pd.DataFrame,
+    Sample_ST_df: pd.DataFrame,
     Temporal1: str,
     Spatio1: str,
     Spatio2: str,
-    feature_importances_: pd.core.frame.DataFrame,
+    feature_importances_: pd.DataFrame,
     radius: Union[int, float] = 6371,
-) -> pd.core.frame.DataFrame:
+) -> pd.DataFrame:
     """assign points to one ensemble, for spherical indexing
 
     Args:
-        ensemble_df (pd.core.frame.DataFrame): ensemble_df
+        ensemble_df (pd.DataFrame): ensemble_df
         ensemble (str): name of the ensemble
-        Sample_ST_df (pd.core.frame.DataFrame): input sample spatio-temporal points of interest
+        Sample_ST_df (pd.DataFrame): input sample spatio-temporal points of interest
         Temporal1 (str): Temporal variable name 1
         Spatio1 (str): Spatio variable name 1
         Spatio2 (str): Spatio variable name 2
-        feature_importances_ (pd.core.frame.DataFrame): feature_importances_ dataframe
+        feature_importances_ (pd.DataFrame): feature_importances_ dataframe
         radius (Union[float, int]): radius of earth in km
 
     Returns:
@@ -276,8 +276,8 @@ def assign_points_to_one_ensemble_sphere(
 
 
 def transform_pred_set_to_STEM_quad(
-    Spatio1: str, Spatio2: str, X_train: pd.core.frame.DataFrame, ensemble_info: pd.core.frame.DataFrame
-) -> pd.core.frame.DataFrame:
+    Spatio1: str, Spatio2: str, X_train: pd.DataFrame, ensemble_info: pd.DataFrame
+) -> pd.DataFrame:
     """Project the input data points to the space of quadtree stixels.
 
     Args:
@@ -285,37 +285,37 @@ def transform_pred_set_to_STEM_quad(
             Name of the spatio column 1
         Spatio2 (str):
             Name of the spatio column 2
-        X_train (pd.core.frame.DataFrame):
+        X_train (pd.DataFrame):
             Training/Testing variables
-        ensemble_info (pd.core.frame.DataFrame):
+        ensemble_info (pd.DataFrame):
             the DataFrame with information of the stixel.
 
     Returns:
         Projected X_train
 
     """
+    X_train = X_train.copy()
 
     angle = float(ensemble_info["rotation"].iloc[0])
     calibration_point_x_jitter = float(ensemble_info["calibration_point_x_jitter"].iloc[0])
     calibration_point_y_jitter = float(ensemble_info["calibration_point_y_jitter"].iloc[0])
 
-    X_train_ = X_train.copy()
     a, b = JitterRotator.rotate_jitter(
         X_train[Spatio1], X_train[Spatio2], angle, calibration_point_x_jitter, calibration_point_y_jitter
     )
-    X_train_[f"{Spatio1}_new"] = a
-    X_train_[f"{Spatio2}_new"] = b
+    X_train[f"{Spatio1}_new"] = a
+    X_train[f"{Spatio2}_new"] = b
 
-    return X_train_
+    return X_train
 
 
 def transform_pred_set_to_Sphere_STEM_quad(
     Spatio1: str,
     Spatio2: str,
-    X_train: pd.core.frame.DataFrame,
-    ensemble_info: pd.core.frame.DataFrame,
+    X_train: pd.DataFrame,
+    ensemble_info: pd.DataFrame,
     radius: Union[float, int] = 6371.0,
-) -> pd.core.frame.DataFrame:
+) -> pd.DataFrame:
     """Project the input data points to the space of quadtree stixels. For spherical indexing.
 
     Args:
@@ -323,9 +323,9 @@ def transform_pred_set_to_Sphere_STEM_quad(
             Name of the spatio column 1
         Spatio2 (str):
             Name of the spatio column 2
-        X_train (pd.core.frame.DataFrame):
+        X_train (pd.DataFrame):
             Training/Testing variables
-        ensemble_info (pd.core.frame.DataFrame):
+        ensemble_info (pd.DataFrame):
             the DataFrame with information of the stixel.
 
     Returns:
@@ -333,6 +333,8 @@ def transform_pred_set_to_Sphere_STEM_quad(
 
     """
 
+    X_train = X_train.copy()
+    
     angle = float(ensemble_info["rotation_angle"].iloc[0])
     axis = np.array(
         [
@@ -342,24 +344,23 @@ def transform_pred_set_to_Sphere_STEM_quad(
         ]
     )
 
-    X_train_ = X_train.copy()
     x, y, z = lonlat_cartesian_3D_transformer.transform(
-        X_train_[Spatio1].values, X_train_[Spatio2].values, radius=radius
+        X_train[Spatio1].values, X_train[Spatio2].values, radius=radius
     )
-    X_train_["x_3D"] = x
-    X_train_["y_3D"] = y
-    X_train_["z_3D"] = z
+    X_train["x_3D"] = x
+    X_train["y_3D"] = y
+    X_train["z_3D"] = z
 
     rotated_point = Sphere_Jitterrotator.rotate_jitter(
         np.column_stack([x, y, z]),
         axis,
         angle,
     )
-    X_train_["x_3D_transformed"] = rotated_point[:, 0]
-    X_train_["y_3D_transformed"] = rotated_point[:, 1]
-    X_train_["z_3D_transformed"] = rotated_point[:, 2]
+    X_train["x_3D_transformed"] = rotated_point[:, 0]
+    X_train["y_3D_transformed"] = rotated_point[:, 1]
+    X_train["z_3D_transformed"] = rotated_point[:, 2]
 
-    return X_train_
+    return X_train
 
 
 def get_model_by_name(model_dict: dict, grid_index: str) -> Union[None, BaseEstimator]:
@@ -428,16 +429,16 @@ def get_model_and_stixel_specific_x_names(
 
 
 def predict_one_stixel(
-    X_test_stixel: pd.core.frame.DataFrame,
+    X_test_stixel: pd.DataFrame,
     task: str,
     model_x_names_tuple: Tuple[Union[None, BaseEstimator], list],
     base_model_method: Union[None, str],
     **base_model_prediction_param
-) -> pd.core.frame.DataFrame:
+) -> pd.DataFrame:
     """predict_one_stixel
 
     Args:
-        X_test_stixel (pd.core.frame.DataFrame): Input testing variables
+        X_test_stixel (pd.DataFrame): Input testing variables
         task (str): One of 'regression', 'classification' and 'hurdle'
         model_x_names_tuple (tuple[Union[None, BaseEstimator], list]): A tuple of (model, stixel_specific_x_names)
         base_model_method (Union[None, str]):  The name of the prediction method for base models. If None, `predict` or `predict_proba` will be used depending on the tasks. This argument is handy if you have a custom base model class that has a special prediction function.

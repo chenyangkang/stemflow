@@ -11,7 +11,7 @@ import numpy as np
 import pandas
 import pandas as pd
 
-from ..utils.generate_soft_colors import generate_soft_color
+from ..utils.generate_random import generate_soft_color
 from ..utils.jitterrotation.jitterrotator import JitterRotator
 from ..utils.validation import check_random_state
 from .Q_blocks import QGrid, QNode, QPoint

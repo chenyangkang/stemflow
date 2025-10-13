@@ -13,6 +13,7 @@ import numpy as np
 import pandas
 import pandas as pd
 from tqdm import tqdm
+import string
 
 from ..gridding.QTree import QTree
 from ..gridding.QuadGrid import QuadGrid
@@ -21,7 +22,8 @@ from .validation import (
     check_transform_spatio_bin_jitter_magnitude,
     check_transform_temporal_bin_start_jitter,
 )
-
+from ..lazyloading.open_db_connection import open_db_connection
+from .generate_random import generate_random_saving_code
 # from tqdm.contrib.concurrent import process_map
 
 
@@ -83,7 +85,8 @@ def generate_temporal_bins(
 
 def get_one_ensemble_quadtree(
     ensemble_count,
-    data: pandas.core.frame.DataFrame,
+    data: Union[pd.DataFrame, str],
+    duckdb_config: dict,
     Spatio1: str = "longitude",
     Spatio2: str = "latitude",
     Temporal1: str = "DOY",
@@ -113,7 +116,7 @@ def get_one_ensemble_quadtree(
         ensemble_count:
             The index of ensemble
         data:
-            Input pandas-like dataframe
+            Training variables. Can be either a pd.DataFrame object or a string that indicate the path to the database (.duckdb or .parquet).
         Spatio1:
             Spatial column name 1 in data
         Spatio2:
@@ -168,6 +171,9 @@ def get_one_ensemble_quadtree(
 
     """
     rng = check_random_state(rng)
+    if isinstance(data, pd.DataFrame):
+        if len(set(data.columns) - set([Temporal1, Spatio1, Spatio2])) > 0:
+            raise AttributeError('Information redundant. To reduce memory use, only pass in columns Temporal1, Spatio1, Spatio2.')
 
     if completely_random_rotation:
         rotation_angle = rng.uniform(0, 90)
@@ -186,105 +192,124 @@ def get_one_ensemble_quadtree(
         rng=rng,
     )
     
-    # ensemble_bootstrap
-    if ensemble_bootstrap:
-        bootstrap_random_state = rng.integers(1e9)
-        rng = np.random.default_rng(bootstrap_random_state)  # NumPy's random generator
-        bootstrap_indices = rng.choice(data.index, size=len(data), replace=True)  # Full bootstrap sample
-    else:
-        bootstrap_indices = None # Place holder
+    duckdb_config['temp_directory'] = os.path.join(duckdb_config['temp_directory'], generate_random_saving_code())
 
-    ensemble_all_df_list = []
-
-    for time_block_index, bin_ in enumerate(temporal_bins):
-        time_start = bin_[0]
-        time_end = bin_[1]
-        
-        if ensemble_bootstrap:
-            valid_index_sub_data = data.index[(data[Temporal1] >= time_start) & (data[Temporal1] < time_end)]
-            sub_data_index = bootstrap_indices[np.isin(bootstrap_indices, valid_index_sub_data)]
-            sub_data = data.loc[sub_data_index] # So that we don't need to make a whole copy of the data
+    with open_db_connection(data, duckdb_config) as (data_df, con):
+        con.register("data_df", data_df)
+        if isinstance(data_df, pd.DataFrame):
+            indexes = np.array(data_df.index)
         else:
-            sub_data = data[(data[Temporal1] >= time_start) & (data[Temporal1] < time_end)]
-
-        if len(sub_data) == 0:
-            continue
-
-        if grid_len is None:
-            QT_obj = QTree(
-                grid_len_lon_upper_threshold=grid_len_lon_upper_threshold,
-                grid_len_lon_lower_threshold=grid_len_lon_lower_threshold,
-                grid_len_lat_upper_threshold=grid_len_lat_upper_threshold,
-                grid_len_lat_lower_threshold=grid_len_lat_lower_threshold,
-                points_lower_threshold=points_lower_threshold,
-                lon_lat_equal_grid=True,
-                rotation_angle=rotation_angle,
-                calibration_point_x_jitter=calibration_point_x_jitter,
-                calibration_point_y_jitter=calibration_point_y_jitter,
-                plot_empty=plot_empty,
-            )
-        elif isinstance(grid_len, float) or isinstance(grid_len, int):
-            QT_obj = QuadGrid(
-                grid_len=grid_len,
-                points_lower_threshold=points_lower_threshold,
-                lon_lat_equal_grid=True,
-                rotation_angle=rotation_angle,
-                calibration_point_x_jitter=calibration_point_x_jitter,
-                calibration_point_y_jitter=calibration_point_y_jitter,
-                plot_empty=plot_empty,
-            )
-        else:
-            raise TypeError("grid_len passed is not int or float.")
-
-        # Give the data and indexes. The indexes should be used to assign points data so that base model can run on those points,
-        # You need to generate the splitting parameters once giving the data. Like the calibration point and min,max.
-
-        QT_obj.add_lon_lat_data(sub_data.index, sub_data[Spatio1].values, sub_data[Spatio2].values)
-        QT_obj.generate_gridding_params()
-
-        # Call subdivide to precess
-        QT_obj.subdivide()
-        this_slice = QT_obj.get_final_result()
-
-        if save_gridding_plot:
-            if time_block_index == int(len(temporal_bins) / 2):
-                QT_obj.graph(scatter=False, ax=ax)
-
-        this_slice["ensemble_index"] = ensemble_count
-        this_slice[f"{Temporal1}_start"] = time_start
-        this_slice[f"{Temporal1}_end"] = time_end
-        this_slice[f"{Temporal1}_start"] = round(this_slice[f"{Temporal1}_start"], 1)
-        this_slice[f"{Temporal1}_end"] = round(this_slice[f"{Temporal1}_end"], 1)
-        this_slice["unique_stixel_id"] = [
-            str(i) + "_" + str(time_block_index) + "_" + str(k)
-            for i, k in zip(this_slice["ensemble_index"].values, this_slice["stixel_indexes"].values)
-        ]
+            indexes = con.sql(f"SELECT __index_level_0__ FROM data_df;").df().values.flatten()
+        total_length = con.sql("SELECT COUNT(*) FROM data_df;").fetchone()[0]
         
+        # ensemble_bootstrap
         if ensemble_bootstrap:
-            this_slice['bootstrap_random_state'] = bootstrap_random_state
+            bootstrap_random_state = rng.integers(1e9)
+            rng = np.random.default_rng(bootstrap_random_state)  # NumPy's random generator
+            bootstrap_indices = rng.choice(indexes, size=total_length, replace=True)  # Full bootstrap sample
+        else:
+            bootstrap_indices = None # Place holder
 
-        # Post process
-        this_slice.loc[:, "stixel_calibration_point_transformed_left_bound"] = [
-            i[0] for i in this_slice["stixel_calibration_point(transformed)"]
-        ]
-        this_slice.loc[:, "stixel_calibration_point_transformed_lower_bound"] = [
-            i[1] for i in this_slice["stixel_calibration_point(transformed)"]
-        ]
-        this_slice.loc[:, "stixel_calibration_point_transformed_right_bound"] = (
-            this_slice["stixel_calibration_point_transformed_left_bound"] + this_slice["stixel_width"]
-        )
-        this_slice.loc[:, "stixel_calibration_point_transformed_upper_bound"] = (
-            this_slice["stixel_calibration_point_transformed_lower_bound"] + this_slice["stixel_height"]
-        )
-        this_slice["calibration_point_x_jitter"] = [
-            i[0] for i in this_slice["space_jitter(first rotate by zero then add this)"].values
-        ]
-        this_slice["calibration_point_y_jitter"] = [
-            i[1] for i in this_slice["space_jitter(first rotate by zero then add this)"].values
-        ]
-        del this_slice["space_jitter(first rotate by zero then add this)"]
+        ensemble_all_df_list = []
 
-        ensemble_all_df_list.append(this_slice)
+        for time_block_index, bin_ in enumerate(temporal_bins):
+            time_start = bin_[0]
+            time_end = bin_[1]
+            
+            if isinstance(data_df, pd.DataFrame):
+                sub_data_index = data.index[(data[Temporal1]>=time_start) & (data[Temporal1]<time_end)]
+                sub_data_index = bootstrap_indices[np.isin(bootstrap_indices, sub_data_index)] if ensemble_bootstrap else sub_data_index
+                sub_data = data.loc[sub_data_index]
+            else:
+                sub_data_index = con.sql(f"SELECT __index_level_0__ FROM data_df WHERE {Temporal1} >= {time_start} AND {Temporal1} < {time_end};").df().values.flatten()
+                sub_data_index = bootstrap_indices[np.isin(bootstrap_indices, sub_data_index)] if ensemble_bootstrap else sub_data_index
+                sub_data_index = pd.DataFrame(sub_data_index, columns=['__index_level_0__'])
+                con.register("sub_data_index", sub_data_index)
+                sub_data = con.sql(f"""
+                                SELECT data_df.{Temporal1}, data_df.{Spatio1}, data_df.{Spatio2}, data_df.__index_level_0__ FROM data_df
+                                JOIN sub_data_index
+                                ON data_df.__index_level_0__ = sub_data_index.__index_level_0__
+                                """).df().set_index('__index_level_0__')
+            
+            if len(sub_data) == 0:
+                continue
 
-    this_ensemble_df = pd.concat(ensemble_all_df_list).reset_index(drop=True)
+            if grid_len is None:
+                QT_obj = QTree(
+                    grid_len_lon_upper_threshold=grid_len_lon_upper_threshold,
+                    grid_len_lon_lower_threshold=grid_len_lon_lower_threshold,
+                    grid_len_lat_upper_threshold=grid_len_lat_upper_threshold,
+                    grid_len_lat_lower_threshold=grid_len_lat_lower_threshold,
+                    points_lower_threshold=points_lower_threshold,
+                    lon_lat_equal_grid=True,
+                    rotation_angle=rotation_angle,
+                    calibration_point_x_jitter=calibration_point_x_jitter,
+                    calibration_point_y_jitter=calibration_point_y_jitter,
+                    plot_empty=plot_empty,
+                )
+            elif isinstance(grid_len, float) or isinstance(grid_len, int):
+                QT_obj = QuadGrid(
+                    grid_len=grid_len,
+                    points_lower_threshold=points_lower_threshold,
+                    lon_lat_equal_grid=True,
+                    rotation_angle=rotation_angle,
+                    calibration_point_x_jitter=calibration_point_x_jitter,
+                    calibration_point_y_jitter=calibration_point_y_jitter,
+                    plot_empty=plot_empty,
+                )
+            else:
+                raise TypeError("grid_len passed is not int or float.")
+
+            # Give the data and indexes. The indexes should be used to assign points data so that base model can run on those points,
+            # You need to generate the splitting parameters once giving the data. Like the calibration point and min,max.
+
+            QT_obj.add_lon_lat_data(sub_data.index, sub_data[Spatio1].values, sub_data[Spatio2].values)
+            QT_obj.generate_gridding_params()
+
+            # Call subdivide to precess
+            QT_obj.subdivide()
+            this_slice = QT_obj.get_final_result()
+
+            if save_gridding_plot:
+                if time_block_index == int(len(temporal_bins) / 2):
+                    QT_obj.graph(scatter=False, ax=ax)
+
+            this_slice["ensemble_index"] = ensemble_count
+            this_slice[f"{Temporal1}_start"] = time_start
+            this_slice[f"{Temporal1}_end"] = time_end
+            this_slice[f"{Temporal1}_start"] = round(this_slice[f"{Temporal1}_start"], 1)
+            this_slice[f"{Temporal1}_end"] = round(this_slice[f"{Temporal1}_end"], 1)
+            this_slice["unique_stixel_id"] = [
+                str(i) + "_" + str(time_block_index) + "_" + str(k)
+                for i, k in zip(this_slice["ensemble_index"].values, this_slice["stixel_indexes"].values)
+            ]
+            
+            if ensemble_bootstrap:
+                this_slice['bootstrap_random_state'] = bootstrap_random_state
+
+            # Post process
+            this_slice.loc[:, "stixel_calibration_point_transformed_left_bound"] = [
+                i[0] for i in this_slice["stixel_calibration_point(transformed)"]
+            ]
+            this_slice.loc[:, "stixel_calibration_point_transformed_lower_bound"] = [
+                i[1] for i in this_slice["stixel_calibration_point(transformed)"]
+            ]
+            this_slice.loc[:, "stixel_calibration_point_transformed_right_bound"] = (
+                this_slice["stixel_calibration_point_transformed_left_bound"] + this_slice["stixel_width"]
+            )
+            this_slice.loc[:, "stixel_calibration_point_transformed_upper_bound"] = (
+                this_slice["stixel_calibration_point_transformed_lower_bound"] + this_slice["stixel_height"]
+            )
+            this_slice["calibration_point_x_jitter"] = [
+                i[0] for i in this_slice["space_jitter(first rotate by zero then add this)"].values
+            ]
+            this_slice["calibration_point_y_jitter"] = [
+                i[1] for i in this_slice["space_jitter(first rotate by zero then add this)"].values
+            ]
+            del this_slice["space_jitter(first rotate by zero then add this)"]
+
+            ensemble_all_df_list.append(this_slice)
+
+        this_ensemble_df = pd.concat(ensemble_all_df_list).reset_index(drop=True)
+            
     return this_ensemble_df

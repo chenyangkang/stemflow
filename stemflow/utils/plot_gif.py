@@ -123,7 +123,6 @@ def make_sample_gif(
             else np.max(data[col].values)
         )
         
-    print(vmin, vmax)
     norm = Normalize(vmin=vmin, vmax=vmax)
 
     # Prepare colormap
@@ -161,7 +160,7 @@ def make_sample_gif(
             print(f"Processing frame {i+1}/{frames}", end="\r")
 
         ax.clear()
-        sub = data[data["Temporal_indexer"] == i]
+        sub = data[data["Temporal_indexer"] == i].copy()
         if sub.empty:
             return []
 
