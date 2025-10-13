@@ -44,6 +44,7 @@ def make_STEMClassifier(fold_=2, min_req=1, **kwargs):
         spatio_bin_jitter_magnitude="adaptive",
         use_temporal_to_train=True,
         n_jobs=1,
+        random_state=42,
         **kwargs
     )
 
@@ -71,6 +72,7 @@ def make_parallel_STEMClassifier(
         spatio_bin_jitter_magnitude="adaptive",
         use_temporal_to_train=True,
         n_jobs=2,
+        random_state=42,
         **kwargs
     )
 
@@ -98,7 +100,8 @@ def make_STEMRegressor(fold_=2, min_req=1, **kwargs):
         temporal_bin_start_jitter="adaptive",
         spatio_bin_jitter_magnitude="adaptive",
         use_temporal_to_train=True,
-        n_jobs=1, 
+        n_jobs=1,
+        random_state=42,
         **kwargs
     )
 
@@ -124,7 +127,8 @@ def make_AdaSTEMClassifier(fold_=2, min_req=1, **kwargs):
         temporal_bin_start_jitter="adaptive",
         spatio_bin_jitter_magnitude="adaptive",
         use_temporal_to_train=True,
-        n_jobs=1, 
+        n_jobs=1,
+        random_state=42,
         **kwargs
     )
     return model
@@ -148,7 +152,8 @@ def make_parallel_AdaSTEMClassifier(fold_=2, min_req=1, **kwargs):
         temporal_bin_start_jitter="adaptive",
         spatio_bin_jitter_magnitude="adaptive",
         use_temporal_to_train=True,
-        n_jobs=2, 
+        n_jobs=2,
+        random_state=42,
         **kwargs
     )
     return model
@@ -177,6 +182,7 @@ def make_AdaSTEMRegressor(fold_=2, min_req=1, **kwargs):
         spatio_bin_jitter_magnitude="adaptive",
         use_temporal_to_train=True,
         n_jobs=1,
+        random_state=42,
         **kwargs
     )
     return model
@@ -207,6 +213,7 @@ def make_SphereAdaSTEMRegressor(
         spatio_bin_jitter_magnitude="adaptive",
         use_temporal_to_train=True,
         n_jobs=1,
+        random_state=42,
         **kwargs
     )
     return model
@@ -232,6 +239,7 @@ def make_SphereAdaClassifier(fold_=2, min_req=1, **kwargs):
         spatio_bin_jitter_magnitude="adaptive",
         use_temporal_to_train=True,
         n_jobs=1,
+        random_state=42,
         **kwargs
     )
     return model
@@ -259,6 +267,7 @@ def make_parallel_SphereAdaClassifier(
         spatio_bin_jitter_magnitude="adaptive",
         use_temporal_to_train=True,
         n_jobs=2,
+        random_state=42,
         **kwargs
     )
     return model
@@ -284,6 +293,7 @@ def make_AdaSTEMRegressor_Hurdle_for_AdaSTEM(fold_=2, min_req=1, **kwargs):
         spatio_bin_jitter_magnitude="adaptive",
         use_temporal_to_train=True,
         n_jobs=1,
+        random_state=42,
         **kwargs
     )
     
@@ -306,6 +316,7 @@ def make_AdaSTEMRegressor_Hurdle_for_AdaSTEM(fold_=2, min_req=1, **kwargs):
         spatio_bin_jitter_magnitude="adaptive",
         use_temporal_to_train=True,
         n_jobs=1,
+        random_state=42,
         **kwargs
     )
     
@@ -336,6 +347,7 @@ def make_STEMClassifier_caliP(fold_=2, min_req=1, **kwargs):
         use_temporal_to_train=True,
         n_jobs=1,
         min_class_sample=3,
+        random_state=42,
         **kwargs
     )
 
@@ -362,6 +374,7 @@ def make_SphereAdaClassifier_caliP(fold_=2, min_req=1, **kwargs):
         use_temporal_to_train=True,
         n_jobs=1,
         min_class_sample=3,
+        random_state=42,
         **kwargs
     )
     return model
@@ -387,6 +400,7 @@ def make_AdaSTEMClassifier_caliP(fold_=2, min_req=1, **kwargs):
         use_temporal_to_train=True,
         n_jobs=1, 
         min_class_sample=3,
+        random_state=42,
         **kwargs
     )
     return model
@@ -414,6 +428,7 @@ def make_AdaSTEMClassifier_custom_pred_method(base_model_class, fold_=2, min_req
         use_temporal_to_train=True,
         n_jobs=1,
         sample_weights_for_classifier=False,
+        random_state=42,
         **kwargs
     )
     return model

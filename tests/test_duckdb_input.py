@@ -257,3 +257,19 @@ def test_parallel_AdaSTEMClassifier_duckdb_input():
         assert importances_by_points.shape[0] > 0
         assert importances_by_points.shape[1] == len(x_names) + 3
 
+
+def test_parallel_duckdb_temporal_window_prequery_works():
+    with make_tmp_duckdb_files() as (target_X_train_path, target_y_train_regressor_path, target_y_train_classifier_path, target_X_test_path, target_y_test_regressor_path, target_y_test_classifier_path):
+        model = make_parallel_AdaSTEMClassifier()
+        model = model.fit(target_X_train_path, target_y_train_classifier_path)
+        pred1 = model.predict(target_X_test_path)
+        
+        model = model.fit(target_X_train_path, target_y_train_classifier_path, overwrite=True)
+        pred2 = model.predict(target_X_test_path)
+        assert np.allclose(pred1.flatten(), pred2.flatten(), equal_nan=True)
+        
+        model = model.fit(target_X_train_path, target_y_train_classifier_path, overwrite=True, temporal_window_prequery=True)
+        pred3 = model.predict(target_X_test_path)
+        assert np.allclose(pred1.flatten(), pred3.flatten(), equal_nan=True)
+        
+
