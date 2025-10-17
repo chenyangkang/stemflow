@@ -47,7 +47,7 @@ from tqdm.auto import tqdm as tqdm_auto
 from ..utils.quadtree import get_one_ensemble_quadtree
 from ..utils.validation import (
     check_base_model,
-    check_prediciton_aggregation,
+    check_prediction_aggregation,
     check_prediction_return,
     check_random_state,
     check_spatial_scale,
@@ -500,12 +500,12 @@ class AdaSTEM(BaseEstimator):
             raise AttributeError('__index_level_0__ should not apprear in the final training data!')
 
         unique_stixel_id = stixel["unique_stixel_id"].iloc[0]
-        name = unique_stixel_id
+        ensemble_index = unique_stixel_id.split('_')[0]
 
         if self.lazy_loading:
             base_model = LazyLoadingEstimator(estimator=self.base_model, 
-                                               dump_dir=os.path.join(self.lazy_loading_dir, 'models', 'ensemble_' + name.split('_')[1]), 
-                                               filename=f"model_{name}.pkl", 
+                                               dump_dir=os.path.join(self.lazy_loading_dir, 'models', 'ensemble_' + ensemble_index), 
+                                               filename=f"model_{unique_stixel_id}.pkl", 
                                                auto_dump=True, auto_load=True, keep_loaded=False)
         else:
             base_model = self.base_model
@@ -525,7 +525,8 @@ class AdaSTEM(BaseEstimator):
             # print(f'Fitting: {ensemble_index}. Not pass: {status}')
             pass
         else:
-            return (name, model, stixel_specific_x_names)
+            return [unique_stixel_id, model, stixel_specific_x_names]
+
 
     def SAC_ensemble_training(self, single_ensemble_df: pd.DataFrame, X_train: Union[pd.DataFrame, str], y_train: Union[pd.DataFrame, str],
                               temporal_window_prequery: bool = False):
@@ -574,9 +575,9 @@ class AdaSTEM(BaseEstimator):
                         ])
                     # Apply bootstrap
                     temporal_window_indexes = bootstrap_indices[np.isin(bootstrap_indices, temporal_window_indexes)] if self.ensemble_bootstrap else temporal_window_indexes
+                    window_X_df_indexes_only = X_train_df.loc[temporal_window_indexes][[self.Temporal1, self.Spatio1, self.Spatio2]]
                     window_X_df = X_train_df.loc[temporal_window_indexes] if temporal_window_prequery else X_train_df
                     window_y_df = y_train_df.loc[temporal_window_indexes] if temporal_window_prequery else y_train_df
-                    window_X_df_indexes_only = X_train_df.loc[temporal_window_indexes][[self.Temporal1, self.Spatio1, self.Spatio2]]
                 else:
                     temporal_window_indexes = con.sql(f"SELECT __index_level_0__ FROM X_train_df WHERE {self.Temporal1} >= {start} AND {self.Temporal1} < {start + self.temporal_bin_interval};").df().values.flatten()
                     # Apply bootstrap
@@ -648,11 +649,13 @@ class AdaSTEM(BaseEstimator):
                     return X_y
                 
                 def find_belonged_points_and_fit(df, st_indexes_df, X_df, y_df):
+                    ensemble_index_ = df['ensemble_index'].iloc[0]
                     X_y = find_belonged_points(df, st_indexes_df, X_df, y_df)
                     X_y['ensemble_index'] = df['ensemble_index'].iloc[0]
                     X_y['unique_stixel_id'] = df['unique_stixel_id'].iloc[0]
                     X_y = X_y.sort_index() # To ensure the input dataframes for the two method (temporal_window_prequery or not) are the same so the tained base models are identical, at least with the same input data
-                    return self.stixel_fitting(X_y)
+                    fitted_res = self.stixel_fitting(X_y)
+                    return fitted_res
 
                 # train
                 res = (
@@ -813,7 +816,6 @@ class AdaSTEM(BaseEstimator):
         if '__index_level_0__' in stixel.columns:
             raise AttributeError('__index_level_0__ should not apprear in the final training data!')
 
-        stixel['unique_stixel_id'] = stixel.name
         unique_stixel_id = stixel["unique_stixel_id"].iloc[0]
 
         model_x_names_tuple = get_model_and_stixel_specific_x_names(
@@ -838,7 +840,7 @@ class AdaSTEM(BaseEstimator):
             return pred
 
     def SAC_ensemble_predict(
-        self, single_ensemble_df: pd.DataFrame, data: Union[pd.DataFrame, str]
+        self, single_ensemble_df: pd.DataFrame, data: Union[pd.DataFrame, str], temporal_window_prequery: bool = False
         ) -> pd.DataFrame:
         """A sub-module of SAC prediction function.
         Predict only one ensemble.
@@ -846,6 +848,7 @@ class AdaSTEM(BaseEstimator):
         Args:
             single_ensemble_df (pd.DataFrame): ensemble data (model.ensemble_df)
             data (pd.DataFrame, str): input covariates to predict
+            temporal_window_prequery (bool): Whether to prequery the temporal windows as pd.DataFrame object to speed-up the stixel query. If set to True, query speed will be faster but with a moderate memory usage increase.
         Returns:
             pd.DataFrame: Prediction result of one ensemble.
         """
@@ -868,10 +871,17 @@ class AdaSTEM(BaseEstimator):
                         (data_df[self.Temporal1] < start + self.temporal_bin_interval)
                         ])
                     window_X_df_indexes_only = data_df.loc[temporal_window_indexes][[self.Temporal1, self.Spatio1, self.Spatio2]]
+                    window_X_df = data_df.loc[temporal_window_indexes] if temporal_window_prequery else data_df
                 else:
                     temporal_window_indexes = con.sql(f"SELECT __index_level_0__ FROM data_df WHERE {self.Temporal1} >= {start} AND {self.Temporal1} < {start + self.temporal_bin_interval};").df().values.flatten()
                     temporal_window_indexes_df = pd.DataFrame(temporal_window_indexes, columns=['__index_level_0__'])
                     con.register("temporal_window_indexes_df", temporal_window_indexes_df)
+                    window_X_df = con.sql(f"""
+                                            SELECT temporal_window_indexes_df.__index_level_0__, data_df.* EXCLUDE(__index_level_0__)
+                                            FROM data_df
+                                            JOIN temporal_window_indexes_df
+                                            ON data_df.__index_level_0__ = temporal_window_indexes_df.__index_level_0__;
+                                            """).df().set_index('__index_level_0__') if temporal_window_prequery else data_df
                     window_X_df_indexes_only = con.sql(f"""
                                                        SELECT data_df.{self.Temporal1}, data_df.{self.Spatio1}, data_df.{self.Spatio2}, data_df.__index_level_0__ 
                                                        FROM data_df
@@ -909,7 +919,14 @@ class AdaSTEM(BaseEstimator):
                     
                     return X
 
-                query_results = (
+                def find_belonged_points_and_predict(df, st_indexes_df, X_df):
+                    X = find_belonged_points(df, st_indexes_df, X_df)
+                    X['ensemble_index'] = df['ensemble_index'].iloc[0]
+                    X['unique_stixel_id'] = df['unique_stixel_id'].iloc[0]
+                    # X = X.sort_index() # To ensure the input dataframes for the two method (temporal_window_prequery or not) are the same so the tained base models are identical, at least with the same input data
+                    return self.stixel_predict(X)
+                
+                res = (
                     window_single_ensemble_df[
                         [
                             "ensemble_index",
@@ -920,27 +937,13 @@ class AdaSTEM(BaseEstimator):
                             "stixel_calibration_point_transformed_upper_bound",
                         ]
                     ]
-                    .groupby(["ensemble_index", "unique_stixel_id"], as_index=True)
+                    .groupby(["ensemble_index", "unique_stixel_id"], as_index=False)
                     .pipe(lambda x: x[x.obj.columns]) # Explicitly select all the columns in the original df to include. To overcome the include_groups=True deprecation warning
-                    .apply(find_belonged_points, st_indexes_df=window_X_df_indexes_only, X_df=data_df, include_groups=False) # although ["ensemble_index", "unique_stixel_id"] will be passed into `find_belonged_points` due to `.pipe(lambda x: x[x.obj.columns])`, the output will not have them so we still set `as_index=True` in `groupby`
-                    .reset_index(level=["ensemble_index", "unique_stixel_id"]) # Turn these indexes into columns and keep the original df indexing
-                )
-            
-                if len(query_results) == 0:
-                    """All points fall out of the grids"""
-                    continue
-                
-                # predict            
-                window_prediction = (
-                    query_results
-                    .dropna(subset="unique_stixel_id")
-                    .groupby("unique_stixel_id", as_index=False)
-                    .pipe(lambda x: x[x.obj.columns]) # Explicitly select all the columns in the original df to include. To overcome the include_groups=True deprecation warning
-                    .apply(lambda stixel: self.stixel_predict(stixel), include_groups=False) #
+                    .apply(find_belonged_points_and_predict, st_indexes_df=window_X_df_indexes_only, X_df=window_X_df, include_groups=False) # although ["ensemble_index", "unique_stixel_id"] will be passed into `find_belonged_points` due to `.pipe(lambda x: x[x.obj.columns])`, the output will not have them so we still set `as_index=True` in `groupby`
                     .droplevel(0) # If using as_index=False duing groupby, pandas will automatically generate a group indexing column, so drop the indexing of the new groups
                 )
-
-                window_prediction_list.append(window_prediction)
+            
+                window_prediction_list.append(res)
 
             if any([i is not None for i in window_prediction_list]):
                 ensemble_prediction = pd.concat(window_prediction_list, axis=0)
@@ -953,7 +956,8 @@ class AdaSTEM(BaseEstimator):
         return ensemble_prediction
 
     def SAC_predict(
-        self, ensemble_df: pd.DataFrame, data: Union[pd.DataFrame, str], verbosity: int = 0, n_jobs: int = 1
+        self, ensemble_df: pd.DataFrame, data: Union[pd.DataFrame, str], verbosity: int = 0, n_jobs: int = 1, temporal_window_prequery: bool = False
+        
     ) -> pd.DataFrame:
         """This function is a prediction function with SAC strategy:
         Split (S), Apply(A), Combine (C). At ensemble level.
@@ -964,6 +968,7 @@ class AdaSTEM(BaseEstimator):
             data (pd.DataFrame, str): data
             verbosity (int, optional): Defaults to 0.
             n_jobs (int): number of processors for parallel computing
+            temporal_window_prequery (bool): Whether to prequery the temporal windows as pd.DataFrame object to speed-up the stixel query. If set to True, query speed will be faster but with a moderate memory usage increase.
 
         Returns:
             pd.DataFrame: prediction results.
@@ -974,10 +979,10 @@ class AdaSTEM(BaseEstimator):
 
         # Parallel maker
         if n_jobs == 1:
-            output_generator = (self.SAC_ensemble_predict(single_ensemble_df=ensemble[1], data=data) for ensemble in groups)
+            output_generator = (self.SAC_ensemble_predict(single_ensemble_df=ensemble[1], data=data, temporal_window_prequery=temporal_window_prequery) for ensemble in groups)
         else:
             def mp_predict(ensemble, self=self):
-                res = self.SAC_ensemble_predict(single_ensemble_df=ensemble[1], data=data)
+                res = self.SAC_ensemble_predict(single_ensemble_df=ensemble[1], data=data, temporal_window_prequery=temporal_window_prequery)
                 return res
 
             parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.joblib_tmp_dir)
@@ -1013,6 +1018,7 @@ class AdaSTEM(BaseEstimator):
         return_by_separate_ensembles: bool = False,
         logit_agg: bool = False,
         base_model_method: Union[None, str] = None,
+        temporal_window_prequery: bool = False,
         **base_model_prediction_param
     ) -> Union[np.ndarray, Tuple[np.ndarray]]:
         """Predict probability
@@ -1038,6 +1044,8 @@ class AdaSTEM(BaseEstimator):
                 Whether to use logit aggregation for the classification task. Most likely only used when you are predicting "real" calibrated probability. If True, the model is averaging the probability prediction estimated by all ensembles in logit scale, and then back-tranforms it to probability scale. It's recommended to be jointly used with the CalibratedClassifierCV class in sklearn as a wrapper of the classifier to estimate the calibrated probability. Default is False, but can be set to true for "real" probability averaging.
             base_model_method:
                 The name of the prediction method for base models. If None, `predict` or `predict_proba` will be used depending on the tasks. This argument is handy if you have a custom base model class that has a special prediction function. Notice that dummy model will still predict 0, so the ensemble-aggregated result is still an average of zeros and your special prediction function output. Therefore, it may only make sense if your special prediction function predicts 0 as the absense/control value. Defaults to None.
+            temporal_window_prequery:
+                Whether to prequery the temporal windows as pd.DataFrame object to speed-up the stixel query. If set to True, query speed will be faster but with a moderate memory usage increase.
             base_model_prediction_param:
                 Any other paramters to pass into the prediction method of the base models. e.g., base_model_prediction_param={'n_jobs':1} (set n_jobs=1 for the *base model*). 
         Raises:
@@ -1054,7 +1062,7 @@ class AdaSTEM(BaseEstimator):
 
         """
         check_X_test(X_test, self)
-        check_prediciton_aggregation(aggregation)
+        check_prediction_aggregation(aggregation)
         return_by_separate_ensembles, return_std = check_prediction_return(return_by_separate_ensembles, return_std)
         verbosity = check_verbosity(self, verbosity)
         n_jobs = check_transform_n_jobs(self, n_jobs)
@@ -1067,7 +1075,7 @@ class AdaSTEM(BaseEstimator):
         
         try:
             # predict
-            res = self.SAC_predict(self.ensemble_df, X_test, verbosity=verbosity, n_jobs=n_jobs)
+            res = self.SAC_predict(self.ensemble_df, X_test, verbosity=verbosity, n_jobs=n_jobs, temporal_window_prequery=temporal_window_prequery)
         except: # Remove the entire lazy_loading_dir since it includes failed models
             raise
         finally: # Remove the joblib_tmp_dir anyway
@@ -1159,6 +1167,7 @@ class AdaSTEM(BaseEstimator):
         return_by_separate_ensembles: bool = False,
         logit_agg: bool = False,
         base_model_method: Union[None, str] = None,
+        temporal_window_prequery: bool = False,
         **base_model_prediction_param
     ) -> Union[np.ndarray, Tuple[np.ndarray]]:
         pass
@@ -1381,7 +1390,7 @@ class AdaSTEM(BaseEstimator):
         #
         verbosity = check_verbosity(self, verbosity=verbosity)
         n_jobs = check_transform_n_jobs(self, n_jobs)
-        check_prediciton_aggregation(aggregation)
+        check_prediction_aggregation(aggregation)
 
         #
         if "feature_importances_" not in dir(self):
@@ -1619,6 +1628,7 @@ class AdaSTEMClassifier(AdaSTEM):
         return_by_separate_ensembles: bool = False,
         logit_agg: bool = False,
         base_model_method: Union[None, str] = None,
+        temporal_window_prequery: bool = False,
         **base_model_prediction_param
     ) -> Union[np.ndarray, Tuple[np.ndarray]]:
         """A rewrite of predict_proba adapted for Classifier
@@ -1646,6 +1656,8 @@ class AdaSTEMClassifier(AdaSTEM):
                 Whether to use logit aggregation for the classification task. If True, the model is averaging the probability prediction estimated by all ensembles in logit scale, and then back-tranform it to probability scale. It's recommened to be combinedly used with the CalibratedClassifierCV class in sklearn as a wrapper of the classifier to estimate the calibrated probability.
             base_model_method:
                 The name of the prediction method for base models. If None, `predict` or `predict_proba` will be used depending on the tasks. This argument is handy if you have a custom base model class that has a special prediction function. Defaults to None.
+            temporal_window_prequery: 
+                Whether to prequery the temporal windows as pd.DataFrame object to speed-up the stixel query. If set to True, query speed will be faster but with a moderate memory usage increase.
             base_model_prediction_param:
                 Any other paramters to pass into the prediction method of the base models. e.g., base_model_prediction_param={'n_jobs':1}.
         Raises:
@@ -1671,6 +1683,7 @@ class AdaSTEMClassifier(AdaSTEM):
                 return_by_separate_ensembles=return_by_separate_ensembles,
                 logit_agg=logit_agg,
                 base_model_method=base_model_method,
+                temporal_window_prequery=temporal_window_prequery,
                 **base_model_prediction_param
             )
             mean = mean[:,1].flatten()
@@ -1688,6 +1701,7 @@ class AdaSTEMClassifier(AdaSTEM):
                 return_by_separate_ensembles=return_by_separate_ensembles,
                 logit_agg=logit_agg,
                 base_model_method=base_model_method,
+                temporal_window_prequery=temporal_window_prequery,
                 **base_model_prediction_param
             )
             mean = mean[:,1].flatten()
@@ -1806,6 +1820,7 @@ class AdaSTEMRegressor(AdaSTEM):
         aggregation: str = "mean",
         return_by_separate_ensembles: bool = False,
         base_model_method: Union[None, str] = None,
+        temporal_window_prequery: bool = False,
         **base_model_prediction_param
     ) -> Union[np.ndarray, Tuple[np.ndarray]]:
         """A rewrite of predict_proba
@@ -1827,6 +1842,8 @@ class AdaSTEMRegressor(AdaSTEM):
                 Experimental function. return not by aggregation, but by separate ensembles.
             base_model_method:
                 The name of the prediction method for base models. If None, `predict` or `predict_proba` will be used depending on the tasks. This argument is handy if you have a custom base model class that has a special prediction function. Defaults to None.
+            temporal_window_prequery: 
+                Whether to prequery the temporal windows as pd.DataFrame object to speed-up the stixel query. If set to True, query speed will be faster but with a moderate memory usage increase.
             base_model_prediction_param:
                 Any other paramters to pass into the prediction method of the base models. e.g., base_model_prediction_param={'n_jobs':1}.
                 
@@ -1844,7 +1861,7 @@ class AdaSTEMRegressor(AdaSTEM):
 
         """
         
-        prediciton = self.predict_proba(
+        prediction = self.predict_proba(
             X_test,
             verbosity=verbosity,
             return_std=return_std,
@@ -1852,10 +1869,11 @@ class AdaSTEMRegressor(AdaSTEM):
             aggregation=aggregation,
             return_by_separate_ensembles=return_by_separate_ensembles,
             base_model_method = base_model_method,
+            temporal_window_prequery=temporal_window_prequery,
             **base_model_prediction_param
         )
         
         # if return_by_separate_ensembles, this will be the dataframe for ensemble
         # if return_std, this wil be a tuple of mean and std of prediction
         # if none of these, then it ill output the mean prediction
-        return prediciton
+        return prediction
