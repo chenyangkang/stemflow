@@ -41,7 +41,7 @@ class LazyLoadingEstimator(BaseEstimator, MetaEstimatorMixin):
         estimator: Optional[BaseEstimator],
         dump_dir: Optional[Path | str] = None,
         filename: Optional[str] = None,
-        compress: Any = 3,
+        compress: Any = 0,
         auto_load: bool = True,
         auto_dump: bool = False,
         keep_loaded: bool = False,
@@ -133,6 +133,7 @@ class LazyLoadingEstimator(BaseEstimator, MetaEstimatorMixin):
                 shutil.move(str(tmp_path), str(path))
                 # Free memory
                 self.estimator = None
+
             finally:
                 # Best-effort cleanup
                 try:
@@ -144,6 +145,7 @@ class LazyLoadingEstimator(BaseEstimator, MetaEstimatorMixin):
                 except Exception:
                     pass
             return path
+
 
     def load(self, path: Optional[Path | str] = None) -> "LazyLoadingEstimator":
         """
@@ -159,7 +161,7 @@ class LazyLoadingEstimator(BaseEstimator, MetaEstimatorMixin):
         cls,
         dump_dir: Path | str,
         filename: Optional[str] = None,
-        compress: Any = 3,
+        compress: Any = 0,
         **kwargs,
     ) -> "LazyLoadingEstimator":
         dump_dir = Path(dump_dir)
