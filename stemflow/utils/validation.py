@@ -377,7 +377,7 @@ def check_X_test(X_test, self):
     check_X_train(X_test, self)
 
 
-def check_prediciton_aggregation(aggregation):
+def check_prediction_aggregation(aggregation):
     if aggregation not in ["mean", "median"]:
         raise ValueError(f"aggregation must be one of 'mean' and 'median'. Got {aggregation}")
 
