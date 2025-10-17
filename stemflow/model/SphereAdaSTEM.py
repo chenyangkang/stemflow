@@ -437,7 +437,8 @@ class SphereAdaSTEM(AdaSTEM):
         return res_list
 
     def SAC_ensemble_predict(
-        self, single_ensemble_df: pd.DataFrame, data: Optional[pd.DataFrame] = None
+        self, single_ensemble_df: pd.DataFrame, data: Optional[pd.DataFrame] = None,
+        temporal_window_prequery: bool = False
     ) -> pd.DataFrame:
         """A sub-module of SAC prediction function.
         Predict only one ensemble.
