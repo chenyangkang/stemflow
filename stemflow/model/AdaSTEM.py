@@ -815,6 +815,9 @@ class AdaSTEM(BaseEstimator):
         """
         if '__index_level_0__' in stixel.columns:
             raise AttributeError('__index_level_0__ should not apprear in the final training data!')
+        
+        if len(stixel) == 0:
+            return None # No data to predict
 
         unique_stixel_id = stixel["unique_stixel_id"].iloc[0]
 
@@ -921,10 +924,13 @@ class AdaSTEM(BaseEstimator):
 
                 def find_belonged_points_and_predict(df, st_indexes_df, X_df):
                     X = find_belonged_points(df, st_indexes_df, X_df)
+                    if len(X)==0:
+                        return None
                     X['ensemble_index'] = df['ensemble_index'].iloc[0]
                     X['unique_stixel_id'] = df['unique_stixel_id'].iloc[0]
                     # X = X.sort_index() # To ensure the input dataframes for the two method (temporal_window_prequery or not) are the same so the tained base models are identical, at least with the same input data
-                    return self.stixel_predict(X)
+                    pred = self.stixel_predict(X)
+                    return pred
                 
                 res = (
                     window_single_ensemble_df[
