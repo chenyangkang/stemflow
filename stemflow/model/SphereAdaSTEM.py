@@ -21,7 +21,7 @@ from ..utils.sphere.discriminant_formula import intersect_triangle_plane
 from ..utils.sphere_quadtree import get_one_ensemble_sphere_quadtree
 from ..utils.validation import (
     check_base_model,
-    check_prediciton_aggregation,
+    check_prediction_aggregation,
     check_random_state,
     check_spatial_scale,
     check_spatio_bin_jitter_magnitude,
