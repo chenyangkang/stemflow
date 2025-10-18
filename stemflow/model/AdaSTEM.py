@@ -1494,7 +1494,7 @@ class AdaSTEM(BaseEstimator):
         if model.lazy_loading:
             for model_name in model.model_dict:
                 if isinstance(model.model_dict[model_name], LazyLoadingEstimator):
-                    model.model_dict[model_name].dump_dir = Path(os.path.join(new_lazy_loading_path, 'models', 'ensemble_' + model_name.split('_')[1]))
+                    model.model_dict[model_name].dump_dir = Path(os.path.join(new_lazy_loading_path, 'models', 'ensemble_' + model_name.split('_')[0]))
     
         if remove_original_file:
             os.remove(tar_gz_file)
