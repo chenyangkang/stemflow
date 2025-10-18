@@ -649,8 +649,9 @@ class AdaSTEM(BaseEstimator):
                     return X_y
                 
                 def find_belonged_points_and_fit(df, st_indexes_df, X_df, y_df):
-                    ensemble_index_ = df['ensemble_index'].iloc[0]
                     X_y = find_belonged_points(df, st_indexes_df, X_df, y_df)
+                    if len(X_y)==0:
+                        return None
                     X_y['ensemble_index'] = df['ensemble_index'].iloc[0]
                     X_y['unique_stixel_id'] = df['unique_stixel_id'].iloc[0]
                     X_y = X_y.sort_index() # To ensure the input dataframes for the two method (temporal_window_prequery or not) are the same so the tained base models are identical, at least with the same input data
@@ -946,8 +947,10 @@ class AdaSTEM(BaseEstimator):
                     .groupby(["ensemble_index", "unique_stixel_id"], as_index=False)
                     .pipe(lambda x: x[x.obj.columns]) # Explicitly select all the columns in the original df to include. To overcome the include_groups=True deprecation warning
                     .apply(find_belonged_points_and_predict, st_indexes_df=window_X_df_indexes_only, X_df=window_X_df, include_groups=False) # although ["ensemble_index", "unique_stixel_id"] will be passed into `find_belonged_points` due to `.pipe(lambda x: x[x.obj.columns])`, the output will not have them so we still set `as_index=True` in `groupby`
-                    .droplevel(0) # If using as_index=False duing groupby, pandas will automatically generate a group indexing column, so drop the indexing of the new groups
                 )
+
+                if len(res)>0:
+                    res = res.droplevel(0) # If using as_index=False duing groupby, pandas will automatically generate a group indexing column, so drop the indexing of the new groups
             
                 window_prediction_list.append(res)
 
