@@ -91,14 +91,16 @@ class LazyLoadingEstimator(BaseEstimator, MetaEstimatorMixin):
         # Try autoloading and then delegate
         if name.startswith("__"):  # avoid dunder recursion
             raise AttributeError(name)
-        with self._lock:
-            if self.estimator is None and self.auto_load:
-                self._load_inplace()
-            if self.estimator is not None and hasattr(self.estimator, name):
-                return getattr(self.estimator, name)
-        # Fallback to default behavior
-        raise AttributeError(f"{type(self).__name__} has no attribute '{name}'")
 
+        if self.estimator is None and not self.auto_load:
+            raise AttributeError(f"Trying to get a attribute of estimator, but the estimator can not be auto-loaded from the disk because auto_load=False.")
+
+        with self._loaded_estimator() as est:
+            if hasattr(est, name):
+                return getattr(est, name)
+            else:
+                raise AttributeError(f"{type(est).__name__} has no attribute '{name}'")
+        
     # ---------- Persistence helpers ----------
     def _resolve_path(self) -> Path:
         if self.dump_dir is None:
@@ -144,6 +146,7 @@ class LazyLoadingEstimator(BaseEstimator, MetaEstimatorMixin):
                     tmp_dir.rmdir()
                 except Exception:
                     pass
+            
             return path
 
 
