@@ -954,13 +954,13 @@ class AdaSTEM(BaseEstimator):
             
                 window_prediction_list.append(res)
 
-            if any([i is not None for i in window_prediction_list]):
-                ensemble_prediction = pd.concat(window_prediction_list, axis=0)
-                ensemble_prediction = ensemble_prediction.groupby("index").mean().reset_index(drop=False)
-            else:
-                ensmeble_index = list(window_single_ensemble_df["ensemble_index"])[0]
-                warnings.warn(f"No prediction for this ensemble: {ensmeble_index}")
-                ensemble_prediction = None
+        if any([i is not None for i in window_prediction_list]):
+            ensemble_prediction = pd.concat(window_prediction_list, axis=0)
+            ensemble_prediction = ensemble_prediction.groupby("index").mean().reset_index(drop=False)
+        else:
+            ensmeble_index = list(window_single_ensemble_df["ensemble_index"])[0]
+            warnings.warn(f"No prediction for this ensemble: {ensmeble_index}")
+            ensemble_prediction = None
 
         return ensemble_prediction
 
@@ -1501,25 +1501,35 @@ class AdaSTEM(BaseEstimator):
             
         return model
     
-    def save(self, tar_gz_file, remove_temporary_file = True):
-        if not os.path.exists(self.lazy_loading_dir):
-            os.makedirs(self.lazy_loading_dir, exist_ok=False)
+    def save(self, tar_gz_file, remove_temporary_file = True, verbosity=1, compresslevel=2):
+        os.makedirs(self.lazy_loading_dir, exist_ok=True)
 
-        # temporary save the model using pickle
-        model_path = os.path.join(self.lazy_loading_dir, f'model.pkl')
+        # dump the main object
+        model_path = os.path.join(self.lazy_loading_dir, 'model.pkl')
         with open(model_path, 'wb') as f:
             pickle.dump(self, f)
-                
-        # save the main model class and potentially lazyloading pieces to the tar.gz file
-        with tarfile.open(tar_gz_file, "w:gz") as tar:
-            for pieces in os.listdir(self.lazy_loading_dir):
-                tar.add(os.path.join(self.lazy_loading_dir, pieces), arcname=pieces)
 
-        if remove_temporary_file:
-            if self.lazy_loading_dir is not None:
-                if os.path.exists(self.lazy_loading_dir):
-                    shutil.rmtree(self.lazy_loading_dir)
+        # collect files recursively (deterministic order)
+        root = os.path.abspath(self.lazy_loading_dir)
+        files = []
+        for dp, dns, fns in os.walk(root):
+            dns.sort(); fns.sort()
+            for fn in fns:
+                files.append(os.path.join(dp, fn))
 
+        it = files
+        if verbosity > 0 and tqdm is not None:
+            it = tqdm(files, desc="Archiving", unit="file")
+
+        with tarfile.open(tar_gz_file, "w:gz", compresslevel=compresslevel) as tar:
+            for fp in it:
+                arcname = os.path.relpath(fp, root)
+                tar.add(fp, arcname=arcname, recursive=False)
+
+        if remove_temporary_file and os.path.exists(self.lazy_loading_dir):
+            shutil.rmtree(self.lazy_loading_dir)
+
+            
     @staticmethod
     def _cleanup(lazy_loading_dir):
         if lazy_loading_dir is not None:
