@@ -145,7 +145,7 @@ class AdaSTEM(BaseEstimator):
                 Overriden by grid_len_*_upper_threshold parameters. Defaults to 50.
             stixel_training_size_threshold:
                 Do not train the model if the available data records for this stixel is less than this threshold,
-                and directly set the value to np.nan. Defaults to 50.
+                and directly set the value to np.nan. Defaults to None, which will be set as the same value as `points_lower_threshold`.
             temporal_start:
                 start of the temporal sequence. Defaults to 1.
             temporal_end:
@@ -200,7 +200,7 @@ class AdaSTEM(BaseEstimator):
             joblib_backend:
                 The backend of joblib. Defaults to 'loky'. Other options include 'threading'. ('multiprocessing' not supported because it does not allow generator format).
             max_mem:
-                The maximum memory use during the training or prediction process. Should be format like '60GB', '512MB', '1.5GB'.
+                The maximum memory use during the training or prediction process. Should be format like '60GB', '512MB', '1.5GB'. This argument is only valid if your input training/prediction data is the path to duckdb files. But even if your input are duckdb files, this argument does not guarantee that the memory use for each joblib worker will be lower than that due to various intermediate objects. This argument should only be considered a relative constrain.
         Raises:
             AttributeError: Base model do not have method 'fit' or 'predict'
             AttributeError: task not in one of ['regression', 'classification', 'hurdle']
