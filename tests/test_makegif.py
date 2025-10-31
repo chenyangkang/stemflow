@@ -71,3 +71,34 @@ def test_make_gif_changing_ranges():
     )
 
     shutil.rmtree(tmp_dir)
+
+
+def test_make_gif_plot_political_boundary():
+
+    tmp_dir = "./stemflow_test_make_gif3"
+    if not os.path.exists(tmp_dir):
+        os.mkdir(tmp_dir)
+
+    make_sample_gif(
+        fake_data,
+        os.path.join(tmp_dir, "FTR_IPT_dat_changing_ranges.gif"),
+        col="dat",
+        log_scale=False,
+        Spatio1="x",
+        Spatio2="y",
+        Temporal1="DOY",
+        figsize=(18, 9),
+        xlims=None,
+        ylims=None,
+        grid=True,
+        xtick_interval=None,
+        ytick_interval=None,
+        lng_size=10,
+        lat_size=10,
+        dpi=100,
+        fps=10,
+        political_boundary='both'
+    )
+
+    shutil.rmtree(tmp_dir)
+
