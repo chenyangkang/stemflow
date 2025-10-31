@@ -1,4 +1,31 @@
 -------
+stemflow version 1.1.6
+-------
+**Oct, 2025**
+
+Fixed several issues. Fix prediction bug, lazyloading bug; update plotting function; update docs. #82. Also: A previous bug: after getting an attribute of a LazyLoadingEstimator object, the model was not auto-dumped. This is now fixed.
+
+
+-------
+stemflow version 1.1.5
+-------
+**Oct, 2025**
+
+This is a large update
+
+Features:
+1. The major changes are that the `AdaSTEM` class now supports `duckdb` and `parquet` file path as input, this allow the user to pass in large dataset without duplicating the pandas dataframe cross the processors when working with n_jobs>1 parallel computing. See the new Jupyter notebooks for details. #76 
+2. The lazy loading is no longer realized by the`LazyLoadingEnsemble` class. Instead, it is realized by `LazyLoadingEstimator`. This allow the model to be dumped once its training/prediction is finished, and we don't need to accumulate the models (hence, memory) until the training is finished for the whole ensemble. This will largely reduce the memory use. See the new Jupyter notebooks for details. #77 
+3. n_jobs > ensemble_folds are no longer supported for user-end clarity. Those jobs are paralleled by ensemble folds so n_jobs > ensemble_folds  is meaning less. We do not want to mislead users to think that a 10-ensemble model will be trained faster using n_jobs=20 compared to n_jobs=10.
+4. These features will not be available in `SphereAdaSTEM` due to the negligible user market and the negligible advantages. #75 
+
+Major bugs fixed:
+1. Previously the models are stored in `self.model_dict` dynamically during the parallel ensemble training process, which means the dictionary is being altered during this process. However, we ask for a `self` as input argument for the ensemble-level training function serialization. This is not ideal since the object being serialized should not be changing. This is fixed by assigning the `model_dict` to `self` after all trainings are finished.
+2. Also fixed #74
+
+
+
+-------
 stemflow version 1.1.3
 -------
 **May 14, 2025:**
