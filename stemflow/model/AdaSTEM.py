@@ -1070,6 +1070,11 @@ class AdaSTEM(BaseEstimator):
                 Return numpy.ndarray of shape (n_samples, n_ensembles)
 
         """
+        # Setup joblib_tmp_dir
+        self.joblib_tmp_dir = initiate_joblib_tmp_dir(self.lazy_loading_dir)
+        self.duckdb_config = duckdb_config(self.max_mem, self.joblib_tmp_dir)
+        
+        #
         check_X_test(X_test, self)
         check_prediction_aggregation(aggregation)
         return_by_separate_ensembles, return_std = check_prediction_return(return_by_separate_ensembles, return_std)
@@ -1077,10 +1082,6 @@ class AdaSTEM(BaseEstimator):
         n_jobs = check_transform_n_jobs(self, n_jobs)
         self.base_model_method = base_model_method
         self.base_model_prediction_param = base_model_prediction_param
-
-        # Setup joblib_tmp_dir
-        self.joblib_tmp_dir = initiate_joblib_tmp_dir(self.lazy_loading_dir)
-        self.duckdb_config = duckdb_config(self.max_mem, self.joblib_tmp_dir)
         
         try:
             # predict
