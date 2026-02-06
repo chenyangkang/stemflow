@@ -743,7 +743,8 @@ class AdaSTEM(BaseEstimator):
         ax=None,
         n_jobs: Union[None, int] = None,
         overwrite = False,
-        temporal_window_prequery: bool = False
+        temporal_window_prequery: bool = False,
+        ensemble_df = None
     ):
         """Fitting method
 
@@ -756,7 +757,7 @@ class AdaSTEM(BaseEstimator):
             n_jobs: multiprocessing thread count. Default the n_jobs of model object.
             overwrite: overwrite files in lazy_loading_dir. If set to False and any file exists in lazy_loading_dir, an error will be raise.
             temporal_window_prequery: Whether to prequery the temporal windows as pd.DataFrame object to speed-up the stixel query. If set to True, query speed will be faster but with a moderate memory usage increase.
-
+            ensemble_df: Instead of runing model.split within the `fit` function, you can pass in a customized ensemble_df to skip the whole splitting process.
         Raises:
             TypeError: X_train is not a type of pd.DataFrame
             TypeError: y_train is not a type of np.ndarray or pd.DataFrame
@@ -783,8 +784,9 @@ class AdaSTEM(BaseEstimator):
             n_jobs = check_transform_n_jobs(self, n_jobs)
             self.store_x_names(X_train)
             
-            # Quadtree            
-            self.split(X_train, verbosity=verbosity, ax=ax, n_jobs=n_jobs)
+            if ensemble_df is None:
+                # Quadtree            
+                self.split(X_train, verbosity=verbosity, ax=ax, n_jobs=n_jobs)
             
             # stixel specific x_names list
             for rm_target in ['model_dict', 'stixel_specific_x_names']:
