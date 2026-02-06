@@ -34,6 +34,7 @@ def train_one_stixel(
     subset_x_names: bool,
     stixel_X_train: pd.DataFrame,
     min_class_sample: int,
+    stixel_filter_func: None
 ) -> Tuple[Union[None, BaseEstimator], list]:
     """Train one stixel
 
@@ -46,10 +47,12 @@ def train_one_stixel(
         subset_x_names (bool): Whether to only store variables with std > 0 for each stixel.
         sub_X_train (pd.DataFrame): Input training dataframe for THE stixel.
         min_class_sample (int): Minimum umber of samples needed to train the classifier in each stixel. If the sample does not satisfy, fit a dummy one.
-
+        stixel_filter_func: filtering function applied on data.
     Returns:
         tuple[Union[None, BaseEstimator], list]: trained_model, stixel_specific_x_names
     """
+    if stixel_X_train is not None:
+        stixel_X_train = stixel_filter_func(stixel_X_train) # apply function
 
     if len(stixel_X_train) < stixel_training_size_threshold:  # threshold
         return (None, [], "Not_Enough_Data")
