@@ -51,7 +51,7 @@ def train_one_stixel(
     Returns:
         tuple[Union[None, BaseEstimator], list]: trained_model, stixel_specific_x_names
     """
-    if stixel_X_train is not None:
+    if stixel_filter_func is not None:
         stixel_X_train = stixel_filter_func(stixel_X_train) # apply function
 
     if len(stixel_X_train) < stixel_training_size_threshold:  # threshold
