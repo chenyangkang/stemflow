@@ -944,13 +944,13 @@ class AdaSTEM(BaseEstimator):
                             "stixel_calibration_point_transformed_upper_bound",
                         ]
                     ]
-                    .groupby(["ensemble_index", "unique_stixel_id"], as_index=False)
+                    .groupby(["ensemble_index", "unique_stixel_id"], as_index=False, group_keys=False)
                     .pipe(lambda x: x[x.obj.columns]) # Explicitly select all the columns in the original df to include. To overcome the include_groups=True deprecation warning
                     .apply(find_belonged_points_and_predict, st_indexes_df=window_X_df_indexes_only, X_df=window_X_df, include_groups=False) # although ["ensemble_index", "unique_stixel_id"] will be passed into `find_belonged_points` due to `.pipe(lambda x: x[x.obj.columns])`, the output will not have them so we still set `as_index=True` in `groupby`
                 )
 
-                if len(res)>0:
-                    res = res.droplevel(0) # If using as_index=False duing groupby, pandas will automatically generate a group indexing column, so drop the indexing of the new groups
+                # if len(res)>0:
+                #     res = res.droplevel(0) # If using as_index=False duing groupby, pandas will automatically generate a group indexing column, so drop the indexing of the new groups
             
                 window_prediction_list.append(res)
 
