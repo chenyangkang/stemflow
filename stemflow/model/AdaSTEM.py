@@ -297,7 +297,11 @@ class AdaSTEM(BaseEstimator):
         else:
             self.verbosity = 0
 
-    def split(self, X_train: Union[pd.DataFrame, str], verbosity: Union[None, int] = None, ax=None, n_jobs: Union[None, int] = None):
+    def split(self, X_train: Union[pd.DataFrame, str], 
+              verbosity: Union[None, int] = None, 
+              ax=None, 
+              n_jobs: Union[None, int] = None,
+              quadtree_arg_dict = None):
         """QuadTree indexing the input data
 
         Args:
@@ -305,6 +309,7 @@ class AdaSTEM(BaseEstimator):
             verbosity: 0 to output nothing, everything other wise. Default None set it to the verbosity of AdaSTEM model class.
             ax: matplotlit Axes to add to.
             n_jobs: number of processors for parallel computing
+            quadtree_arg_dict: a dictionary to pass into quadtree splitting algorithm for additional conditional gridding. Must be None or a dictionary that have keys "additional_features" and "addiitonal_quadtree_criteria". For example, this can be {'additional_features': ['co_occurrence'], 'addiitonal_quadtree_criteria': lamba x:np.sum(x['co_occurrence']==1)>10} to take the 'co_occurrence' column into consideration during quadtree gridding, with the criteria that the number of 'co_occurrence' record must be more than 10, and if further splitting will fail that criterion, the splitting is stopped. The additional column must exist in the X_train dataframe or database.
 
         Returns:
             self.grid_dict, a dictionary of one DataFrame for each grid, containing the gridding information
@@ -324,6 +329,9 @@ class AdaSTEM(BaseEstimator):
             
         if verbosity is None:
             verbosity = self.verbosity
+
+        if quadtree_arg_dict is None:
+            quadtree_arg_dict = {'additional_features':[], 'addiitonal_quadtree_criteria':None}
             
         # Determine grid_len based on conditions
         if self.grid_len is None:
@@ -379,7 +387,7 @@ class AdaSTEM(BaseEstimator):
                 pass
         
         if isinstance(X_train, pd.DataFrame):
-            X_train_indexes = X_train[[self.Temporal1, self.Spatio1, self.Spatio2]]
+            X_train_indexes = X_train[[self.Temporal1, self.Spatio1, self.Spatio2] + quadtree_arg_dict['additional_features']]
         else:
             X_train_indexes = X_train
         
@@ -407,7 +415,8 @@ class AdaSTEM(BaseEstimator):
             save_gridding_plot=self.save_gridding_plot,
             ax=ax,
             completely_random_rotation=self.completely_random_rotation,
-            ensemble_bootstrap=self.ensemble_bootstrap
+            ensemble_bootstrap=self.ensemble_bootstrap,
+            quadtree_arg_dict=quadtree_arg_dict
         )
 
         if n_jobs > 1 and isinstance(n_jobs, int):
@@ -747,7 +756,7 @@ class AdaSTEM(BaseEstimator):
         n_jobs: Union[None, int] = None,
         overwrite = False,
         temporal_window_prequery: bool = False,
-        ensemble_df = None,
+        ensemble_df: Union[None, pd.DataFrame] = None,
         stixel_filter_func = None
     ):
         """Fitting method
@@ -763,6 +772,7 @@ class AdaSTEM(BaseEstimator):
             temporal_window_prequery: Whether to prequery the temporal windows as pd.DataFrame object to speed-up the stixel query. If set to True, query speed will be faster but with a moderate memory usage increase.
             ensemble_df: Instead of runing model.split within the `fit` function, you can pass in a customized ensemble_df to skip the whole splitting process.
             stixel_filter_func: filtering function applied on input data when fitting stixels. For example, you can pass `stixel_filter_func=lambda x:x['temp']*x['prec']>25` to fit only using data where temperature * precipication is over 25, within each stixel.
+            
         Raises:
             TypeError: X_train is not a type of pd.DataFrame
             TypeError: y_train is not a type of np.ndarray or pd.DataFrame
@@ -795,6 +805,9 @@ class AdaSTEM(BaseEstimator):
             if ensemble_df is None:
                 # Quadtree            
                 self.split(X_train, verbosity=verbosity, ax=ax, n_jobs=n_jobs)
+            else:
+                assert isinstance(ensemble_df, pd.DataFrame)
+                self.ensemble_df = ensemble_df
             
             # stixel specific x_names list
             for rm_target in ['model_dict', 'stixel_specific_x_names']:

@@ -195,7 +195,20 @@ class STEM(AdaSTEM):
 
         self.grid_len = grid_len
 
-
+    def split(self, X_train, verbosity=None, ax=None, n_jobs=None, quadtree_arg_dict=None):
+        if quadtree_arg_dict is not None:
+            raise AttributeError(
+                "quadtree_arg_dict is not supported for STEM models (fixed grid length); "
+                "use AdaSTEM instead."
+            )
+        return super().split(
+            X_train=X_train,
+            verbosity=verbosity,
+            ax=ax,
+            n_jobs=n_jobs,
+            quadtree_arg_dict=None,  # force None
+        )
+        
 class STEMClassifier(AdaSTEMClassifier):
     """STEM model Classifier interface (allow fixed grid size)
 
@@ -300,7 +313,20 @@ class STEMClassifier(AdaSTEMClassifier):
 
         self.grid_len = grid_len
 
-
+    def split(self, X_train, verbosity=None, ax=None, n_jobs=None, quadtree_arg_dict=None):
+        if quadtree_arg_dict is not None:
+            raise AttributeError(
+                "quadtree_arg_dict is not supported for STEM models (fixed grid length); "
+                "use AdaSTEM instead."
+            )
+        return super().split(
+            X_train=X_train,
+            verbosity=verbosity,
+            ax=ax,
+            n_jobs=n_jobs,
+            quadtree_arg_dict=None,  # force None
+        )
+        
 class STEMRegressor(AdaSTEMRegressor):
     """STEM model Regressor interface (allow fixed grid size)
 
@@ -404,3 +430,18 @@ class STEMRegressor(AdaSTEMRegressor):
         )
 
         self.grid_len = grid_len
+
+    def split(self, X_train, verbosity=None, ax=None, n_jobs=None, quadtree_arg_dict=None):
+        if quadtree_arg_dict is not None:
+            raise AttributeError(
+                "quadtree_arg_dict is not supported for STEM models (fixed grid length); "
+                "use AdaSTEM instead."
+            )
+        return super().split(
+            X_train=X_train,
+            verbosity=verbosity,
+            ax=ax,
+            n_jobs=n_jobs,
+            quadtree_arg_dict=None,  # force None
+        )
+        
