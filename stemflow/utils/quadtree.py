@@ -165,7 +165,7 @@ def get_one_ensemble_quadtree(
         ensemble_bootstrap:
             Whether to bootstrap the data at each ensemble level to account for uncertainty.
         quadtree_arg_dict: 
-            a dictionary to pass into quadtree splitting algorithm for additional conditional gridding. Must be None or a dictionary that have keys "additional_features" and "addiitonal_quadtree_criteria". For example, this can be {'additional_features': ['co_occurrence'], 'addiitonal_quadtree_criteria': lamba x:np.sum(x['co_occurrence']==1)>10} to take the 'co_occurrence' column into consideration during quadtree gridding, with the criteria that the number of 'co_occurrence' record must be more than 10, and if further splitting will fail that criterion, the splitting is stopped. The additional column must exist in the X_train dataframe or database.
+            a dictionary to pass into quadtree splitting algorithm for additional conditional gridding. Must be None or a dictionary that have keys "additional_features" and "addiitonal_quadtree_criteria". For example, this can be {'additional_features': ['co_occurrence'], 'addiitonal_quadtree_criteria': lamba x:np.sum(x['co_occurrence']==1)>10} to take the 'co_occurrence' column into consideration during quadtree gridding, with the criteria that the number of 'co_occurrence' record must be more than 10, and if further splitting will fail that criterion, the splitting is stopped. The function for 'addiitonal_quadtree_criteria' must return a True or False boolean for that stixel. The additional column must exist in the X_train dataframe or database.
 
     Returns:
         A tuple of <br>

@@ -309,7 +309,7 @@ class AdaSTEM(BaseEstimator):
             verbosity: 0 to output nothing, everything other wise. Default None set it to the verbosity of AdaSTEM model class.
             ax: matplotlit Axes to add to.
             n_jobs: number of processors for parallel computing
-            quadtree_arg_dict: a dictionary to pass into quadtree splitting algorithm for additional conditional gridding. Must be None or a dictionary that have keys "additional_features" and "addiitonal_quadtree_criteria". For example, this can be {'additional_features': ['co_occurrence'], 'addiitonal_quadtree_criteria': lamba x:np.sum(x['co_occurrence']==1)>10} to take the 'co_occurrence' column into consideration during quadtree gridding, with the criteria that the number of 'co_occurrence' record must be more than 10, and if further splitting will fail that criterion, the splitting is stopped. The additional column must exist in the X_train dataframe or database.
+            quadtree_arg_dict: a dictionary to pass into quadtree splitting algorithm for additional conditional gridding. Must be None or a dictionary that have keys "additional_features" and "addiitonal_quadtree_criteria". For example, this can be {'additional_features': ['co_occurrence'], 'addiitonal_quadtree_criteria': lamba x:np.sum(x['co_occurrence']==1)>10} to take the 'co_occurrence' column into consideration during quadtree gridding, with the criteria that the number of 'co_occurrence' record must be more than 10, and if further splitting will fail that criterion, the splitting is stopped. The function for 'addiitonal_quadtree_criteria' must return a True or False boolean for that stixel. The additional column must exist in the X_train dataframe or database.
 
         Returns:
             self.grid_dict, a dictionary of one DataFrame for each grid, containing the gridding information
@@ -771,7 +771,7 @@ class AdaSTEM(BaseEstimator):
             overwrite: overwrite files in lazy_loading_dir. If set to False and any file exists in lazy_loading_dir, an error will be raise.
             temporal_window_prequery: Whether to prequery the temporal windows as pd.DataFrame object to speed-up the stixel query. If set to True, query speed will be faster but with a moderate memory usage increase.
             ensemble_df: Instead of runing model.split within the `fit` function, you can pass in a customized ensemble_df to skip the whole splitting process.
-            stixel_filter_func: filtering function applied on input data when fitting stixels. For example, you can pass `stixel_filter_func=lambda x:x['temp']*x['prec']>25` to fit only using data where temperature * precipication is over 25, within each stixel.
+            stixel_filter_func: filtering function applied on input data when fitting stixels. For example, you can pass `stixel_filter_func=lambda x:x[x['temp']*x['prec']]>25` to fit only using data where temperature * precipication is over 25, within each stixel. The function must return a dataframe.
             
         Raises:
             TypeError: X_train is not a type of pd.DataFrame
