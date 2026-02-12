@@ -115,7 +115,7 @@ class AdaSTEM(BaseEstimator):
         plot_ylims: Tuple[Union[float, int], Union[float, int]] = None,
         verbosity: int = 1,
         plot_empty: bool = False,
-        completely_random_rotation: bool = False,
+        completely_random_rotation: bool = True,
         lazy_loading: bool = False,
         lazy_loading_dir: Union[str, None] = None,
         min_class_sample: int = 1,
@@ -188,7 +188,7 @@ class AdaSTEM(BaseEstimator):
             plot_empty:
                 Whether to plot the empty grid
             completely_random_rotation:
-                If True, the rotation angle will be generated completely randomly, as in paper https://doi.org/10.1002/eap.2056. If False, the ensembles will split the 90 degree with equal angle intervals. e.g., if ensemble_fold=9, then each ensemble will rotate 10 degree futher than the previous ensemble. Defalt to False, because if ensemble fold is small, it will be more robust to equally devide the data; and if ensemble fold is large, they are effectively similar than complete random.
+                If True, the rotation angle will be generated completely randomly, as in paper https://doi.org/10.1002/eap.2056. If False, the ensembles will split the 90 degree with equal angle intervals. e.g., if ensemble_fold=9, then each ensemble will rotate 10 degree futher than the previous ensemble. Defalt to True.
             lazy_loading:
                 If True, ensembles of models will be saved in disk, and only loaded when being used (e.g., prediction phase), and the ensembles of models are dump to disk once it is used.
             lazy_loading_dir:
@@ -1614,7 +1614,7 @@ class AdaSTEMClassifier(AdaSTEM):
         plot_ylims=None,
         verbosity=0,
         plot_empty=False,
-        completely_random_rotation=False,
+        completely_random_rotation=True,
         lazy_loading = False,
         lazy_loading_dir = None,
         min_class_sample = 1,
@@ -1807,7 +1807,7 @@ class AdaSTEMRegressor(AdaSTEM):
         plot_ylims=None,
         verbosity=0,
         plot_empty=False,
-        completely_random_rotation=False,
+        completely_random_rotation=True,
         lazy_loading=False,
         lazy_loading_dir=None,
         min_class_sample=1,
