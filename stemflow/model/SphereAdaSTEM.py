@@ -515,17 +515,18 @@ class SphereAdaSTEM(AdaSTEM):
             window_prediction = (
                 query_results
                 .dropna(subset="unique_stixel_id")
-                .groupby("unique_stixel_id", as_index=False)
+                .groupby("unique_stixel_id", as_index=False, group_keys=False)
                 .pipe(lambda x: x[x.obj.columns])
                 .apply(lambda stixel: self.stixel_predict(stixel), include_groups=False)
-                .droplevel(0)
             )
             # print('window_prediction:',window_prediction)
             window_prediction_list.append(window_prediction)
 
         if any([i is not None for i in window_prediction_list]):
             ensemble_prediction = pd.concat(window_prediction_list, axis=0)
-            ensemble_prediction = ensemble_prediction.groupby("index").mean().reset_index(drop=False)
+            ensemble_prediction = ensemble_prediction.groupby(level=0).mean()
+            ensemble_prediction.index.name = "index"
+            ensemble_prediction = ensemble_prediction.reset_index(drop=False)
         else:
             ensmeble_index = list(window_single_ensemble_df["ensemble_index"])[0]
             warnings.warn(f"No prediction for this ensemble: {ensmeble_index}")
