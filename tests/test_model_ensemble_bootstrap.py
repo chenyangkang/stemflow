@@ -41,7 +41,7 @@ def test_STEMClassifier_ensemble_bootstrap():
     assert len(pred_df) > 0
 
     eval = AdaSTEM.eval_STEM_res("classification", pred_df.y_true, pred_df.y_pred)
-    assert eval["AUC"] >= 0.5
+    assert eval["AUC"] >= 0.51
     assert eval["kappa"] >= 0.2
     # assert eval["Spearman_r"] >= 0.2
 
@@ -71,7 +71,7 @@ def test_parallel_STEMClassifier_ensemble_bootstrap():
     assert len(pred_df) > 0
 
     eval = AdaSTEM.eval_STEM_res("classification", pred_df.y_true, pred_df.y_pred)
-    assert eval["AUC"] >= 0.5
+    assert eval["AUC"] >= 0.51
     assert eval["kappa"] >= 0.2
     # assert eval["Spearman_r"] >= 0.2
 
@@ -100,7 +100,7 @@ def test_AdaSTEMClassifier_ensemble_bootstrap():
     assert len(pred_df) > 0
 
     eval = AdaSTEM.eval_STEM_res("classification", pred_df.y_true, pred_df.y_pred)
-    assert eval["AUC"] >= 0.5
+    assert eval["AUC"] >= 0.51
     assert eval["kappa"] >= 0.2
     # assert eval["Spearman_r"] >= 0.2
 

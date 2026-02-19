@@ -43,7 +43,7 @@ def test_STEMClassifier():
     assert len(pred_df) > 0
 
     eval = AdaSTEM.eval_STEM_res("classification", pred_df.y_true, pred_df.y_pred)
-    assert eval["AUC"] >= 0.5
+    assert eval["AUC"] >= 0.51
     assert eval["kappa"] >= 0.2
     # assert eval["Spearman_r"] >= 0.2
 
@@ -55,7 +55,7 @@ def test_STEMClassifier():
     assert importances_by_points.shape[1] == len(x_names) + 3
     
     ## Then predict on limited samples?
-    pred = model.predict(X_test.sample(n=1, replace=False))
+    pred = model.predict(X_test.sample(n=50, replace=False))
 
 
 def test_parallel_STEMClassifier():
@@ -77,7 +77,7 @@ def test_parallel_STEMClassifier():
     assert len(pred_df) > 0
 
     eval = AdaSTEM.eval_STEM_res("classification", pred_df.y_true, pred_df.y_pred)
-    assert eval["AUC"] >= 0.5
+    assert eval["AUC"] >= 0.51
     assert eval["kappa"] >= 0.2
     # assert eval["Spearman_r"] >= 0.2
 
@@ -89,7 +89,7 @@ def test_parallel_STEMClassifier():
     assert importances_by_points.shape[1] == len(x_names) + 3
 
     ## Then predict on limited samples?
-    pred = model.predict(X_test.sample(n=1, replace=False))
+    pred = model.predict(X_test.sample(n=50, replace=False))
     
 def test_STEMRegressor():
     model = make_STEMRegressor()
@@ -110,7 +110,7 @@ def test_STEMRegressor():
     assert len(pred_df) > 0
 
     eval = AdaSTEM.eval_STEM_res("hurdle", pred_df.y_true, pred_df.y_pred)
-    assert eval["AUC"] >= 0.5
+    assert eval["AUC"] >= 0.51
     assert eval["kappa"] >= 0.2
     assert eval["Spearman_r"] >= 0.2
 
@@ -122,7 +122,7 @@ def test_STEMRegressor():
     assert importances_by_points.shape[1] == len(x_names) + 3
 
     ## Then predict on limited samples?
-    pred = model.predict(X_test.sample(n=1, replace=False))
+    pred = model.predict(X_test.sample(n=50, replace=False))
     
 def test_AdaSTEMClassifier():
     model = make_AdaSTEMClassifier()
@@ -143,7 +143,7 @@ def test_AdaSTEMClassifier():
     assert len(pred_df) > 0
 
     eval = AdaSTEM.eval_STEM_res("classification", pred_df.y_true, pred_df.y_pred)
-    assert eval["AUC"] >= 0.5
+    assert eval["AUC"] >= 0.51
     assert eval["kappa"] >= 0.2
     # assert eval["Spearman_r"] >= 0.2
 
@@ -155,7 +155,7 @@ def test_AdaSTEMClassifier():
     assert importances_by_points.shape[1] == len(x_names) + 3
 
     ## Then predict on limited samples?
-    pred = model.predict(X_test.sample(n=1, replace=False))
+    pred = model.predict(X_test.sample(n=50, replace=False))
     
 
 def test_AdaSTEMRegressor():
@@ -184,7 +184,7 @@ def test_AdaSTEMRegressor():
     assert len(pred_df) > 0
 
     eval = AdaSTEM.eval_STEM_res("hurdle", pred_df.y_true, pred_df.y_pred)
-    assert eval["AUC"] >= 0.5
+    assert eval["AUC"] >= 0.51
     assert eval["kappa"] >= 0.2
     assert eval["Spearman_r"] >= 0.2
 
@@ -199,7 +199,7 @@ def test_AdaSTEMRegressor():
     score_df = model.score(X_test, y_test)
     
     ## Then predict on limited samples?
-    pred = model.predict(X_test.sample(n=1, replace=False))
+    pred = model.predict(X_test.sample(n=50, replace=False))
     
 def test_parallel_AdaSTEMClassifier():
     model = make_parallel_AdaSTEMClassifier()
@@ -220,7 +220,7 @@ def test_parallel_AdaSTEMClassifier():
     assert len(pred_df) > 0
 
     eval = AdaSTEM.eval_STEM_res("classification", pred_df.y_true, pred_df.y_pred)
-    assert eval["AUC"] >= 0.5
+    assert eval["AUC"] >= 0.51
     assert eval["kappa"] >= 0.2
     # assert eval["Spearman_r"] >= 0.2
 
@@ -232,7 +232,7 @@ def test_parallel_AdaSTEMClassifier():
     assert importances_by_points.shape[1] == len(x_names) + 3
 
     ## Then predict on limited samples?
-    pred = model.predict(X_test.sample(n=1, replace=False))
+    pred = model.predict(X_test.sample(n=50, replace=False))
     
 
 def test_AdaSTEMRegressor_return_ensemble():
@@ -261,7 +261,7 @@ def test_AdaSTEMRegressor_return_ensemble():
     assert len(pred_df) > 0
 
     eval = AdaSTEM.eval_STEM_res("hurdle", pred_df.y_true, pred_df.y_pred)
-    assert eval["AUC"] >= 0.5
+    assert eval["AUC"] >= 0.51
     assert eval["kappa"] >= 0.2
     assert eval["Spearman_r"] >= 0.2
 
@@ -276,7 +276,7 @@ def test_AdaSTEMRegressor_return_ensemble():
     score_df = model.score(X_test, y_test)
     
     ## Then predict on limited samples?
-    pred = model.predict(X_test.sample(n=1, replace=False))
+    pred = model.predict(X_test.sample(n=50, replace=False))
     
 def test_SphereAdaClassifier():
     model = make_SphereAdaClassifier()
@@ -297,7 +297,7 @@ def test_SphereAdaClassifier():
     assert len(pred_df) > 0
 
     eval = AdaSTEM.eval_STEM_res("classification", pred_df.y_true, pred_df.y_pred)
-    assert eval["AUC"] >= 0.5
+    assert eval["AUC"] >= 0.51
     assert eval["kappa"] >= 0.2
     # assert eval["Spearman_r"] >= 0.2
 
@@ -313,7 +313,7 @@ def test_SphereAdaClassifier():
     assert importances_by_points.shape[1] == len(x_names) + 3
     
     ## Then predict on limited samples?
-    pred = model.predict(X_test.sample(n=1, replace=False))
+    pred = model.predict(X_test.sample(n=50, replace=False))
     
 def test_parallel_SphereAdaClassifier():
     model = make_parallel_SphereAdaClassifier()
@@ -335,7 +335,7 @@ def test_parallel_SphereAdaClassifier():
     assert len(pred_df) > 0
 
     eval = AdaSTEM.eval_STEM_res("classification", pred_df.y_true, pred_df.y_pred)
-    assert eval["AUC"] >= 0.5
+    assert eval["AUC"] >= 0.51
     assert eval["kappa"] >= 0.2
     # assert eval["Spearman_r"] >= 0.2
 
@@ -347,7 +347,7 @@ def test_parallel_SphereAdaClassifier():
     assert importances_by_points.shape[1] == len(x_names) + 3
 
     ## Then predict on limited samples?
-    pred = model.predict(X_test.sample(n=1, replace=False))
+    pred = model.predict(X_test.sample(n=50, replace=False))
     
 def test_SphereAdaSTEMRegressor():
     model = make_SphereAdaSTEMRegressor()
@@ -368,7 +368,7 @@ def test_SphereAdaSTEMRegressor():
     assert len(pred_df) > 0
 
     eval = AdaSTEM.eval_STEM_res("hurdle", pred_df.y_true, pred_df.y_pred)
-    assert eval["AUC"] >= 0.5
+    assert eval["AUC"] >= 0.51
     assert eval["kappa"] >= 0.2
     assert eval["Spearman_r"] >= 0.2
 
@@ -380,7 +380,7 @@ def test_SphereAdaSTEMRegressor():
     assert importances_by_points.shape[1] == len(x_names) + 3
     
     ## Then predict on limited samples?
-    pred = model.predict(X_test.sample(n=1, replace=False))
+    pred = model.predict(X_test.sample(n=50, replace=False))
     
 def test_AdaSTEMRegressor_Hurdle_for_AdaSTEM():
     model = make_AdaSTEMRegressor_Hurdle_for_AdaSTEM()
@@ -399,12 +399,12 @@ def test_AdaSTEMRegressor_Hurdle_for_AdaSTEM():
     assert len(pred_df) > 0
 
     eval = AdaSTEM.eval_STEM_res("hurdle", pred_df.y_true, pred_df.y_pred)
-    assert eval["AUC"] >= 0.5
+    assert eval["AUC"] >= 0.51
     assert eval["kappa"] >= 0.1
     assert eval["Spearman_r"] >= 0.1
 
     ## Then predict on limited samples?
-    pred = model.predict(X_test.sample(n=1, replace=False))
+    pred = model.predict(X_test.sample(n=50, replace=False))
     
 
 # def test_AdaSTEMRegressor_median():
