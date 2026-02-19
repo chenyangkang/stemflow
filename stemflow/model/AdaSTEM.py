@@ -962,7 +962,7 @@ class AdaSTEM(BaseEstimator):
         else:
             ensmeble_index = list(window_single_ensemble_df["ensemble_index"])[0]
             warnings.warn(f"No prediction for this ensemble: {ensmeble_index}")
-            ensemble_prediction = None
+            ensemble_prediction = pd.DataFrame({'pred': pd.Series(dtype="float64")}) # empty dataframe
 
         return ensemble_prediction
 
@@ -1106,14 +1106,14 @@ class AdaSTEM(BaseEstimator):
         
         # Experimental Function
         if return_by_separate_ensembles:
-            new_res = pd.DataFrame({"index": list(X_test_indexes)}).set_index("index")
-            new_res = new_res.merge(res, left_on="index", right_on="index", how="left")
-            return new_res.values
+            indexer = pd.DataFrame({"index": list(X_test_indexes)}).set_index("index")
+            res = pd.concat([indexer, res], axis=1)
+            return res.values
 
         # Transform to logit space if classification:
         if self.task=='classification' and logit_agg:
             for col_index in range(res.shape[1]):
-                prob = np.clip(res.iloc[:,col_index], 1e-8, 1 - 1e-8)
+                prob = np.clip(res.iloc[:,col_index], 1e-16, 1 - 1e-16)
                 res.iloc[:,col_index] = np.log(prob / (1-prob)) # logit space
                 
             # Aggregate
@@ -1124,7 +1124,7 @@ class AdaSTEM(BaseEstimator):
                 
             # Transform back to 0-1:
             res_mean = 1/(1+np.exp(-res_mean)) # notice that the res_std is not transformed!
-            res_mean = res_mean.where(res_mean<=1e-8, 0)
+            res_mean = res_mean.where(res_mean<=1e-16, 0)
             
         else:
             # don't need to aggregate at logit scale
@@ -1150,22 +1150,23 @@ class AdaSTEM(BaseEstimator):
         )
 
         # Preparing output (formatting)
-        new_res = pd.DataFrame({"index": list(X_test_indexes)}).set_index("index")
-        new_res = new_res.merge(res, left_on="index", right_on="index", how="left")
-        nan_count = np.sum(np.isnan(new_res["pred_mean"].values))
-        nan_frac = nan_count / len(new_res["pred_mean"].values)
+        indexer = pd.DataFrame({"index": list(X_test_indexes)}).set_index("index")
+        res = pd.concat([indexer, res], axis=1)
+        
+        nan_count = np.sum(np.isnan(res["pred_mean"].values))
+        nan_frac = nan_count / len(res["pred_mean"].values)
         warnings.warn(f"There are {nan_frac}% points ({nan_count} points) falling out of predictable range.")
 
         if return_std:
             if self.task=='classification':
-                return np.array([1-new_res["pred_mean"].values.flatten(), new_res["pred_mean"].values.flatten()]).T, new_res["pred_std"].values
+                return np.array([1-res["pred_mean"].values.flatten(), res["pred_mean"].values.flatten()]).T, res["pred_std"].values
             else:
-                return new_res["pred_mean"].values.flatten(), new_res["pred_std"].values.flatten()
+                return res["pred_mean"].values.flatten(), res["pred_std"].values.flatten()
         else:
             if self.task=='classification':
-                return np.array([1-new_res["pred_mean"].values.flatten(), new_res["pred_mean"].values.flatten()]).T
+                return np.array([1-res["pred_mean"].values.flatten(), res["pred_mean"].values.flatten()]).T
             else:
-                return new_res["pred_mean"].values.flatten()
+                return res["pred_mean"].values.flatten()
         
 
     @abstractmethod
