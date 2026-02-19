@@ -951,12 +951,14 @@ class AdaSTEM(BaseEstimator):
 
                 # if len(res)>0:
                 #     res = res.droplevel(0) # If using as_index=False duing groupby, pandas will automatically generate a group indexing column, so drop the indexing of the new groups
-            
+                if len(res)==0:
+                    continue
+                
                 window_prediction_list.append(res)
 
         if any([i is not None for i in window_prediction_list]):
             ensemble_prediction = pd.concat(window_prediction_list, axis=0)
-            ensemble_prediction = ensemble_prediction.groupby("index").mean().reset_index(drop=False)
+            ensemble_prediction = ensemble_prediction.groupby(level=0, sort=False).mean()
         else:
             ensmeble_index = list(window_single_ensemble_df["ensemble_index"])[0]
             warnings.warn(f"No prediction for this ensemble: {ensmeble_index}")
@@ -1004,7 +1006,7 @@ class AdaSTEM(BaseEstimator):
             )
 
         # Prediction
-        pred = [i.set_index("index") for i in output_generator]
+        pred = [i for i in output_generator]
         get_reusable_executor().shutdown(wait=True)
         
         pred = pd.concat(pred, axis=1)

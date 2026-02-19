@@ -483,7 +483,18 @@ class SphereAdaSTEM(AdaSTEM):
 
                 return X_df.iloc[np.where(intersect)[0], :]
 
-            query_results = (
+            def find_belonged_points_and_predict(df, st_indexes_df, X_df):
+                X = find_belonged_points(df, st_indexes_df, X_df)
+                if len(X)==0:
+                    return None
+                X['ensemble_index'] = df['ensemble_index'].iloc[0]
+                X['unique_stixel_id'] = df['unique_stixel_id'].iloc[0]
+                # X = X.sort_index() # To ensure the input dataframes for the two method (temporal_window_prequery or not) are the same so the tained base models are identical, at least with the same input data
+                pred = self.stixel_predict(X)
+                return pred
+            
+            # predict
+            window_prediction = (
                 window_single_ensemble_df[
                     [
                         "ensemble_index",
@@ -499,32 +510,21 @@ class SphereAdaSTEM(AdaSTEM):
                         "p3z",
                     ]
                 ]
-                .groupby(["ensemble_index", "unique_stixel_id"], as_index=True)
+                .groupby(["ensemble_index", "unique_stixel_id"], as_index=False, group_keys=False)
                 .pipe(lambda x: x[x.obj.columns])
-                .apply(find_belonged_points, st_indexes_df=window_X_df_indexes_only, X_df=window_X_df, include_groups=False)
-                .reset_index(level=["ensemble_index", "unique_stixel_id"])
+                .apply(find_belonged_points_and_predict, st_indexes_df=window_X_df_indexes_only, X_df=window_X_df, include_groups=False)
             )
 
-            if len(query_results) == 0:
+            if len(window_prediction) == 0:
                 """All points fall out of the grids"""
                 continue
 
-            # predict
-            window_prediction = (
-                query_results
-                .dropna(subset="unique_stixel_id")
-                .groupby("unique_stixel_id", as_index=False, group_keys=False)
-                .pipe(lambda x: x[x.obj.columns])
-                .apply(lambda stixel: self.stixel_predict(stixel), include_groups=False)
-            )
             # print('window_prediction:',window_prediction)
             window_prediction_list.append(window_prediction)
 
         if any([i is not None for i in window_prediction_list]):
             ensemble_prediction = pd.concat(window_prediction_list, axis=0)
             ensemble_prediction = ensemble_prediction.groupby(level=0).mean()
-            ensemble_prediction.index.name = "index"
-            ensemble_prediction = ensemble_prediction.reset_index(drop=False)
         else:
             ensmeble_index = list(window_single_ensemble_df["ensemble_index"])[0]
             warnings.warn(f"No prediction for this ensemble: {ensmeble_index}")
