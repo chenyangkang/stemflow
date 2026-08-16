@@ -1,0 +1,24 @@
+/* @media only screen and (min-width: 76.25em) {
+    .md-container {
+      position: relative;
+    }
+    .md-container:before {
+      content: '';
+      position: absolute;
+      top: 9.6rem; /* 4.8rem if you don't use tabs */
+      left: 0;
+      width: calc((100% - 122rem) / 2 + 24.2rem); /* you can use something smaller than 24.2rem and background won't be that close to main content */
+      height: calc(100% - 25.2rem); /* 100% - 20.4rem if you don't use tabs */
+      background-color: #eee;
+      z-index: -1;
+      /* add border if you want */
+    }
+  } */
+
+
+
+/* @media only screen and (min-width: 60em) {
+    .md-content {
+      margin-right: 0;
+    }
+  } */
