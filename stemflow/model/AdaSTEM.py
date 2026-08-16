@@ -786,6 +786,10 @@ class AdaSTEM(BaseEstimator):
             # Quadtree            
             self.split(X_train, verbosity=verbosity, ax=ax, n_jobs=n_jobs)
             
+            # Deside whether to terminate the training process if avaliable ensmebles does not match with the targeted ensemble_fold
+            if len(self.ensemble_df["ensemble_index"].unique()) < self.ensemble_fold:
+                raise ValueError(f"Not enough ensembles generated. The number of ensembles generated is {len(self.ensemble_df['ensemble_index'].unique())}, which is less than the required minimum of {self.ensemble_fold}. This indicates that the input data might be too sparse or the gridding parameters are too strict. Please consider adjusting the gridding parameters or providing more data, otherwise, AdaSTEM may not be the optimum method for your purpose, since it require a lot of data.")
+            
             # stixel specific x_names list
             for rm_target in ['model_dict', 'stixel_specific_x_names']:
                 if hasattr(self, rm_target):
