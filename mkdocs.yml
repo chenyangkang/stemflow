@@ -2,7 +2,7 @@ site_name: stemflow
 site_description: 'A package for Adaptive Spatio-Temporal Model (AdaSTEM) in python.'
 repo_name: 'chenyangkang/stemflow'
 repo_url: 'https://github.com/chenyangkang/stemflow'
-site_url: https://chenyangkag.github.io/stemflow/
+site_url: https://chenyangkang.github.io/stemflow/
 use_directory_urls: false
 
 theme:
@@ -104,8 +104,8 @@ nav:
       - 'Sphere_QTree': API_Documentation/gridding/stemflow.gridding.Sphere_QTree.md
       - 'QuadGrid': API_Documentation/gridding/stemflow.gridding.QuadGrid.md
     - stemflow.lazyloading:
-      - 'lazyloading': API_Documentation/gridding/stemflow.lazyloading.lazyloading.md
-      - 'open_db_connection': API_Documentation/gridding/stemflow.lazyloading.open_db_connection.md
+      - 'lazyloading': API_Documentation/lazyloading/stemflow.lazyloading.lazyloading.md
+      - 'open_db_connection': API_Documentation/lazyloading/stemflow.lazyloading.open_db_connection.md
     - stemflow.utils:
       - 'jitterrotation':
         - 'jitterrotator': API_Documentation/utils/jitterrotation/stemflow.utils.jitterrotation.jitterrotator.md
@@ -120,7 +120,6 @@ nav:
       - 'generate_random': API_Documentation/utils/stemflow.utils.generate_random.md
       - 'validation': API_Documentation/utils/stemflow.utils.validation.md
       - 'wrapper': API_Documentation/utils/stemflow.utils.wrapper.md
-      - 'lazyloading': API_Documentation/utils/stemflow.utils.lazyloading.md
     - stemflow.model_selection: API_Documentation/stemflow.model_selection.md
 
   - Fun Visualization:

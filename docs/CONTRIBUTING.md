@@ -13,7 +13,7 @@ We welcome contribution to `stemflow`
 1. Submit a pull request
 
 
-We recommend you to open and issue of `feature` if you wish to add brand-new features before the PR, especially with heavy mathematics to resolve.
+We recommend you to open an issue of `feature` if you wish to add brand-new features before the PR, especially with heavy mathematics to resolve.
 
 ---
 
@@ -24,7 +24,7 @@ You will need your own fork to work on the code. Go to the `stemflow` project pa
 ```bash
 git clone git@github.com:YOUR-USER-NAME/stemflow.git stemflow-YOURNAME
 cd stemflow-YOURNAME
-git remote add upstream git://github.com/stemflow/stemflow.git
+git remote add upstream https://github.com/chenyangkang/stemflow.git
 ```
 
 This creates the directory `stemflow-YOURNAME` and connects your repository to the upstream (main project) `stemflow` repository.
@@ -45,9 +45,9 @@ To do this, first install miniconda or conda:
 Next, start a new environment called `stemflow`, activate it, and install dependencies:
 
 ```bash
-conda create -n stemflow -python=3.8 -y
+conda create -n stemflow python=3.9 -y
 activate stemflow
-conda install --file requirement.txt
+conda install --file requirements.txt
 conda install pre-commit pytest pytest-cov pytest-xdist
 
 pre-commit install

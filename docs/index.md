@@ -166,13 +166,15 @@ model = AdaSTEMRegressor(
 Fitting and prediction methods follow the style of sklearn `BaseEstimator` class:
 
 ```py
+import numpy as np
+
 ## fit
 model = model.fit(X_train.reset_index(drop=True), y_train)
 
 ## predict
 pred = model.predict(X_test)
 pred = np.where(pred<0, 0, pred)
-eval_metrics = AdaSTEM.eval_STEM_res('hurdle',y_test, pred_mean)
+eval_metrics = AdaSTEM.eval_STEM_res('hurdle',y_test, pred)
 print(eval_metrics)
 ```
 
