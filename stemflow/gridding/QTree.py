@@ -13,14 +13,10 @@ import pandas as pd
 
 from ..utils.generate_random import generate_soft_color
 from ..utils.jitterrotation.jitterrotator import JitterRotator
-from ..utils.validation import check_random_state
+from ..utils.validation import check_random_state, normalize_quadtree_args
 from .Q_blocks import QNode, QPoint
 
-os.environ["MKL_NUM_THREADS"] = "1"
-os.environ["NUMEXPR_NUM_THREADS"] = "1"
-os.environ["OMP_NUM_THREADS"] = "1"
 
-warnings.filterwarnings("ignore")
 
 
 def recursive_subdivide(
@@ -209,9 +205,10 @@ class QTree:
         self.calibration_point_x_jitter = calibration_point_x_jitter
         self.calibration_point_y_jitter = calibration_point_y_jitter
         self.plot_empty = plot_empty
-        self.quadtree_arg_dict = quadtree_arg_dict
+        self.quadtree_arg_dict = normalize_quadtree_args(quadtree_arg_dict)
 
-    def add_lon_lat_data(self, indexes: Sequence, x_array: Sequence, y_array: Sequence, additiona_features=None):
+    def add_lon_lat_data(self, indexes: Sequence, x_array: Sequence, y_array: Sequence,
+                         additiona_features=None, *, additional_features=None):
         """Store input lng lat data and transform to **Point** object
 
         Parameters:
@@ -220,6 +217,10 @@ class QTree:
             y_array: latitudinal values.
 
         """
+        if additional_features is not None:
+            if additiona_features is not None:
+                raise ValueError("Provide only one additional_features argument.")
+            additiona_features = additional_features
         if not len(x_array) == len(y_array) or not len(x_array) == len(indexes):
             raise ValueError("input longitude and latitude and indexes not in same length!")
         if additiona_features is not None:

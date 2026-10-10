@@ -23,7 +23,8 @@ def open_db_connection(X_train, duckdb_config):
             if X_train.endswith('.duckdb'):
                 con = duckdb.connect(X_train, read_only=True, config=duckdb_config)
                 the_only_table_name = con.sql("""SHOW TABLES""").fetchall()[0][0]
-                the_only_table_name = con.sql(f"select * from {the_only_table_name};")
+                quoted_table = '"' + the_only_table_name.replace('"', '""') + '"'
+                the_only_table_name = con.sql(f"select * from {quoted_table};")
             elif X_train.endswith('.parquet'):
                 con = duckdb.connect(config=duckdb_config)
                 the_only_table_name = con.read_parquet(X_train, hive_partitioning=False)
@@ -55,7 +56,8 @@ def _as_relation(con, obj, view_name, attach_alias):
         return obj
     if isinstance(obj, str) and obj.endswith(".duckdb"):
         # attach the DB file under its own alias, then expose its (first) table as a view
-        con.execute(f"ATTACH '{obj}' AS {attach_alias} (READ_ONLY)")
+        filename = obj.replace("'", "''")
+        con.execute(f"ATTACH '{filename}' AS {attach_alias} (READ_ONLY)")
         row = con.sql(f"""
             SELECT table_name
             FROM duckdb_tables()
@@ -71,7 +73,8 @@ def _as_relation(con, obj, view_name, attach_alias):
             )
 
         tbl = row[0]
-        rel = con.sql(f"SELECT * FROM {attach_alias}.main.{tbl}")
+        quoted_table = '"' + tbl.replace('"', '""') + '"'
+        rel = con.sql(f"SELECT * FROM {attach_alias}.main.{quoted_table}")
         rel.create_view(view_name)
         return rel
     if isinstance(obj, str) and obj.endswith(".parquet"):
@@ -99,4 +102,3 @@ def open_both_Xy_db_connection(X_train, y_train, duckdb_config):
     finally:
         if con is not None:
             con.close()
-            

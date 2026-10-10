@@ -16,11 +16,7 @@ from ..utils.jitterrotation.jitterrotator import JitterRotator
 from ..utils.validation import check_random_state
 from .Q_blocks import QGrid, QNode, QPoint
 
-os.environ["MKL_NUM_THREADS"] = "1"
-os.environ["NUMEXPR_NUM_THREADS"] = "1"
-os.environ["OMP_NUM_THREADS"] = "1"
 
-warnings.filterwarnings("ignore")
 
 
 class QuadGrid:

@@ -1,0 +1,458 @@
+{
+  "fixture": {
+    "rows": 200000,
+    "features": 131,
+    "detections": 14998
+  },
+  "baseline": "368acf6",
+  "results": [
+    {
+      "variant": "baseline",
+      "backend": "native",
+      "jobs": 4,
+      "threads": 1,
+      "input": "duckdb",
+      "base_model": "xgboost",
+      "detailed_profiling": true,
+      "trained_stixels": 635,
+      "input_preparation_method": "manual",
+      "input_payload_bytes": 214400000,
+      "estimated_largest_window_payload_bytes": 85174264,
+      "saved_models_bytes": 28480876,
+      "largest_saved_model_bytes": 48198,
+      "lazy_loading": true,
+      "prediction_rows": 200000,
+      "prediction_output_bytes": 800000,
+      "coverage": 1.0,
+      "auc": 0.740835680768721,
+      "brier": 0.06450807303190231,
+      "log_loss": 0.24036239087581635,
+      "versions": {
+        "numpy": "2.5.1",
+        "pandas": "3.0.5",
+        "duckdb": "1.5.5",
+        "sklearn": "1.9.0",
+        "xgboost": "3.3.0"
+      },
+      "execution_info": null,
+      "stixel_measurements": {
+        "fit_calls": 635,
+        "fit_seconds_sum": 54.880179808009416,
+        "max_stixel_dataframe_bytes": 5601147,
+        "max_fit_rss_increase_bytes": 25903104,
+        "max_fit_accounted_increase_bytes": 79577088
+      },
+      "phase_seconds": {
+        "imports": 8.55525091686286,
+        "input_preparation": 1.7181817081291229,
+        "partitioning": 1.2726335839834064,
+        "fit_preparation": 0.05397595791146159,
+        "training": 17.7661832079757,
+        "fit_finalize": 0.004736375063657761,
+        "heldout_prediction": 2.890730333980173,
+        "evaluation": 0.013517583021894097,
+        "prediction": 3.931932083098218,
+        "finalize": 0.002257541986182332
+      },
+      "processing_seconds": 36.20931962504983,
+      "process_tree_peak_rss_mb": 2963.859375,
+      "process_tree_peak_accounted_mb": 1192.276123046875,
+      "phase_memory": {
+        "startup": {
+          "samples": 1,
+          "peak_rss_mb": 0.140625,
+          "peak_accounted_mb": 0.18780517578125,
+          "peak_parent_rss_mb": 0.140625,
+          "peak_workers_rss_mb": 0,
+          "peak_active_stixel_payload_mb": 0,
+          "peak_active_fit_rss_increase_mb": 0
+        },
+        "imports": {
+          "samples": 81,
+          "peak_rss_mb": 241.328125,
+          "peak_accounted_mb": 157.0963134765625,
+          "peak_parent_rss_mb": 241.328125,
+          "peak_workers_rss_mb": 0,
+          "peak_active_stixel_payload_mb": 0,
+          "peak_active_fit_rss_increase_mb": 0
+        },
+        "input_preparation": {
+          "samples": 17,
+          "peak_rss_mb": 2009.125,
+          "peak_accounted_mb": 1143.5530395507812,
+          "peak_parent_rss_mb": 2009.125,
+          "peak_workers_rss_mb": 0,
+          "peak_active_stixel_payload_mb": 0,
+          "peak_active_fit_rss_increase_mb": 0
+        },
+        "partitioning": {
+          "samples": 12,
+          "peak_rss_mb": 2133.390625,
+          "peak_accounted_mb": 822.22705078125,
+          "peak_parent_rss_mb": 1884.59375,
+          "peak_workers_rss_mb": 248.828125,
+          "peak_active_stixel_payload_mb": 0,
+          "peak_active_fit_rss_increase_mb": 0
+        },
+        "training": {
+          "samples": 169,
+          "peak_rss_mb": 2963.859375,
+          "peak_accounted_mb": 1192.276123046875,
+          "peak_parent_rss_mb": 1890.15625,
+          "peak_workers_rss_mb": 1404.171875,
+          "peak_active_stixel_payload_mb": 5.341670036315918,
+          "peak_active_fit_rss_increase_mb": 23.4375
+        },
+        "heldout_prediction": {
+          "samples": 27,
+          "peak_rss_mb": 1701.359375,
+          "peak_accounted_mb": 472.69635009765625,
+          "peak_parent_rss_mb": 1362.28125,
+          "peak_workers_rss_mb": 339.15625,
+          "peak_active_stixel_payload_mb": 0,
+          "peak_active_fit_rss_increase_mb": 0
+        },
+        "prediction": {
+          "samples": 38,
+          "peak_rss_mb": 2572.4375,
+          "peak_accounted_mb": 843.33740234375,
+          "peak_parent_rss_mb": 1391.875,
+          "peak_workers_rss_mb": 1319.859375,
+          "peak_active_stixel_payload_mb": 0,
+          "peak_active_fit_rss_increase_mb": 0
+        },
+        "done": {
+          "samples": 1,
+          "peak_rss_mb": 850.53125,
+          "peak_accounted_mb": 230.50616455078125,
+          "peak_parent_rss_mb": 850.53125,
+          "peak_workers_rss_mb": 0,
+          "peak_active_stixel_payload_mb": 0,
+          "peak_active_fit_rss_increase_mb": 0
+        },
+        "fit_preparation": null,
+        "fit_finalize": null,
+        "evaluation": null,
+        "finalize": null
+      },
+      "wall_seconds": 36.4275931250304,
+      "prepared_input_pipeline_peak_accounted_mb": 1192.276123046875
+    },
+    {
+      "variant": "rewrite_native",
+      "backend": "native",
+      "jobs": 4,
+      "threads": 1,
+      "input": "duckdb",
+      "base_model": "xgboost",
+      "detailed_profiling": true,
+      "trained_stixels": 635,
+      "input_preparation_method": "helper",
+      "input_payload_bytes": 214400000,
+      "estimated_largest_window_payload_bytes": 85174264,
+      "saved_models_bytes": 28480876,
+      "largest_saved_model_bytes": 48198,
+      "lazy_loading": true,
+      "prediction_rows": 200000,
+      "prediction_output_bytes": 800000,
+      "coverage": 1.0,
+      "auc": 0.740835680768721,
+      "brier": 0.06450807303190231,
+      "log_loss": 0.24036239087581635,
+      "versions": {
+        "numpy": "2.5.1",
+        "pandas": "3.0.5",
+        "duckdb": "1.5.5",
+        "sklearn": "1.9.0",
+        "xgboost": "3.3.0"
+      },
+      "execution_info": {
+        "training_data_backend": "native",
+        "workers": 4,
+        "shared_input_bytes": 0,
+        "partition_seconds": 5.408655852079391e-07,
+        "shared_preparation_seconds": 2.50060111284256e-07,
+        "training_seconds": 17.62504112510942,
+        "fit_seconds": 17.684581333072856
+      },
+      "stixel_measurements": {
+        "fit_calls": 635,
+        "fit_seconds_sum": 54.63095945306122,
+        "max_stixel_dataframe_bytes": 5601147,
+        "max_fit_rss_increase_bytes": 27672576,
+        "max_fit_accounted_increase_bytes": 8765440
+      },
+      "phase_seconds": {
+        "imports": 8.484754332806915,
+        "input_preparation": 1.7630999581888318,
+        "partitioning": 1.2777889168355614,
+        "fit_preparation": 0.05030570807866752,
+        "training": 17.624635291984305,
+        "fit_finalize": 0.014103499939665198,
+        "heldout_prediction": 2.7600615001283586,
+        "evaluation": 0.013460207963362336,
+        "prediction": 3.776248208945617,
+        "finalize": 0.00242637493647635
+      },
+      "processing_seconds": 35.76677245879546,
+      "process_tree_peak_rss_mb": 3049.09375,
+      "process_tree_peak_accounted_mb": 1135.3179321289062,
+      "phase_memory": {
+        "done": {
+          "samples": 2,
+          "peak_rss_mb": 1850.625,
+          "peak_accounted_mb": 214.271240234375,
+          "peak_parent_rss_mb": 1850.625,
+          "peak_workers_rss_mb": 0,
+          "peak_active_stixel_payload_mb": 0,
+          "peak_active_fit_rss_increase_mb": 0
+        },
+        "imports": {
+          "samples": 81,
+          "peak_rss_mb": 243.484375,
+          "peak_accounted_mb": 163.564697265625,
+          "peak_parent_rss_mb": 243.484375,
+          "peak_workers_rss_mb": 0,
+          "peak_active_stixel_payload_mb": 0,
+          "peak_active_fit_rss_increase_mb": 0
+        },
+        "input_preparation": {
+          "samples": 16,
+          "peak_rss_mb": 1895.0,
+          "peak_accounted_mb": 1135.3179321289062,
+          "peak_parent_rss_mb": 1895.0,
+          "peak_workers_rss_mb": 0,
+          "peak_active_stixel_payload_mb": 0,
+          "peak_active_fit_rss_increase_mb": 0
+        },
+        "partitioning": {
+          "samples": 12,
+          "peak_rss_mb": 2004.078125,
+          "peak_accounted_mb": 817.7578735351562,
+          "peak_parent_rss_mb": 1766.28125,
+          "peak_workers_rss_mb": 237.921875,
+          "peak_active_stixel_payload_mb": 0,
+          "peak_active_fit_rss_increase_mb": 0
+        },
+        "fit_preparation": {
+          "samples": 1,
+          "peak_rss_mb": 1766.484375,
+          "peak_accounted_mb": 681.6148681640625,
+          "peak_parent_rss_mb": 1766.484375,
+          "peak_workers_rss_mb": 0,
+          "peak_active_stixel_payload_mb": 0,
+          "peak_active_fit_rss_increase_mb": 0
+        },
+        "training": {
+          "samples": 167,
+          "peak_rss_mb": 3049.09375,
+          "peak_accounted_mb": 1133.5089111328125,
+          "peak_parent_rss_mb": 1771.6875,
+          "peak_workers_rss_mb": 1277.40625,
+          "peak_active_stixel_payload_mb": 5.341670036315918,
+          "peak_active_fit_rss_increase_mb": 22.109375
+        },
+        "heldout_prediction": {
+          "samples": 27,
+          "peak_rss_mb": 2072.859375,
+          "peak_accounted_mb": 417.1019287109375,
+          "peak_parent_rss_mb": 1775.21875,
+          "peak_workers_rss_mb": 299.390625,
+          "peak_active_stixel_payload_mb": 0,
+          "peak_active_fit_rss_increase_mb": 0
+        },
+        "prediction": {
+          "samples": 36,
+          "peak_rss_mb": 2957.921875,
+          "peak_accounted_mb": 738.1340942382812,
+          "peak_parent_rss_mb": 1852.515625,
+          "peak_workers_rss_mb": 1168.8125,
+          "peak_active_stixel_payload_mb": 0,
+          "peak_active_fit_rss_increase_mb": 0
+        },
+        "fit_finalize": null,
+        "evaluation": null,
+        "finalize": null
+      },
+      "wall_seconds": 36.004091625101864,
+      "prepared_input_pipeline_peak_accounted_mb": 1133.5089111328125,
+      "same_nan_mask": true,
+      "max_prediction_difference": 0.0,
+      "same_full_nan_mask": true,
+      "max_full_prediction_difference": 0.0
+    },
+    {
+      "variant": "rewrite_memmap",
+      "backend": "memmap",
+      "jobs": 4,
+      "threads": 1,
+      "input": "duckdb",
+      "base_model": "xgboost",
+      "detailed_profiling": true,
+      "trained_stixels": 635,
+      "input_preparation_method": "helper",
+      "input_payload_bytes": 214400000,
+      "estimated_largest_window_payload_bytes": 85174264,
+      "saved_models_bytes": 28480876,
+      "largest_saved_model_bytes": 48198,
+      "lazy_loading": true,
+      "prediction_rows": 200000,
+      "prediction_output_bytes": 800000,
+      "coverage": 1.0,
+      "auc": 0.740835680768721,
+      "brier": 0.06450807303190231,
+      "log_loss": 0.24036239087581635,
+      "versions": {
+        "numpy": "2.5.1",
+        "pandas": "3.0.5",
+        "duckdb": "1.5.5",
+        "sklearn": "1.9.0",
+        "xgboost": "3.3.0"
+      },
+      "execution_info": {
+        "training_data_backend": "memmap",
+        "workers": 4,
+        "shared_input_bytes": 170235448,
+        "partition_seconds": 4.5797787606716156e-07,
+        "shared_preparation_seconds": 0.4004203749354929,
+        "training_seconds": 17.162387415999547,
+        "fit_seconds": 17.62865712493658
+      },
+      "stixel_measurements": {
+        "fit_calls": 635,
+        "fit_seconds_sum": 54.92477950104512,
+        "max_stixel_dataframe_bytes": 5601147,
+        "max_fit_rss_increase_bytes": 29573120,
+        "max_fit_accounted_increase_bytes": 8552448
+      },
+      "phase_seconds": {
+        "imports": 8.602787708863616,
+        "input_preparation": 1.7264043751638383,
+        "partitioning": 1.2851704158820212,
+        "fit_preparation": 0.05102095892652869,
+        "shared_input_preparation": 0.40014862501993775,
+        "training": 17.162015583133325,
+        "fit_finalize": 0.02000133297406137,
+        "heldout_prediction": 2.480094416998327,
+        "evaluation": 0.011141292052343488,
+        "prediction": 3.7668144998606294,
+        "finalize": 0.0028813329990953207
+      },
+      "processing_seconds": 35.50834537483752,
+      "process_tree_peak_rss_mb": 3422.0,
+      "process_tree_peak_accounted_mb": 1144.3804931640625,
+      "phase_memory": {
+        "done": {
+          "samples": 3,
+          "peak_rss_mb": 2133.6875,
+          "peak_accounted_mb": 236.42791748046875,
+          "peak_parent_rss_mb": 2133.6875,
+          "peak_workers_rss_mb": 0,
+          "peak_active_stixel_payload_mb": 0,
+          "peak_active_fit_rss_increase_mb": 0
+        },
+        "imports": {
+          "samples": 82,
+          "peak_rss_mb": 243.65625,
+          "peak_accounted_mb": 163.03363037109375,
+          "peak_parent_rss_mb": 243.65625,
+          "peak_workers_rss_mb": 0,
+          "peak_active_stixel_payload_mb": 0,
+          "peak_active_fit_rss_increase_mb": 0
+        },
+        "input_preparation": {
+          "samples": 16,
+          "peak_rss_mb": 1851.125,
+          "peak_accounted_mb": 1144.3804931640625,
+          "peak_parent_rss_mb": 1851.125,
+          "peak_workers_rss_mb": 0,
+          "peak_active_stixel_payload_mb": 0,
+          "peak_active_fit_rss_increase_mb": 0
+        },
+        "partitioning": {
+          "samples": 12,
+          "peak_rss_mb": 2072.46875,
+          "peak_accounted_mb": 809.7269287109375,
+          "peak_parent_rss_mb": 1854.5625,
+          "peak_workers_rss_mb": 218.0,
+          "peak_active_stixel_payload_mb": 0,
+          "peak_active_fit_rss_increase_mb": 0
+        },
+        "fit_preparation": {
+          "samples": 1,
+          "peak_rss_mb": 1860.109375,
+          "peak_accounted_mb": 681.4901123046875,
+          "peak_parent_rss_mb": 1860.109375,
+          "peak_workers_rss_mb": 0,
+          "peak_active_stixel_payload_mb": 0,
+          "peak_active_fit_rss_increase_mb": 0
+        },
+        "shared_input_preparation": {
+          "samples": 4,
+          "peak_rss_mb": 2230.71875,
+          "peak_accounted_mb": 501.80322265625,
+          "peak_parent_rss_mb": 2230.71875,
+          "peak_workers_rss_mb": 0,
+          "peak_active_stixel_payload_mb": 0,
+          "peak_active_fit_rss_increase_mb": 0
+        },
+        "training": {
+          "samples": 162,
+          "peak_rss_mb": 2814.9375,
+          "peak_accounted_mb": 653.7594604492188,
+          "peak_parent_rss_mb": 2072.3125,
+          "peak_workers_rss_mb": 743.0,
+          "peak_active_stixel_payload_mb": 5.341670036315918,
+          "peak_active_fit_rss_increase_mb": 28.125
+        },
+        "heldout_prediction": {
+          "samples": 23,
+          "peak_rss_mb": 2364.375,
+          "peak_accounted_mb": 421.71173095703125,
+          "peak_parent_rss_mb": 2087.0625,
+          "peak_workers_rss_mb": 289.078125,
+          "peak_active_stixel_payload_mb": 0,
+          "peak_active_fit_rss_increase_mb": 0
+        },
+        "prediction": {
+          "samples": 34,
+          "peak_rss_mb": 3422.0,
+          "peak_accounted_mb": 745.4780883789062,
+          "peak_parent_rss_mb": 2133.53125,
+          "peak_workers_rss_mb": 1317.046875,
+          "peak_active_stixel_payload_mb": 0,
+          "peak_active_fit_rss_increase_mb": 0
+        },
+        "fit_finalize": null,
+        "evaluation": null,
+        "finalize": null
+      },
+      "wall_seconds": 35.801577124977484,
+      "prepared_input_pipeline_peak_accounted_mb": 809.7269287109375,
+      "same_nan_mask": true,
+      "max_prediction_difference": 0.0,
+      "same_full_nan_mask": true,
+      "max_full_prediction_difference": 0.0
+    }
+  ],
+  "host": {
+    "platform": "macOS-15.7.7-arm64-arm-64bit-Mach-O",
+    "machine": "arm64",
+    "python": "3.13.15",
+    "logical_cpus": 14
+  },
+  "configuration": {
+    "source": "synthetic",
+    "input": "duckdb",
+    "ensembles": 8,
+    "trees": 20,
+    "depth": 4,
+    "jobs": 4,
+    "threads": 1,
+    "base_model": "xgboost",
+    "seed": 42,
+    "resident_models": false
+  },
+  "memory_metric": "macOS physical footprint",
+  "limitations": "Sampled every 100 ms; RSS sums double-count shared pages. Footprint/PSS excludes some job-wide memory. Validate Slurm cgroup peak on HPC. Saved model bytes and shared file bytes measure disk payload, not resident memory. Fit RSS increases also include estimator preprocessing and allocator retention. Logical dataframe bytes can share underlying memory and must not be added to RSS. Phases shorter than the sampling interval may have no memory sample (null). Detailed profiling adds boundary measurements and small temporary JSON writes. Times are measured on this fixture, not extrapolations to full species data."
+}

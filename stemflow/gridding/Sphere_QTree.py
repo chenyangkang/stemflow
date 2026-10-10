@@ -30,11 +30,7 @@ from .Q_blocks import QPoint_3D, Sphere_QTriangle
 
 sys.setrecursionlimit(500000)
 
-os.environ["MKL_NUM_THREADS"] = "1"
-os.environ["NUMEXPR_NUM_THREADS"] = "1"
-os.environ["OMP_NUM_THREADS"] = "1"
 
-warnings.filterwarnings("ignore")
 
 
 def Sphere_recursive_subdivide(

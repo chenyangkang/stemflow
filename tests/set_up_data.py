@@ -1,5 +1,6 @@
 import os
 import pickle
+from pathlib import Path
 from urllib.request import urlopen
 
 import stemflow
@@ -7,14 +8,20 @@ import stemflow
 
 def get_data():
     url = "https://chenyangkang.github.io/stemflow/mini_data/mini_data.pkl"
-    print(f"Requesting data from {url} ...")
-    data = pickle.load(urlopen(url))
+    bundled = Path(__file__).resolve().parents[1] / "docs" / "mini_data" / "mini_data.pkl"
+    print(f"Reading test data from {bundled if bundled.exists() else url} ...")
+    if bundled.exists():
+        with bundled.open("rb") as handle:
+            data = pickle.load(handle)
+    else:
+        with urlopen(url) as handle:
+            data = pickle.load(handle)
     print("Done.")
     x_names = get_x_names()
     X = data.drop("count", axis=1)[x_names + ["longitude", "latitude"]].fillna(-1)
     y = data[["count"]]
 
-    assert os.path.exists(len(data) > 0)
+    assert len(data) > 0
     return X, y
 
 

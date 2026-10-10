@@ -62,7 +62,7 @@ def train_one_stixel(
     unique_sub_y_train_binary = np.unique(np.where(sub_y_train > 0, 1, 0))
 
     # nan check
-    nan_count = np.sum(np.isnan(np.array(sub_X_train))) + np.sum(np.isnan(sub_y_train))
+    nan_count = sub_X_train.isna().to_numpy().sum() + sub_y_train.isna().sum()
     if nan_count > 0:
         return (None, [], "Contain_Nan")
 

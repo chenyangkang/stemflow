@@ -27,11 +27,7 @@ from .generate_random import generate_random_saving_code
 # from tqdm.contrib.concurrent import process_map
 
 
-os.environ["MKL_NUM_THREADS"] = "1"
-os.environ["NUMEXPR_NUM_THREADS"] = "1"
-os.environ["OMP_NUM_THREADS"] = "1"
 
-warnings.filterwarnings("ignore")
 
 
 def generate_temporal_bins(

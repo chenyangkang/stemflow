@@ -2,7 +2,7 @@ site_name: stemflow
 site_description: 'A package for Adaptive Spatio-Temporal Model (AdaSTEM) in python.'
 repo_name: 'chenyangkang/stemflow'
 repo_url: 'https://github.com/chenyangkang/stemflow'
-site_url: https://chenyangkag.github.io/stemflow/
+site_url: https://chenyangkang.github.io/stemflow/
 use_directory_urls: false
 
 theme:
@@ -86,10 +86,12 @@ nav:
     - 'Optimizing stixel size': Examples/07.Optimizing_stixel_size.ipynb
     - 'Lazy-loading': Examples/08.Lazy_loading.ipynb
     - 'Database query': Examples/09.Database_query.ipynb
+    - 'Parallel execution and memory': Examples/10.Execution_and_memory.ipynb
   - Tips:
     - 'Tips for spatiotemporal indexing': Tips/Tips_for_spatiotemporal_indexing.md
     - 'Tips for data types': Tips/Tips_for_data_types.md
     - 'Tips for different tasks': Tips/Tips_for_different_tasks.md
+    - 'Parallel execution and memory': Tips/Tips_for_parallel_execution.md
   - API Documentation:
     - stemflow.model:
       - 'AdaSTEM': API_Documentation/model/stemflow.model.AdaSTEM.md
@@ -104,8 +106,9 @@ nav:
       - 'Sphere_QTree': API_Documentation/gridding/stemflow.gridding.Sphere_QTree.md
       - 'QuadGrid': API_Documentation/gridding/stemflow.gridding.QuadGrid.md
     - stemflow.lazyloading:
-      - 'lazyloading': API_Documentation/gridding/stemflow.lazyloading.lazyloading.md
-      - 'open_db_connection': API_Documentation/gridding/stemflow.lazyloading.open_db_connection.md
+      - 'lazyloading': API_Documentation/lazyloading/stemflow.lazyloading.lazyloading.md
+      - 'open_db_connection': API_Documentation/lazyloading/stemflow.lazyloading.open_db_connection.md
+      - 'data_preparation': API_Documentation/lazyloading/stemflow.lazyloading.data_preparation.md
     - stemflow.utils:
       - 'jitterrotation':
         - 'jitterrotator': API_Documentation/utils/jitterrotation/stemflow.utils.jitterrotation.jitterrotator.md
@@ -120,7 +123,6 @@ nav:
       - 'generate_random': API_Documentation/utils/stemflow.utils.generate_random.md
       - 'validation': API_Documentation/utils/stemflow.utils.validation.md
       - 'wrapper': API_Documentation/utils/stemflow.utils.wrapper.md
-      - 'lazyloading': API_Documentation/utils/stemflow.utils.lazyloading.md
     - stemflow.model_selection: API_Documentation/stemflow.model_selection.md
 
   - Fun Visualization:

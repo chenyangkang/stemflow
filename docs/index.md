@@ -181,6 +181,19 @@ Where the `pred` is the mean of the predicted values across ensembles.
 See [AdaSTEM demo](https://chenyangkang.github.io/stemflow/Examples/01.AdaSTEM_demo.html) for further functionality.<br>
 Besides, `stemflow` also support [lazy loading](https://chenyangkang.github.io/stemflow/Examples/08.Lazy_loading.html) and [database query](https://chenyangkang.github.io/stemflow/Examples/09.Database_query.html) to reduce memory load during parallel computing.
 
+The execution rewrite adds a Pandas-friendly database helper and optional shared training arrays:
+
+```py
+from stemflow.lazyloading import make_training_databases
+
+X_path, y_path = make_training_databases(X_train, y_train, "data/training")
+model.fit(X_path, y_path, temporal_window_prequery=True,
+          training_data_backend="memmap", inner_max_num_threads=1,
+          max_concurrent_ensembles=4)
+```
+
+DuckDB remains the default training route. See the [parallel execution guide](https://chenyangkang.github.io/stemflow/Tips/Tips_for_parallel_execution.html) and [executed example](https://chenyangkang.github.io/stemflow/Examples/10.Execution_and_memory.html) for compatibility, scratch-space requirements and complete-job memory trade-offs. The repository also contains reproducible benchmarks in `scripts/00_benchmarks/` and measured comparisons in `resources/REWRITE.md`.
+
 -----
 
 ## Plot QuadTree ensembles :evergreen_tree:
