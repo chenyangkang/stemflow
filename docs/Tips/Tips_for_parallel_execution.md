@@ -87,6 +87,73 @@ Median aggregation and `return_by_separate_ensembles=True` retain the full matri
 
 For estimators with read-only prediction, `fit(..., persist_prediction_state=False)` lets lazy models be loaded and released without rewriting their files. The default is True, preserving custom estimators whose prediction-time mutations must persist. This choice is independent of streaming aggregation. The standalone `LazyLoadingEstimator` offers the corresponding `dump_on_read` option and also defaults to True. Performance comparisons explicitly disable repeated writes for the tested forests/XGBoost models.
 
+### Monitor a running workflow
+
+Install the optional monitoring dependency in the environment that runs the model:
+
+```bash
+pip install "stemflow[monitoring]"
+# From a checkout of this branch: pip install -e ".[monitoring]"
+```
+
+Wrap fitting and prediction in one context. This records the largest observed process-tree total across the complete context, rather than adding separate peaks from workers or steps:
+
+```python
+with model.monitor_execution(
+    sample_interval=1.0,
+    log_interval=30.0,
+    output_path="data/execution_monitor.json",
+) as monitor:
+    model.fit(X_path, y_path, temporal_window_prequery=True)
+    with monitor.phase("testing"):
+        test_pred = model.predict_proba(X_test_path, temporal_window_prequery=True)
+        scores = model.eval_STEM_res("classification", y_test, test_pred[:, 1])
+    pred = model.predict_proba(prediction_path, temporal_window_prequery=True)
+
+report = model.execution_monitor_
+peak = report["peak_tree_rss_bytes"]
+print("Job peak RSS (GiB):", "unavailable" if peak is None else peak / 2**30)
+for stage in report["stages"]:
+    peak = stage["peak_tree_rss_bytes"]
+    print(stage["name"], stage["wall_seconds"],
+          "unavailable" if peak is None else peak / 2**30)
+
+# Save after the context to retain the complete report, including prediction.
+model.save("data/model.tar.gz", remove_temporary_file=False)
+```
+
+The example paths stand for your own training, held-out evaluation and final prediction inputs. Include your own preparation, evaluation or plotting in named `monitor.phase(...)` stages. For independent data preparation or other estimators, use the same context directly with `from stemflow.utils import ExecutionMonitor`.
+
+`model.execution_monitor_` is a plain dictionary containing workflow and stage timings, sampled peaks, parent/child memory, measurement coverage and any errors. It updates after each outer AdaSTEM method finishes and is finalized when the context exits, including on failure. It survives pickling and `model.save`/`AdaSTEM.load`. Save after exiting the context to capture the complete run; a save inside it contains the latest available snapshot. The report is created only when monitoring is enabled. Unmonitored calls leave it intact; a new monitored context replaces it with that context's report. To keep fit and prediction together, use one context as above. You can still call `monitor.summary()` during or after execution.
+
+Live stdout updates are flushed into ordinary Slurm logs. They show elapsed wall time, the current stage, parent RSS, descendants' RSS, and the simultaneous process-tree peak. Built-in stages include input validation, partitioning, training data preparation, training, prediction setup, prediction/aggregation, and cleanup. Feature importance calculation, model saving, `score`, and calibration diagnostics also have stage hooks. Streaming prediction and aggregation overlap, so their main loop is reported as one stage. The matrix route reports ensemble prediction and aggregation separately.
+
+The JSON report updates alongside live logs and on context exit, replacing one file. If the process is killed abruptly, the most recent update can remain with `running=True`; no Python monitor can guarantee a final update after SIGKILL. `log_interval=None` disables logging and writes only the final report. The default retains no raw memory history. Set `max_samples=600` to retain at most the most recent 600 samples; lifetime and stage peaks remain available after old samples are discarded.
+
+The portable reader uses [psutil](https://psutil.io/api/#psutil.Process.memory_info) on macOS (including Apple Silicon), Linux, Windows and other supported Unix systems. A macOS sandbox fallback queries the job's descendants through libproc when global process enumeration is blocked. Read failures retain unavailable values and sample coverage counts rather than inventing zero usage. `rss_complete` and `partial_rss_samples` help identify incomplete readings.
+
+| Measurement | Meaning and limits |
+| --- | --- |
+| RSS | Resident process memory; Windows working set. Summing processes counts shared pages repeatedly. |
+| USS, optional | Private memory on supported systems. Excludes shared pages and is not total job memory. |
+| PSS, optional | Linux proportional accounting, which apportions shared pages among processes. |
+| Physical footprint, optional | macOS accounting, including compressed memory. Different from RSS, USS and Linux PSS. |
+
+Set `detailed_memory=True` to request USS/PSS and macOS physical footprint when available. Detailed queries can be slower or require permissions; missing readings remain `None`. Each sample includes the number of processes successfully read for each metric and a completeness flag. No extra measurements are substituted for each other. Peaks from different metrics or stages must not be added together. Stage timings are inclusive, so nested stages also overlap.
+
+This is sampled host memory for the calling process and currently discoverable descendants on one node. Readings within each pass are sequential, so totals approximate a snapshot. Brief spikes between samples, orphaned workers and GPU device memory may be missed. It does not measure Slurm/cgroup charges or remote distributed workers. It also cannot separate an estimator's workspace from data copies inside the same process: parent/child memory is a process breakdown, not allocation ownership. Retained arrays/models contribute to every stage where they are resident. Use the detailed profiler below to investigate allocations, and scheduler accounting to choose HPC requests.
+
+Monitoring is off by default and leaves temporal-window prequerying, concurrency, lazy loading and aggregation choices intact. The report includes sampling time and maximum sample gap so that you can assess observation cost. Increase `sample_interval` for long production runs; run expensive allocation tracing separately. A monitor context belongs to the calling thread. Only its plain report is stored on the model; the live sampler, locks and thread are never passed to workers or saved with the model.
+
+To check the sampler with two known native memory allocations on any target machine:
+
+```bash
+python scripts/00_benchmarks/check_execution_monitor.py
+python -m pytest tests/test_execution_monitor.py -q
+```
+
+The quick check retains one small report under `data/00_benchmarks/execution_monitor/` and closes its workers. The dedicated CI workflow runs the checks on macOS, Linux and Windows; configuring this matrix is not evidence of a successful run until CI has executed it.
+
 ### Attribute expensive steps
 
 Profiling is opt-in and records compact JSON per parent fit/predict and per ensemble worker:
@@ -98,7 +165,7 @@ export STEMFLOW_PROFILE_ALLOCATIONS=1
 python run_model.py
 ```
 
-`STEMFLOW_PROFILE_DIR` alone enables function timing with file/line attribution. `STEMFLOW_PROFILE_LINES=1` adds line timings within stemflow, including called work. `STEMFLOW_PROFILE_ALLOCATIONS=1` adds net retained Python allocations by source line and a traced Python peak. Native XGBoost/forest allocations, mapped pages and GPU device memory are not measured by `tracemalloc`. Use the benchmark process-tree sampler and scheduler accounting for whole-job peaks. Inclusive function/line timings overlap and must not be summed as independent components.
+`STEMFLOW_PROFILE_DIR` alone enables function timing with file/line attribution. `STEMFLOW_PROFILE_LINES=1` adds line timings within stemflow, including called work. `STEMFLOW_PROFILE_ALLOCATIONS=1` adds net retained Python allocations by source line and a traced Python peak. Native XGBoost/forest allocations, mapped pages and GPU device memory are not measured by `tracemalloc`. Use the execution monitor or benchmark process-tree sampler for sampled host-memory peaks, and scheduler accounting for HPC charges. Inclusive function/line timings overlap and must not be summed as independent components.
 
 Profiling adds overhead, particularly with line and allocation tracing. Run detailed profiles separately from comparative timing runs. It is intended for serial or process workers; concurrent threads share profiler state. Unset these variables for normal execution. A failed profile write emits a warning while preserving the model call's result or exception.
 

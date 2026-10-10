@@ -1,0 +1,232 @@
+{
+  "repository": "chenyangkang/stemflow",
+  "branch": "codex-rewrite",
+  "requested_action": "Create focused GitHub issues and a tracking issue; leave all open.",
+  "state": "published_verified",
+  "note": "Before publishing, check current issues for duplicates and update tracker with actual child issue links. Do not publish source datasets, credentials, local absolute paths or raw HPC logs.",
+  "issues": [
+    {
+      "key": "bootstrap",
+      "title": "[BUG] Preserve bootstrap occurrence multiplicity during stixel training",
+      "status": "implemented_on_branch",
+      "commits": [
+        "53dc476"
+      ],
+      "body": "Bootstrap sampling should repeat an observation exactly as many times as it was drawn. The previous selection path could multiply duplicate IDs again when selecting temporal windows/stixels, changing the intended resampling distribution.\n\n**Status:** implemented on local `codex-rewrite`; keep open until merged and verified.\n\nThe rewrite carries occurrence positions through selection and includes a direct resampling oracle. This is an intentional numerical correction: matching the old duplicate-row output is not the acceptance criterion. `ensemble_bootstrap=True` remains supported, including native DuckDB, Parquet, Pandas and shared input routes.\n\n**Acceptance**\n- [x] Compare selected occurrence counts with direct seeded resampling, with and without temporal-window prequery.\n- [x] Preserve source order, half-open spatial bounds, reproducibility and intended zero/one dummy stixels.\n- [ ] Merge the correction and retain regression coverage in CI.\n\nEvidence: `tests/test_execution_rewrite.py`, `tests/test_prediction_streaming.py`, `resources/REWRITE.md`.\n\nLocal implementation commits: `53dc476`. Branch: `codex-rewrite`. These commits may not yet be published.",
+      "github": {
+        "number": 97,
+        "url": "https://github.com/chenyangkang/stemflow/issues/97",
+        "state": "open",
+        "author": "chenyangkang",
+        "verified": true
+      }
+    },
+    {
+      "key": "logit_aggregation",
+      "title": "[BUG] Correct logit aggregation and verify prediction mean/std semantics",
+      "status": "implemented_on_branch",
+      "commits": [
+        "53dc476",
+        "46a87db"
+      ],
+      "body": "The earlier logit aggregation path could replace positive probabilities with zero. This invalidates the resulting aggregate probability and can affect downstream marginal-probability calculations.\n\n**Status:** corrected on local `codex-rewrite`; keep open until merged.\n\nThe corrected route clips probabilities for numerical stability, aggregates logits as requested, and transforms the mean back to probability. Arithmetic aggregation remains independently available. Streaming and matrix implementations are compared, including missing coverage and standard deviations (`ddof=1`; logit standard deviation is on the logit scale).\n\n**Acceptance**\n- [x] Preserve positive input probabilities in logit aggregation.\n- [x] Match streaming and matrix arithmetic/logit means and standard deviations within stated numerical tolerances.\n- [x] Retain separate-ensemble and median behavior and minimum-ensemble coverage masking.\n- [ ] Merge and run release CI.\n\nEvidence: `tests/test_execution_rewrite.py::test_logit_aggregation_preserves_positive_probabilities`, `tests/test_prediction_streaming.py`. This correction does not establish that logit aggregation is better calibrated than arithmetic aggregation.\n\nLocal implementation commits: `53dc476`, `46a87db`. Branch: `codex-rewrite`. These commits may not yet be published.",
+      "github": {
+        "number": 98,
+        "url": "https://github.com/chenyangkang/stemflow/issues/98",
+        "state": "open",
+        "author": "chenyangkang",
+        "verified": true
+      }
+    },
+    {
+      "key": "duckdb",
+      "title": "[BUG] Validate concurrent read-only DuckDB access and compressed-column failures",
+      "status": "partially_implemented_needs_hpc_validation",
+      "commits": [
+        "53dc476",
+        "46a87db"
+      ],
+      "body": "Production runs reported failures inside DuckDB while reading compressed training columns. Some jobs failed after several ensembles completed. These incidents must be distinguished from a separate run where Slurm explicitly recorded OUT_OF_MEMORY.\n\n**Status:** read-only source access and local compatibility checks are implemented on `codex-rewrite`; the original HPC compressed-column failure is not established as resolved.\n\n**Requirements**\n- Preserve parallel workers and `temporal_window_prequery=True`.\n- Open source databases read-only; never silently rebuild or modify shared source data.\n- Keep database ID/order contracts explicit.\n- Reproduce any remaining failure with a small fixture and record DuckDB version, writer/reader versions, query, types, compression and bootstrap setting.\n- Treat globally disabling compression, disabling concurrency, or regenerating all databases as proposed workarounds requiring evidence, not assumed fixes.\n\n**Acceptance**\n- [x] Native workers use read-only source connections.\n- [x] Local tests cover DuckDB/Parquet, bootstrap, shared/native routes and temporal prequery.\n- [ ] Run concurrent reads on Linux/Slurm against representative databases, including files written by older supported DuckDB versions.\n- [ ] Identify and document any upstream DuckDB issue/version constraint with a reproducer.\n\nEvidence: `stemflow/lazyloading/open_db_connection.py`, `tests/test_execution_rewrite.py`, `resources/REWRITE.md`.\n\nRelated historical report: #85 (closed) addressed temporary-directory setup during repeated prediction. Do not assume that report and the later compressed-column failures have the same cause.\n\nLocal implementation commits: `53dc476`, `46a87db`. Branch: `codex-rewrite`. These commits may not yet be published.",
+      "github": {
+        "number": 99,
+        "url": "https://github.com/chenyangkang/stemflow/issues/99",
+        "state": "open",
+        "author": "chenyangkang",
+        "verified": true
+      }
+    },
+    {
+      "key": "training_memory",
+      "title": "[Performance] Reduce ensemble data copies and bound queued training work",
+      "status": "implemented_on_branch",
+      "commits": [
+        "53dc476",
+        "46a87db"
+      ],
+      "body": "Training many ensembles in parallel can duplicate temporal-window data and large estimator payloads. Reducing DuckDB's `max_mem` alone does not bound estimator workspace or total job memory.\n\n**Status:** optional shared inputs and bounded task dispatch are implemented on local `codex-rewrite`; production sizing remains workload-dependent.\n\nThe native Pandas/DuckDB/Parquet route remains the default. The optional memmap route stores numeric inputs in read-only NumPy files grouped by dtype; workers construct Pandas data for the current stixel. Queued work is bounded, and `max_concurrent_ensembles` can limit active ensembles separately from total ensemble count. Temporal prequery and lazy loading remain compatible.\n\n**Acceptance**\n- [x] Preserve dtype, index, source order, missing coverage and estimator-facing Pandas interfaces.\n- [x] Compare native/shared predictions and bootstrap occurrence counts.\n- [x] Clean temporary mappings on success and failure.\n- [ ] Merge and repeat full-job memory/time comparisons with realistic tuned/calibrated estimators on Linux.\n\nEvidence: `stemflow/lazyloading/training_data.py`, `tests/test_execution_rewrite.py`, `resources/REWRITE.md`. Local Mac measurements show useful but non-universal memory reductions; they are not a hard memory guarantee.\n\nLocal implementation commits: `53dc476`, `46a87db`. Branch: `codex-rewrite`. These commits may not yet be published.",
+      "github": {
+        "number": 100,
+        "url": "https://github.com/chenyangkang/stemflow/issues/100",
+        "state": "open",
+        "author": "chenyangkang",
+        "verified": true
+      }
+    },
+    {
+      "key": "prediction_memory",
+      "title": "[Performance] Stream ensemble predictions and avoid sending every model to each worker",
+      "status": "implemented_on_branch",
+      "commits": [
+        "53dc476",
+        "46a87db"
+      ],
+      "body": "Prediction previously retained all ensemble outputs before computing summary statistics, and resident-model execution could send unnecessary models to each worker. Both can dominate memory even after training is optimized.\n\n**Status:** implemented on local `codex-rewrite`.\n\nBuilt-in planar prediction sends each worker its assigned ensemble models. Mean/std aggregation consumes results with online counts and Welford moments. Persistent reduction storage scales with prediction rows rather than rows \u00d7 ensembles. Median, separate-ensemble returns and custom prediction overrides retain a compatible matrix route; `streaming=False` explicitly selects it.\n\n**Acceptance**\n- [x] Compare arithmetic/logit means, std, coverage and output order against the matrix route.\n- [x] Preserve custom overrides and supported model-family behavior.\n- [x] Measure aggregation separately from the complete train-and-predict job.\n- [ ] Merge and test production-sized prediction sets on the target platform.\n\nEvidence: `stemflow/lazyloading/prediction.py`, `tests/test_prediction_streaming.py`, `resources/PIPELINE_OPTIMIZATION.md`. A 500,000-row \u00d7 50-ensemble probe reduced the logical prediction buffer from 200 MB to 10 MB. This is a 20-fold buffer reduction, not a 20-fold whole-job RAM reduction.\n\nRelated earlier work: #81 (closed). This issue tracks the additional streaming reduction and ensemble-specific worker payloads in the rewrite.\n\nLocal implementation commits: `53dc476`, `46a87db`. Branch: `codex-rewrite`. These commits may not yet be published.",
+      "github": {
+        "number": 101,
+        "url": "https://github.com/chenyangkang/stemflow/issues/101",
+        "state": "open",
+        "author": "chenyangkang",
+        "verified": true
+      }
+    },
+    {
+      "key": "lazy_prediction",
+      "title": "[Performance] Allow read-only lazy predictions while preserving stateful estimator behavior",
+      "status": "implemented_on_branch",
+      "commits": [
+        "46a87db"
+      ],
+      "body": "Lazy prediction previously loaded, predicted with, and serialized a model again on every use. For estimators whose prediction method does not change persistent state, rewriting adds avoidable I/O and serialization work.\n\n**Status:** implemented on local `codex-rewrite`.\n\n`fit(..., persist_prediction_state=True)` preserves existing behavior for arbitrary stateful estimators. Explicit `False` loads, predicts and releases a lazy estimator without saving prediction-time mutations. Training still saves fitted models, and prediction results are still returned.\n\n**Acceptance**\n- [x] Preserve the compatibility default for a custom estimator that changes state during prediction.\n- [x] Verify opt-out behavior and ordinary XGBoost/forest prediction.\n- [x] Keep lazy loading independent of DuckDB/shared inputs and streaming aggregation.\n- [ ] Merge and document when users should select the opt-out.\n\nEvidence: `stemflow/lazyloading/lazyloading.py`, `tests/test_prediction_streaming.py`, `docs/Tips/Tips_for_parallel_execution.md`. Reported prediction speed improvements combine several changes; do not attribute all of them to this option alone.\n\nRelated earlier work: #77 (closed). This issue concerns avoiding prediction-time rewrites of individual lazy estimators while retaining stateful compatibility.\n\nLocal implementation commits: `46a87db`. Branch: `codex-rewrite`. These commits may not yet be published.",
+      "github": {
+        "number": 102,
+        "url": "https://github.com/chenyangkang/stemflow/issues/102",
+        "state": "open",
+        "author": "chenyangkang",
+        "verified": true
+      }
+    },
+    {
+      "key": "database_preparation",
+      "title": "[Feature] Provide simple DuckDB preparation helpers with reliable target alignment",
+      "status": "implemented_on_branch",
+      "commits": [
+        "53dc476"
+      ],
+      "body": "Using DuckDB currently requires users to understand table names, ID columns, SQL and X/y ordering. Incorrect target alignment is also a correctness risk, including named Series targets.\n\n**Status:** helpers and alignment corrections are implemented on local `codex-rewrite`.\n\nProvide `make_duckdb_database`, `make_training_databases` and a `training_databases` context manager for numeric Pandas inputs. Pandas labels align by ID; arrays align by position. Source frames remain unchanged, and temporary lifetime/cleanup is explicit. Preserve the existing manually prepared database interface.\n\n**Acceptance**\n- [x] Validate duplicate/missing IDs, index alignment, named Series and length mismatches.\n- [x] Preserve numeric dtypes and deterministic source order.\n- [x] Exercise prepared databases in native/shared fitting and prediction.\n- [x] Test cleanup and source-frame immutability.\n- [ ] Merge and retain an executable example that requires no manual SQL.\n\nEvidence: `stemflow/lazyloading/data_preparation.py`, `tests/test_data_preparation.py`, `tests/test_execution_rewrite.py`, `docs/Examples/10.Execution_and_memory.ipynb`.\n\nRelated earlier work: #76 (closed). This adds user-facing preparation and alignment helpers on top of existing DuckDB support.\n\nLocal implementation commits: `53dc476`. Branch: `codex-rewrite`. These commits may not yet be published.",
+      "github": {
+        "number": 103,
+        "url": "https://github.com/chenyangkang/stemflow/issues/103",
+        "state": "open",
+        "author": "chenyangkang",
+        "verified": true
+      }
+    },
+    {
+      "key": "calibration_api",
+      "title": "[Feature] Add composable within-stixel calibration and optional self-tuning estimators",
+      "status": "implemented_on_branch",
+      "commits": [
+        "46a87db",
+        "4b21beb",
+        "0fe87e2"
+      ],
+      "body": "Users need independent choices for a fixed model, a tuned model, a calibrated model, or a tuned-and-calibrated model. Local calibration should use held-out scores within stixels and remain usable outside AdaSTEM.\n\n**Status:** modular estimators and a local-beta XGBoost recipe are implemented on local `codex-rewrite`.\n\nComponents include `CrossValidatedCalibratedClassifier`, `BetaCalibrator`, `SpatioTemporalKFold`, `SelfTuningClassifier/Regressor` and `local_beta_xgboost`. Fixed-parameter estimators can be calibrated without tuning. Tuning can be nested inside calibration training folds. The recipe exposes spatial/temporal block counts, calibration and tuning fold counts, Optuna trial count, tree counts, retry count and ridge strength.\n\nBeta uses `sigmoid(a log(p) - b log(1-p) + c)`, with an identity-centered penalty. No final global beta map or automatic class weighting is added. Intentional all-zero/all-one AdaSTEM stixels remain constant.\n\n**Acceptance**\n- [x] Test standalone/composed use, cloning, pickling, OOF separation and feature metadata exclusions.\n- [x] Match the supplied local-beta helper on fixed and tuned reference fixtures.\n- [x] Keep generic calibration independent of optional XGBoost/Optuna dependencies.\n- [ ] Merge and retain the public examples.\n\nEvidence: `stemflow/calibration/`, `stemflow/tuning.py`, `tests/test_calibration.py`. Regression calibration here calibrates point means, not a full predictive distribution. Implementation equivalence is not proof of superior scientific accuracy.\n\nLocal implementation commits: `46a87db`, `4b21beb`, `0fe87e2`. Branch: `codex-rewrite`. These commits may not yet be published.",
+      "github": {
+        "number": 104,
+        "url": "https://github.com/chenyangkang/stemflow/issues/104",
+        "state": "open",
+        "author": "chenyangkang",
+        "verified": true
+      }
+    },
+    {
+      "key": "rare_support",
+      "title": "[Research] Improve rare-species local calibration with explicit support and regularization validation",
+      "status": "remaining_research",
+      "commits": [
+        "46a87db"
+      ],
+      "body": "Rare species can have many checklists but very few detections within a stixel or validation fold. One positive per fold can prevent a numerical failure without making calibration reliable. Relative ECE is particularly unstable in zero-event bins.\n\n**Current work:** `SpatioTemporalKFold` retries blocked splits, records support and fallback status, and supports explicit rare-fold policies. The tuner skips unsupported searches. Identity-regularized local beta is available, but no universal ridge or rare-species winner has been established.\n\n**Proposed experiment**\n- Compare raw, local sigmoid, local beta (including ridge=0 and a strength grid), and small tuned XGBoost/forest models.\n- Vary detection support, total sample size and block/fold granularity; use repeated independent blocked evaluations.\n- Evaluate stixel-level relative/absolute errors, proper losses, AUC/AP, coverage, stability and runtime.\n- Compare a hierarchical/partially pooled local alternative if independent stixel fits remain unstable.\n- Keep test labels out of tuning and do not select methods solely to make plots look smoother.\n\n**Acceptance**\n- [ ] Define adequate-support criteria using detection/non-detection counts and uncertainty, rather than an arbitrary checklist count alone.\n- [ ] Report low-support failures/fallbacks and uncertainty.\n- [ ] Identify a strategy consistently useful across stixels and species, or report the remaining trade-off.\n\nThe small Acadian audit had no fitted stixel with 20 training detections; it cannot establish a local winner. Evidence: `resources/PIPELINE_OPTIMIZATION.md`, `data/02_calibration/acadian_small_optuna/`.\n\nRelated earlier safeguard: #93 (closed) concerns missing ensembles; it does not establish reliable within-stixel calibration with few detections.\n\nLocal implementation commits: `46a87db`. Branch: `codex-rewrite`. These commits may not yet be published.",
+      "github": {
+        "number": 105,
+        "url": "https://github.com/chenyangkang/stemflow/issues/105",
+        "state": "open",
+        "author": "chenyangkang",
+        "verified": true
+      }
+    },
+    {
+      "key": "calibration_diagnostics",
+      "title": "[Feature] Diagnose calibration at overall, spatial, temporal and actual-stixel levels",
+      "status": "implemented_on_branch",
+      "commits": [
+        "46a87db"
+      ],
+      "body": "Global ECE and AUC can conceal local probability errors that matter when copula correlation is estimated inside stixels. Sparse zero-event bins can also produce extreme floor-dependent relative scores and awkward log-scale overlays.\n\n**Status:** multi-level diagnostics and plots are implemented on local `codex-rewrite`.\n\nOutputs cover overall, spatial, temporal, space-time and actual supplied stixel partitions. Include ECE in percentage points, quantile ECE, relative ECE with explicit floors, zero-event mass, signed bias, predicted/observed rate, AUC/AP, Brier, log loss and coverage. Reliability bins record sample/event counts, expected detections and uncertainty references.\n\nOverlay plots use common probability intervals, individual stixel curves and an equal-stixel average; zeros are handled explicitly on log axes with ordinary decimal tick labels. Training support and held-out support are separate flags. Overlapping stixels are not independent replicates.\n\n**Acceptance**\n- [x] Score actual occurrence/copula partition geometry when supplied.\n- [x] Retain support/count information and avoid treating an undefined rate ratio/AUC as perfect.\n- [x] Test binning, relative floors, coverage and saved diagnostic plots.\n- [ ] Merge and document limitations of sparse-bin relative ECE and equal-stixel weighting.\n\nEvidence: `stemflow/calibration/diagnostics.py`, `stemflow/calibration/metrics.py`, `tests/test_calibration.py`, `docs/Tips/Local_calibration_and_tuning.md`. These are marginal diagnostics, not proof of pointwise conditional calibration.\n\nLocal implementation commits: `46a87db`. Branch: `codex-rewrite`. These commits may not yet be published.",
+      "github": {
+        "number": 106,
+        "url": "https://github.com/chenyangkang/stemflow/issues/106",
+        "state": "open",
+        "author": "chenyangkang",
+        "verified": true
+      }
+    },
+    {
+      "key": "spatial_jitter",
+      "title": "[BUG] Fix planar spatial jitter cancellation while preserving ensemble_df compatibility",
+      "status": "implemented_on_branch",
+      "commits": [
+        "588e7d7",
+        "d732ed7"
+      ],
+      "body": "Planar QTree/QuadGrid shifted every rotated point by jitter j, then anchored the grid at the minimum of those shifted points. Relative coordinates became (z+j)-(min(z)+j)=z-min(z), canceling the intended random grid phase.\n\nThis does not mean all ensembles were identical: different rotations, temporal subsets and bootstrap observations still change partitions. The evenly spaced angle schedule is correct (50 ensembles: 0, 1.8, ..., 88.2 degrees); nearby angles can naturally look similar.\n\n**Status:** audited and corrected on local `codex-rewrite`.\n\nThe correction applies a bounded grid phase, pads adaptive roots to retain observations while keeping dyadic cell scales, and preserves fixed-grid periodicity. It also covers the fixed-grid exact outer-maximum boundary case. No `ensemble_df` column, dtype or transform meaning is changed. New bounds/counts can differ; previously saved geometry remains usable.\n\n**Acceptance**\n- [x] Isolate jitter at the same angle and compare nearby/spread angles before and after.\n- [x] Verify transforms, inverse plots, coverage, negative/large jitter and zero-jitter behavior.\n- [x] Preserve exported schema, sampled rotation/jitter/temporal metadata and old-geometry use in AdaSTEM and STEM.\n- [ ] Merge and revalidate production work/performance with the corrected geometry.\n\nOn 2,400 checklist coordinates, neighboring-angle adaptive mean partition ARI fell from 0.811 to 0.384. ARI is partition agreement, not percentage area overlap or prediction accuracy. Evidence: `tests/test_gridding_rotation.py`, `scripts/03_gridding/compare_spatial_jitter.py`, `data/03_gridding/jitter_correction/` and its adaptive/fixed overlay figures.\n\nLocal implementation commits: `588e7d7`, `d732ed7`. Branch: `codex-rewrite`. These commits may not yet be published.",
+      "github": {
+        "number": 107,
+        "url": "https://github.com/chenyangkang/stemflow/issues/107",
+        "state": "open",
+        "author": "chenyangkang",
+        "verified": true
+      }
+    },
+    {
+      "key": "tracker",
+      "title": "[Tracking] AdaSTEM rewrite: correctness, efficient execution and local calibration",
+      "status": "open_until_merge_and_validation",
+      "commits": [
+        "368acf6",
+        "53dc476",
+        "46a87db",
+        "d732ed7"
+      ],
+      "body": "Track the focused work on `codex-rewrite` before merging into main. All linked issues remain open. Close implemented items after merging and verifying their acceptance criteria; keep unresolved investigations open.\n\n**Implemented locally, awaiting merge**\n- [ ] #97 \u2014 [BUG] Preserve bootstrap occurrence multiplicity during stixel training\n- [ ] #98 \u2014 [BUG] Correct logit aggregation and verify prediction mean/std semantics\n- [ ] #100 \u2014 [Performance] Reduce ensemble data copies and bound queued training work\n- [ ] #101 \u2014 [Performance] Stream ensemble predictions and avoid sending every model to each worker\n- [ ] #102 \u2014 [Performance] Allow read-only lazy predictions while preserving stateful estimator behavior\n- [ ] #103 \u2014 [Feature] Provide simple DuckDB preparation helpers with reliable target alignment\n- [ ] #104 \u2014 [Feature] Add composable within-stixel calibration and optional self-tuning estimators\n- [ ] #106 \u2014 [Feature] Diagnose calibration at overall, spatial, temporal and actual-stixel levels\n- [ ] #107 \u2014 [BUG] Fix planar spatial jitter cancellation while preserving ensemble_df compatibility\n\n- [ ] #109 \u2014 [Feature] Persist execution timings and support live process-tree memory monitoring\n\n**Remaining investigation or calibration work**\n- [ ] #99 \u2014 [BUG] Validate concurrent read-only DuckDB access and compressed-column failures\n- [ ] #105 \u2014 [Research] Improve rare-species local calibration with explicit support and regularization validation\n\nRelated earlier issues #76, #77, #81, #85 and #93 are closed; the focused issues distinguish the additional rewrite scope from that earlier work.\n\nLocal evidence: `resources/REWRITE.md` and `resources/PIPELINE_OPTIMIZATION.md`. Implementation commits are on the local `codex-rewrite` branch and may not yet be published. The latest reviewed local commit is `d732ed7`.\n\nThis tracker is limited to the selected package changes and calibration work.",
+      "github": {
+        "number": 108,
+        "url": "https://github.com/chenyangkang/stemflow/issues/108",
+        "state": "open",
+        "author": "chenyangkang",
+        "verified": true
+      }
+    },
+    {
+      "key": "execution_monitor",
+      "title": "[Feature] Persist execution timings and support live process-tree memory monitoring",
+      "status": "implemented_on_branch_native_ci_pending",
+      "commits": [],
+      "body": "AdaSTEM needs optional runtime observability across fitting and prediction: users should be able to inspect stage timings and sampled host-memory peaks after a run, or print progress into ordinary job logs while it runs.\n\n**Status:** implemented on `codex-rewrite`; keep this issue open until the feature is merged and validated on the supported platforms.\n\n**Implemented**\n- `with model.monitor_execution(...):` records named inclusive stages, workflow elapsed time, parent RSS, descendants' RSS and simultaneous process-tree peaks.\n- The plain report remains on `model.execution_monitor_`, updates after outer model calls, and is finalized on context exit, including failures. It survives pickle and lazy model save/load. A new monitored context replaces the previous report.\n- `log_interval=30` enables flushed progress/stage logs; `log_interval=None` keeps monitoring silent. Optional JSON output replaces one report file; raw sample retention is bounded and disabled by default.\n- The live thread, locks and process reader stay outside the estimator and are not serialized to workers.\n- Portable psutil RSS reading with capability-detected USS, Linux PSS and macOS physical footprint. Unavailable readings and incomplete coverage are explicit. A libproc fallback supports descendant RSS queries in restricted macOS sandboxes.\n- Existing concurrency, temporal-window prequery, lazy loading and prediction aggregation remain available and unchanged.\n\n**Validation**\n- 32 focused monitoring/profiling checks passed locally on both Python 3.13 and 3.14 on Apple Silicon.\n- Earlier broader validation: 166 checks across execution, streaming prediction, profiling, calibration, data preparation, gridding and memory sampling.\n- Enabled/disabled monitoring gives matching predictions and ensemble metadata for Pandas, DuckDB and Parquet, native/shared inputs, parallel workers, bootstrapping, lazy models and streaming/matrix mean/std aggregation.\n- Tests exercise native child/grandchild allocations, denied access, disappearing workers, report-write failures and original exception preservation.\n- Native Linux/Windows runs remain pending. A six-job GitHub Actions matrix covers Ubuntu/macOS/Windows with Python 3.11/3.13 and retains compact validation artifacts.\n\n**Acceptance**\n- [x] Retain post-run reports on the model and support optional live logs.\n- [x] Verify save/load persistence without serializing live monitoring state.\n- [x] Keep monitoring optional and separate measurement failures from model failures.\n- [x] Document sampled peaks, inclusive timings, measurement coverage and bounded storage.\n- [ ] Complete native cross-platform CI.\n- [ ] Merge the feature.\n\nRSS may double-count shared pages. USS, PSS and macOS physical footprint remain separate measurements. This sampler is not a memory limiter or an allocator-ownership breakdown, and does not measure remote-node/GPU memory or Slurm/cgroup charges. Brief peaks can occur between samples.\n\nEvidence: `stemflow/utils/execution_monitor.py`, `tests/test_execution_monitor.py`, `scripts/00_benchmarks/check_execution_monitor.py`, `resources/EXECUTION_MONITOR.md`, and the monitoring section of `docs/Tips/Tips_for_parallel_execution.md`.\n\nRelated rewrite tracker: #108.",
+      "github": {
+        "number": 109,
+        "url": "https://github.com/chenyangkang/stemflow/issues/109",
+        "state": "open",
+        "author": "chenyangkang",
+        "verified": true
+      }
+    }
+  ],
+  "excluded_issue_keys": [
+    "copula_validation",
+    "profiling_hpc",
+    "compatibility_docs"
+  ],
+  "head_at_initial_issue_publication": "d732ed7",
+  "snapshot_note": "Issue bodies are publication snapshots; GitHub may contain later publication and CI updates."
+}

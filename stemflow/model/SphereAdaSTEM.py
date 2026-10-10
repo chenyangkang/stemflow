@@ -32,6 +32,7 @@ from ..utils.validation import (
     check_verbosity,
 )
 from ..utils.wrapper import model_wrapper
+from ..utils.execution_monitor import monitor_step
 from .AdaSTEM import AdaSTEM, AdaSTEMClassifier, AdaSTEMRegressor
 from .static_func_AdaSTEM import (  # predict_one_ensemble
     assign_points_to_one_ensemble_sphere,
@@ -229,6 +230,7 @@ class SphereAdaSTEM(AdaSTEM):
             
         self.radius = radius
 
+    @monitor_step("partitioning")
     def split(
         self, X_train: pd.DataFrame, verbosity: Union[None, int] = None, ax=None, n_jobs: int = 1
     ) -> dict:

@@ -88,6 +88,7 @@ from .static_func_AdaSTEM import (  # predict_one_ensemble
 
 from ..utils.generate_random import generate_random_saving_code
 from ..utils.execution_profile import profile_execution
+from ..utils.execution_monitor import ExecutionMonitor, execution_step, monitor_step
 
 class AdaSTEM(BaseEstimator):
     """An AdaSTEM model class inherited by AdaSTEMClassifier and AdaSTEMRegressor"""
@@ -303,6 +304,27 @@ class AdaSTEM(BaseEstimator):
         else:
             self.verbosity = 0
 
+    def monitor_execution(self, sample_interval=1.0, log_interval=30.0,
+                          output_path=None, max_samples=0, detailed_memory=False):
+        """Return an opt-in context for wall timings and local process-tree memory.
+
+        Wrap fit and prediction in the same context to measure their combined
+        peak. Stages are recorded for all AdaSTEM calls in the calling thread;
+        use monitor.phase('evaluation') for additional workflow stages.
+        Requires the optional monitoring extra: pip install 'stemflow[monitoring]'.
+        A plain report is stored as execution_monitor_ after each outer model
+        call and finalized on context exit; a later context replaces it. Save
+        the model after exiting to include the complete report. Set
+        log_interval=None for silent monitoring. The live sampler is never
+        attached to or serialized with the model.
+        """
+        monitor = ExecutionMonitor(sample_interval=sample_interval, log_interval=log_interval,
+                                   output_path=output_path, max_samples=max_samples,
+                                   detailed_memory=detailed_memory)
+        monitor._track_model(self)
+        return monitor
+
+    @monitor_step("partitioning")
     def split(self, X_train: Union[pd.DataFrame, str], 
               verbosity: Union[None, int] = None, 
               ax=None, 
@@ -687,6 +709,7 @@ class AdaSTEM(BaseEstimator):
                                        for name in names if name in stixel_specific_x_names}
         return self
 
+    @monitor_step("fit")
     @profile_execution
     def fit(
         self,
@@ -758,16 +781,17 @@ class AdaSTEM(BaseEstimator):
             self.duckdb_config = duckdb_config(self.max_mem, self.joblib_tmp_dir)
             
             # Input check
-            self.rng = check_random_state(self.random_state)
-            verbosity = check_verbosity(self, verbosity)
-            self.data_format = check_X_y_format_match(X_train, y_train)
-            check_X_train(X_train, self)
-            check_y_train(y_train, self)
-            X_train, y_train = check_X_y_indexes_match(X_train, y_train, self)
-            n_jobs = check_transform_n_jobs(self, n_jobs)
-            if max_concurrent_ensembles is not None:
-                n_jobs = min(n_jobs, max_concurrent_ensembles)
-            self.store_x_names(X_train)
+            with execution_step("input_validation"):
+                self.rng = check_random_state(self.random_state)
+                verbosity = check_verbosity(self, verbosity)
+                self.data_format = check_X_y_format_match(X_train, y_train)
+                check_X_train(X_train, self)
+                check_y_train(y_train, self)
+                X_train, y_train = check_X_y_indexes_match(X_train, y_train, self)
+                n_jobs = check_transform_n_jobs(self, n_jobs)
+                if max_concurrent_ensembles is not None:
+                    n_jobs = min(n_jobs, max_concurrent_ensembles)
+                self.store_x_names(X_train)
             
             if stixel_filter_func is not None:
                 assert callable(stixel_filter_func)
@@ -799,19 +823,21 @@ class AdaSTEM(BaseEstimator):
                                         persist_prediction_state=persist_prediction_state,
                                         partition_seconds=partition_seconds)
             preparation_start = time.perf_counter()
-            if training_data_backend == "memmap":
-                self._shared_training_data = SharedTrainingData.build(X_train, y_train,
-                    self.duckdb_config, os.path.join(self.joblib_tmp_dir, 'shared_training'),
-                    coordinate_columns=(self.Temporal1, self.Spatio1, self.Spatio2))
-                self.execution_info_["shared_input_bytes"] = self._shared_training_data.nbytes
-                # Only metadata and filenames need to be serialized to workers.
-                training_X, training_y = None, None
-            else:
-                training_X, training_y = X_train, y_train
+            with execution_step("training_data_preparation"):
+                if training_data_backend == "memmap":
+                    self._shared_training_data = SharedTrainingData.build(X_train, y_train,
+                        self.duckdb_config, os.path.join(self.joblib_tmp_dir, 'shared_training'),
+                        coordinate_columns=(self.Temporal1, self.Spatio1, self.Spatio2))
+                    self.execution_info_["shared_input_bytes"] = self._shared_training_data.nbytes
+                    # Only metadata and filenames need to be serialized to workers.
+                    training_X, training_y = None, None
+                else:
+                    training_X, training_y = X_train, y_train
             self.execution_info_["shared_preparation_seconds"] = time.perf_counter() - preparation_start
             # Training
             training_start = time.perf_counter()
-            self.SAC_training(self.ensemble_df, training_X, training_y, verbosity, workers, temporal_window_prequery, stixel_filter_func)
+            with execution_step("training"):
+                self.SAC_training(self.ensemble_df, training_X, training_y, verbosity, workers, temporal_window_prequery, stixel_filter_func)
             self.execution_info_["training_seconds"] = time.perf_counter() - training_start
             if isinstance(y_train, str):
                 with open_db_connection(y_train, self.duckdb_config) as (source, con):
@@ -826,10 +852,11 @@ class AdaSTEM(BaseEstimator):
                 shutil.rmtree(self.lazy_loading_dir)
             raise
         finally: # Remove temporary shared inputs after all workers finish.
-            self.__dict__.pop("_shared_training_data", None)
-            self.__dict__.pop("_inner_max_num_threads", None)
-            if os.path.exists(self.joblib_tmp_dir):
-                shutil.rmtree(self.joblib_tmp_dir)
+            with execution_step("fit_cleanup"):
+                self.__dict__.pop("_shared_training_data", None)
+                self.__dict__.pop("_inner_max_num_threads", None)
+                if os.path.exists(self.joblib_tmp_dir):
+                    shutil.rmtree(self.joblib_tmp_dir)
 
         self.execution_info_["fit_seconds"] = time.perf_counter() - fit_start
         return self
@@ -999,33 +1026,38 @@ class AdaSTEM(BaseEstimator):
         return pred
 
     def _stream_prediction(self, X_test, verbosity, n_jobs, prequery, return_std, logit):
-        if isinstance(X_test, pd.DataFrame):
-            index = X_test.index
-        else:
-            with open_db_connection(X_test, self.duckdb_config) as (source, con):
-                con.register("prediction_index_source", source)
-                index = con.sql("SELECT __index_level_0__ FROM prediction_index_source").fetchnumpy()["__index_level_0__"]
-        reducer = PredictionMoments(index, with_std=return_std, logit=logit)
+        with execution_step("prediction_input_index"):
+            if isinstance(X_test, pd.DataFrame):
+                index = X_test.index
+            else:
+                with open_db_connection(X_test, self.duckdb_config) as (source, con):
+                    con.register("prediction_index_source", source)
+                    index = con.sql("SELECT __index_level_0__ FROM prediction_index_source").fetchnumpy()["__index_level_0__"]
+            reducer = PredictionMoments(index, with_std=return_std, logit=logit)
         try:
-            for _, prediction in self._iter_ensemble_predictions(
-                    self.ensemble_df, X_test, verbosity, n_jobs, prequery):
-                reducer.update(prediction)
-                del prediction
+            with execution_step("prediction_and_aggregation"):
+                for _, prediction in self._iter_ensemble_predictions(
+                        self.ensemble_df, X_test, verbosity, n_jobs, prequery):
+                    reducer.update(prediction)
+                    del prediction
         finally:
-            if os.path.exists(self.joblib_tmp_dir):
-                shutil.rmtree(self.joblib_tmp_dir)
+            with execution_step("prediction_cleanup"):
+                if os.path.exists(self.joblib_tmp_dir):
+                    shutil.rmtree(self.joblib_tmp_dir)
         if not reducer.seen:
             raise ValueError("All samples are not predictable based on current settings!")
-        mean, std = reducer.finish(self.min_ensemble_required)
-        self.prediction_execution_info_ = dict(aggregation_backend="streaming",
-            accumulator_bytes=reducer.count.nbytes + reducer.mean.nbytes +
-                (reducer.m2.nbytes if reducer.m2 is not None else 0),
-            rows=len(index), ensembles=self.ensemble_fold)
-        missing = np.count_nonzero(np.isnan(mean))
-        warnings.warn(f"There are {100 * missing / len(mean):.3g}% points ({missing} points) falling out of predictable range.")
-        result = np.column_stack([1 - mean, mean]) if self.task == "classification" else mean
+        with execution_step("prediction_finalize"):
+            mean, std = reducer.finish(self.min_ensemble_required)
+            self.prediction_execution_info_ = dict(aggregation_backend="streaming",
+                accumulator_bytes=reducer.count.nbytes + reducer.mean.nbytes +
+                    (reducer.m2.nbytes if reducer.m2 is not None else 0),
+                rows=len(index), ensembles=self.ensemble_fold)
+            missing = np.count_nonzero(np.isnan(mean))
+            warnings.warn(f"There are {100 * missing / len(mean):.3g}% points ({missing} points) falling out of predictable range.")
+            result = np.column_stack([1 - mean, mean]) if self.task == "classification" else mean
         return (result, std) if return_std else result
 
+    @monitor_step("prediction")
     @profile_execution
     def predict_proba(
         self,
@@ -1086,18 +1118,17 @@ class AdaSTEM(BaseEstimator):
                 Return numpy.ndarray of shape (n_samples, n_ensembles)
 
         """
-        # Setup joblib_tmp_dir
-        self.joblib_tmp_dir = initiate_joblib_tmp_dir(self.lazy_loading_dir)
-        self.duckdb_config = duckdb_config(self.max_mem, self.joblib_tmp_dir)
-        
-        #
-        check_X_test(X_test, self)
-        check_prediction_aggregation(aggregation)
-        return_by_separate_ensembles, return_std = check_prediction_return(return_by_separate_ensembles, return_std)
-        verbosity = check_verbosity(self, verbosity)
-        n_jobs = check_transform_n_jobs(self, n_jobs)
-        self.base_model_method = base_model_method
-        self.base_model_prediction_param = base_model_prediction_param
+        with execution_step("prediction_setup"):
+            # Setup joblib_tmp_dir
+            self.joblib_tmp_dir = initiate_joblib_tmp_dir(self.lazy_loading_dir)
+            self.duckdb_config = duckdb_config(self.max_mem, self.joblib_tmp_dir)
+            check_X_test(X_test, self)
+            check_prediction_aggregation(aggregation)
+            return_by_separate_ensembles, return_std = check_prediction_return(return_by_separate_ensembles, return_std)
+            verbosity = check_verbosity(self, verbosity)
+            n_jobs = check_transform_n_jobs(self, n_jobs)
+            self.base_model_method = base_model_method
+            self.base_model_prediction_param = base_model_prediction_param
 
         if (streaming and aggregation == "mean" and not return_by_separate_ensembles
                 and type(self).SAC_predict is AdaSTEM.SAC_predict):
@@ -1107,87 +1138,90 @@ class AdaSTEM(BaseEstimator):
         
         try:
             # predict
-            res = self.SAC_predict(self.ensemble_df, X_test, verbosity=verbosity, n_jobs=n_jobs, temporal_window_prequery=temporal_window_prequery)
+            with execution_step("ensemble_prediction"):
+                res = self.SAC_predict(self.ensemble_df, X_test, verbosity=verbosity, n_jobs=n_jobs, temporal_window_prequery=temporal_window_prequery)
         except: # Remove the entire lazy_loading_dir since it includes failed models
             raise
         finally: # Remove the joblib_tmp_dir anyway
-            if os.path.exists(self.joblib_tmp_dir):
-                shutil.rmtree(self.joblib_tmp_dir)
+            with execution_step("prediction_cleanup"):
+                if os.path.exists(self.joblib_tmp_dir):
+                    shutil.rmtree(self.joblib_tmp_dir)
                 
-        # Get X_test indexes
-        if isinstance(X_test, pd.DataFrame):
-            X_test_indexes = np.array(X_test.index)
-        elif isinstance(X_test, str):
-            with open_db_connection(X_test, self.duckdb_config) as (X_test_df, con):
-                con.register("X_test_df", X_test_df)
-                X_test_indexes = con.sql("SELECT __index_level_0__ FROM X_test_df;").df().values.flatten()
-        else: 
-            raise
-        
-        # Experimental Function
-        if return_by_separate_ensembles:
+        with execution_step("prediction_aggregation"):
+            # Get X_test indexes
+            if isinstance(X_test, pd.DataFrame):
+                X_test_indexes = np.array(X_test.index)
+            elif isinstance(X_test, str):
+                with open_db_connection(X_test, self.duckdb_config) as (X_test_df, con):
+                    con.register("X_test_df", X_test_df)
+                    X_test_indexes = con.sql("SELECT __index_level_0__ FROM X_test_df;").df().values.flatten()
+            else:
+                raise
+
+            # Experimental Function
+            if return_by_separate_ensembles:
+                indexer = pd.DataFrame({"index": list(X_test_indexes)}).set_index("index")
+                res = pd.concat([indexer, res], axis=1)
+                return res.values
+
+            # Transform to logit space if classification:
+            if self.task=='classification' and logit_agg:
+                for col_index in range(res.shape[1]):
+                    prob = np.clip(res.iloc[:,col_index], 1e-16, 1 - 1e-16)
+                    res.iloc[:,col_index] = np.log(prob / (1-prob)) # logit space
+
+                # Aggregate
+                if aggregation == "mean":
+                    res_mean = res.mean(axis=1, skipna=True)  # mean of all grid model that predicts this stixel
+                elif aggregation == "median":
+                    res_mean = res.median(axis=1, skipna=True)
+
+                # Transform back to 0-1:
+                res_mean = 1/(1+np.exp(-res_mean)) # notice that the res_std is not transformed!
+                res_mean = res_mean.mask(res_mean <= 1e-16, 0)
+
+            else:
+                # don't need to aggregate at logit scale
+                # Aggregate
+                if aggregation == "mean":
+                    res_mean = res.mean(axis=1, skipna=True)  # mean of all grid model that predicts this stixel
+                elif aggregation == "median":
+                    res_mean = res.median(axis=1, skipna=True)
+
+            res_std = res.std(axis=1, skipna=True)
+
+            # Nan count
+            res_nan_count = res.isnull().sum(axis=1)
+            pred_mean = np.where(
+                self.ensemble_fold - res_nan_count.values >= self.min_ensemble_required, res_mean.values, np.nan
+            )
+            pred_std = np.where(
+                self.ensemble_fold - res_nan_count.values >= self.min_ensemble_required, res_std.values, np.nan
+            )
+
+            res = pd.DataFrame({"index": list(res_mean.index), "pred_mean": pred_mean, "pred_std": pred_std}).set_index(
+                "index"
+            )
+
+            # Preparing output (formatting)
             indexer = pd.DataFrame({"index": list(X_test_indexes)}).set_index("index")
             res = pd.concat([indexer, res], axis=1)
-            return res.values
 
-        # Transform to logit space if classification:
-        if self.task=='classification' and logit_agg:
-            for col_index in range(res.shape[1]):
-                prob = np.clip(res.iloc[:,col_index], 1e-16, 1 - 1e-16)
-                res.iloc[:,col_index] = np.log(prob / (1-prob)) # logit space
-                
-            # Aggregate
-            if aggregation == "mean":
-                res_mean = res.mean(axis=1, skipna=True)  # mean of all grid model that predicts this stixel
-            elif aggregation == "median":
-                res_mean = res.median(axis=1, skipna=True)
-                
-            # Transform back to 0-1:
-            res_mean = 1/(1+np.exp(-res_mean)) # notice that the res_std is not transformed!
-            res_mean = res_mean.mask(res_mean <= 1e-16, 0)
-            
-        else:
-            # don't need to aggregate at logit scale
-            # Aggregate
-            if aggregation == "mean":
-                res_mean = res.mean(axis=1, skipna=True)  # mean of all grid model that predicts this stixel
-            elif aggregation == "median":
-                res_mean = res.median(axis=1, skipna=True)
-        
-        res_std = res.std(axis=1, skipna=True)
-        
-        # Nan count
-        res_nan_count = res.isnull().sum(axis=1)
-        pred_mean = np.where(
-            self.ensemble_fold - res_nan_count.values >= self.min_ensemble_required, res_mean.values, np.nan
-        )
-        pred_std = np.where(
-            self.ensemble_fold - res_nan_count.values >= self.min_ensemble_required, res_std.values, np.nan
-        )
-        
-        res = pd.DataFrame({"index": list(res_mean.index), "pred_mean": pred_mean, "pred_std": pred_std}).set_index(
-            "index"
-        )
+            nan_count = np.sum(np.isnan(res["pred_mean"].values))
+            nan_frac = nan_count / len(res["pred_mean"].values)
+            warnings.warn(f"There are {nan_frac}% points ({nan_count} points) falling out of predictable range.")
 
-        # Preparing output (formatting)
-        indexer = pd.DataFrame({"index": list(X_test_indexes)}).set_index("index")
-        res = pd.concat([indexer, res], axis=1)
-        
-        nan_count = np.sum(np.isnan(res["pred_mean"].values))
-        nan_frac = nan_count / len(res["pred_mean"].values)
-        warnings.warn(f"There are {nan_frac}% points ({nan_count} points) falling out of predictable range.")
-
-        if return_std:
-            if self.task=='classification':
-                return np.array([1-res["pred_mean"].values.flatten(), res["pred_mean"].values.flatten()]).T, res["pred_std"].values
+            if return_std:
+                if self.task=='classification':
+                    return np.array([1-res["pred_mean"].values.flatten(), res["pred_mean"].values.flatten()]).T, res["pred_std"].values
+                else:
+                    return res["pred_mean"].values.flatten(), res["pred_std"].values.flatten()
             else:
-                return res["pred_mean"].values.flatten(), res["pred_std"].values.flatten()
-        else:
-            if self.task=='classification':
-                return np.array([1-res["pred_mean"].values.flatten(), res["pred_mean"].values.flatten()]).T
-            else:
-                return res["pred_mean"].values.flatten()
-        
+                if self.task=='classification':
+                    return np.array([1-res["pred_mean"].values.flatten(), res["pred_mean"].values.flatten()]).T
+                else:
+                    return res["pred_mean"].values.flatten()
+
 
     @abstractmethod
     def predict(
@@ -1311,6 +1345,7 @@ class AdaSTEM(BaseEstimator):
             "poisson_deviance_explained": poisson_deviance_explained,
         }
 
+    @monitor_step("evaluation")
     def score(self, X_test: pd.DataFrame, y_test: Union[pd.Series, np.ndarray]) -> dict:
         """Combine predicting and evaluating in one method
 
@@ -1333,11 +1368,13 @@ class AdaSTEM(BaseEstimator):
         from ..calibration import calibration_scores
         return calibration_scores(y_test, y_pred, n_bins)
 
+    @monitor_step("calibration_diagnostics")
     def calibration_diagnostics(self, X_test, y_test, pred=None, **kwargs):
         """Held-out overall, spatial, temporal and actual-stixel calibration."""
         from ..calibration import stixel_calibration_diagnostics
         return stixel_calibration_diagnostics(self, X_test, y_test, pred, **kwargs)
 
+    @monitor_step("feature_importances")
     def calculate_feature_importances(self):
         """A method to generate feature importance values for each stixel.
 
@@ -1390,6 +1427,7 @@ class AdaSTEM(BaseEstimator):
             pd.DataFrame(feature_importance_list).set_index("stixel_index").reset_index(drop=False).fillna(0)
         )
 
+    @monitor_step("feature_importances_by_points")
     def assign_feature_importances_by_points(
         self,
         Sample_ST_df: Union[pd.DataFrame, None] = None,
@@ -1536,6 +1574,7 @@ class AdaSTEM(BaseEstimator):
             
         return model
     
+    @monitor_step("model_save")
     def save(self, tar_gz_file, remove_temporary_file = True, verbosity=1, compresslevel=2):
         os.makedirs(self.lazy_loading_dir, exist_ok=True)
 

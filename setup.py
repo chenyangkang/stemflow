@@ -30,7 +30,8 @@ setup(
     package_dir={"stemflow": "stemflow"},
     python_requires=">=3.9.0",
     install_requires=requirements,
-    extras_require={"tuning": ["xgboost>=1.7.6", "optuna>=3.0"]},
+    extras_require={"tuning": ["xgboost>=1.7.6", "optuna>=3.0"],
+                    "monitoring": ["psutil>=5.9"]},
     platforms="any",
     keywords=[
         "python",
