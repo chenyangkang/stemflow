@@ -250,24 +250,26 @@ class QTree:
         self.grid_length_x = np.max(x_list) - np.min(x_list)
         self.grid_length_y = np.max(y_list) - np.min(y_list)
 
-        left_bottom_point_x = np.min(x_list)
-        left_bottom_point_y = np.min(y_list)
-
-        self.left_bottom_point = (left_bottom_point_x, left_bottom_point_y)
         if self.lon_lat_equal_grid is True:
-            self.root = QNode(
-                left_bottom_point_x,
-                left_bottom_point_y,
-                max(self.grid_length_x, self.grid_length_y),
-                max(self.grid_length_x, self.grid_length_y),
-                self.points,
-            )
+            width = height = max(self.grid_length_x, self.grid_length_y)
         elif self.lon_lat_equal_grid is False:
-            self.root = QNode(
-                left_bottom_point_x, left_bottom_point_y, self.grid_length_x, self.grid_length_y, self.points
-            )
+            width, height = self.grid_length_x, self.grid_length_y
         else:
             raise ValueError("The input lon_lat_equal_grid not a boolean value!")
+
+        phase_x, phase_y = self._grid_phase(width, height)
+        left_bottom_point_x = np.min(x_list) - phase_x
+        left_bottom_point_y = np.min(y_list) - phase_y
+        # Padding retains every point and the existing dyadic cell scales.
+        if phase_x != 0 or phase_y != 0:
+            width, height = 2 * width, 2 * height
+        self.left_bottom_point = (left_bottom_point_x, left_bottom_point_y)
+        self.root = QNode(left_bottom_point_x, left_bottom_point_y, width, height, self.points)
+
+    def _grid_phase(self, width, height):
+        """Move boundaries relative to points, bounded by one root period."""
+        return (self.calibration_point_x_jitter % width if width > 0 else 0.,
+                self.calibration_point_y_jitter % height if height > 0 else 0.)
 
     def get_points(self):
         """return points"""

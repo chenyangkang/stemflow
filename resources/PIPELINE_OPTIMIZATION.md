@@ -143,7 +143,7 @@ and the correspondence between plotted rectangles and inverse-transformed cells
 passed. There is no angle-division or clockwise/counterclockwise plotting error
 in these planar paths.
 
-There is a separate, pre-existing spatial jitter defect in both `QTree` and
+The initial audit identified a separate, pre-existing spatial jitter defect in both `QTree` and
 `QuadGrid`: coordinates are shifted by a common offset, then the grid is anchored
 to the minimum of those shifted coordinates. Writing rotated coordinates as `z`
 and the jitter as `j`, the grid origin becomes `min(z) + j`. Relative positions
@@ -175,15 +175,84 @@ Each pair uses only observations assigned in both partitions. At most one of
 the 2,400 observations per partition was unassigned at a floating-point outer
 boundary in this direct spatial probe; counts are retained in the audit.
 
-The audit and eight tests preserve production gridding behavior. A correction
-must randomize grid boundaries relative to the observations, independently of
-the shifted minimum, while padding the root to retain coverage. Reordering the
-same evenly spaced angles changes only the order, not final ensemble diversity.
-Changing the jitter implementation would change fitted stixels and needs
-explicit compatibility and coverage tests before adoption.
+This initial audit added eight tests without changing production gridding.
+The correction described below now randomizes boundaries relative to the
+observations. Reordering the same evenly spaced angles changes only the order,
+not final ensemble diversity.
 
 Reproduce with `PYTHONPATH=. python scripts/03_gridding/audit_rotation.py` and
 `python -m pytest tests/test_gridding_rotation.py -q`. Small numerical outputs
 are in `data/03_gridding/rotation_audit/`, and the figure is in
 `figures/03_gridding/rotation_audit/rotation_audit.png`. No base models are fitted
 or saved by this audit.
+
+## Spatial jitter correction
+
+Both planar grid classes now use jitter to change the origin relative to the
+observations. For a transformed minimum `m`, jitter `j` and grid period `L`,
+the origin uses `m - (j % L)` rather than following `m` alone. The transformed
+points still contain the original additive jitter, so all existing prediction
+transforms and inverse plotting transforms remain valid.
+
+For fixed STEM, `L` is the fixed cell width. For adaptive QTree, the periods are
+the unpadded root widths; a nonzero phase doubles both root dimensions so every
+input point remains within the root. Doubling preserves the existing dyadic
+cell-size family rather than changing cell sizes to arbitrary padded lengths.
+Zero jitter retains the unpadded adaptive root. Fixed-grid outer maxima also
+receive a cell when the data span is an exact multiple of the grid width.
+Jitter is periodic at the applicable grid period, so offsets separated by an
+integer number of fixed-grid cell widths can legitimately produce the same
+fixed partition.
+
+Rotation scheduling and RNG draws are unchanged. No columns, names, dtypes or
+extra settings are added to `ensemble_df`. Its rotation and jitter values
+retain the same coordinate-transform meaning. Existing saved grid geometry can
+be fitted and predicted using the new code; regenerating a grid now produces
+different spatial boundaries and may change stixel counts, support and fitted
+predictions. Existing all-zero/all-one model behavior is retained.
+
+The real-coordinate check samples 2,400 rows from the existing read-only
+`X_train.duckdb` in longitude [-105, -70], latitude [25, 55]. It holds the same
+observations, angles and offsets between before/after panels, with no temporal
+jitter or bootstrap in the spatial comparison:
+
+| AdaSTEM comparison | Before mean pair ARI | Corrected mean pair ARI |
+| --- | ---: | ---: |
+| Six offsets, same 27.5-degree angle | 1.000 | 0.445 |
+| Six neighboring angles from 0 to 9 degrees | 0.811 | 0.384 |
+| Six angles spread from 0 to 88.2 degrees | 0.436 | 0.382 |
+
+All corrected spatial partitions assigned all sampled observations. Legacy
+adaptive partitions sometimes left one maximum-boundary observation unassigned
+at floating-point precision. In the legacy ablation, different jitter values
+gave ARI 1 on common assigned rows; changing the angle, subsetting observations
+or bootstrapping the observations gave different adaptive partitions. Thus
+canceling spatial jitter does **not** imply all ensembles are identical.
+Rotations, temporal subsets and bootstrap samples still vary.
+
+The two overlay figures show adaptive and fixed grids before and after the fix
+in the same geographic domain. Separate actual `.split()` calls also save both
+`ensemble_df` tables and verify identical column lists, dtypes, angles, jitter
+values and temporal-window metadata. The reported ARI is partition agreement,
+not percentage area overlap or evidence of better calibration/copula accuracy.
+
+The small exploratory build probe took about 4.3 ms before versus 5.6 ms after
+per adaptive partition, including polygon extraction. Root padding adds work
+and may affect the number of fitted stixels; this probe is not a production
+runtime or peak-memory benchmark. It replaces ineffective jitter with the
+requested spatial variation rather than claiming a speed improvement.
+
+Validation passed 130 distinct tests across the compatibility and calibration
+runs, covering gridding, inverse plots, large/negative
+jitter, coverage, zero-jitter compatibility, periodic fixed grids, old geometry
+reuse, unchanged metadata schema, parallel generation, native/shared inputs,
+DuckDB/Parquet, bootstrap occurrence counts, streaming predictions and local
+calibration. Old-geometry compatibility is exercised for both adaptive and
+fixed STEM classifiers.
+
+Reproduce the real-coordinate comparison with
+`PYTHONPATH=. python scripts/03_gridding/compare_spatial_jitter.py --database ../X_train.duckdb`.
+Numerical outputs and the two small grid tables are in
+`data/03_gridding/jitter_correction/`. Figures are in
+`figures/03_gridding/jitter_correction/`. Source databases are read-only and no
+trained models or full datasets are retained.

@@ -17,12 +17,28 @@ from stemflow.model.AdaSTEM import AdaSTEMClassifier
 from stemflow.utils.jitterrotation.jitterrotator import JitterRotator
 
 
-def build_grid(xy, angle, jitter=(0., 0.), kind="adaptive"):
+class LegacyQTree(QTree):
+    """Reproduce the uncorrected origin while sharing the subdivision code."""
+
+    def _grid_phase(self, width, height):
+        return 0., 0.
+
+
+class LegacyQuadGrid(QuadGrid):
+    """Reproduce the uncorrected fixed-grid origin."""
+
+    def _grid_phase(self, width, height):
+        return 0., 0.
+
+
+def build_grid(xy, angle, jitter=(0., 0.), kind="adaptive", *, corrected=False):
     common = dict(rotation_angle=angle, calibration_point_x_jitter=jitter[0],
                   calibration_point_y_jitter=jitter[1], points_lower_threshold=20,
                   plot_empty=True)
-    grid = (QTree(12, 2, 12, 2, **common) if kind == "adaptive"
-            else QuadGrid(grid_len=5, **common))
+    adaptive_cls = QTree if corrected else LegacyQTree
+    fixed_cls = QuadGrid if corrected else LegacyQuadGrid
+    grid = (adaptive_cls(12, 2, 12, 2, **common) if kind == "adaptive"
+            else fixed_cls(grid_len=5, **common))
     grid.add_lon_lat_data(np.arange(len(xy)), xy[:, 0], xy[:, 1])
     grid.generate_gridding_params()
     grid.subdivide()

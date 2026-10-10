@@ -10,6 +10,26 @@ Here, we present more tips and examples on how to play with these indexing syste
 
 ## 2D + Temporal indexing
 
+### Rotation and spatial jitter
+
+`completely_random_rotation=False` assigns angles `90 * ensemble_index / ensemble_fold`;
+with 50 ensembles these are 0, 1.8, ..., 88.2 degrees. Nearby angles can yield
+similar grids even though the full angle range is covered. The default `True`
+draws independent angles in [0, 90).
+
+Spatial jitter shifts boundaries relative to the observations. Fixed STEM grids
+use the jitter modulo the cell width. Adaptive grids use it modulo the unpadded
+root dimensions and pad a nonzero-phase root by a factor of two to keep the
+observations covered while preserving dyadic cell scales. Zero jitter keeps the
+unpadded adaptive root. The existing jitter magnitude parameters and
+`ensemble_df` columns retain their meaning and format.
+
+This corrects an earlier planar implementation in which shifting observations
+and then anchoring the grid at their shifted minimum canceled spatial jitter.
+Previously generated metadata remains usable, but regenerated grids can have
+different boundaries and stixel counts. Rotation, temporal jitter and bootstrap
+sampling are separate sources of ensemble differences.
+
 ### Flexible coordinate systems
 
 `stemflow` support all types of spatial coordinate reference system (CRS) and temporal indexing (for example, week month, year, or decades). `stemflow` only support tabular point data currently. You should transform your data to desired CRS before feeding them to `stemflow`.
