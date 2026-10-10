@@ -115,7 +115,7 @@ class AdaSTEM(BaseEstimator):
         plot_ylims: Tuple[Union[float, int], Union[float, int]] = None,
         verbosity: int = 1,
         plot_empty: bool = False,
-        completely_random_rotation: bool = False,
+        completely_random_rotation: bool = True,
         lazy_loading: bool = False,
         lazy_loading_dir: Union[str, None] = None,
         min_class_sample: int = 1,
@@ -188,7 +188,7 @@ class AdaSTEM(BaseEstimator):
             plot_empty:
                 Whether to plot the empty grid
             completely_random_rotation:
-                If True, the rotation angle will be generated completely randomly, as in paper https://doi.org/10.1002/eap.2056. If False, the ensembles will split the 90 degree with equal angle intervals. e.g., if ensemble_fold=9, then each ensemble will rotate 10 degree futher than the previous ensemble. Defalt to False, because if ensemble fold is small, it will be more robust to equally devide the data; and if ensemble fold is large, they are effectively similar than complete random.
+                If True, the rotation angle will be generated completely randomly, as in paper https://doi.org/10.1002/eap.2056. If False, the ensembles will split the 90 degree with equal angle intervals. e.g., if ensemble_fold=9, then each ensemble will rotate 10 degree futher than the previous ensemble. Defalt to True.
             lazy_loading:
                 If True, ensembles of models will be saved in disk, and only loaded when being used (e.g., prediction phase), and the ensembles of models are dump to disk once it is used.
             lazy_loading_dir:
@@ -297,7 +297,11 @@ class AdaSTEM(BaseEstimator):
         else:
             self.verbosity = 0
 
-    def split(self, X_train: Union[pd.DataFrame, str], verbosity: Union[None, int] = None, ax=None, n_jobs: Union[None, int] = None):
+    def split(self, X_train: Union[pd.DataFrame, str], 
+              verbosity: Union[None, int] = None, 
+              ax=None, 
+              n_jobs: Union[None, int] = None,
+              quadtree_arg_dict = None):
         """QuadTree indexing the input data
 
         Args:
@@ -305,6 +309,7 @@ class AdaSTEM(BaseEstimator):
             verbosity: 0 to output nothing, everything other wise. Default None set it to the verbosity of AdaSTEM model class.
             ax: matplotlit Axes to add to.
             n_jobs: number of processors for parallel computing
+            quadtree_arg_dict: a dictionary to pass into quadtree splitting algorithm for additional conditional gridding. Must be None or a dictionary that have keys "additional_features" and "addiitonal_quadtree_criteria". For example, this can be {'additional_features': ['co_occurrence'], 'addiitonal_quadtree_criteria': lamba x:np.sum(x['co_occurrence']==1)>10} to take the 'co_occurrence' column into consideration during quadtree gridding, with the criteria that the number of 'co_occurrence' record must be more than 10, and if further splitting will fail that criterion, the splitting is stopped. The function for 'addiitonal_quadtree_criteria' must return a True or False boolean for that stixel. The additional column must exist in the X_train dataframe or database.
 
         Returns:
             self.grid_dict, a dictionary of one DataFrame for each grid, containing the gridding information
@@ -324,6 +329,9 @@ class AdaSTEM(BaseEstimator):
             
         if verbosity is None:
             verbosity = self.verbosity
+
+        if quadtree_arg_dict is None:
+            quadtree_arg_dict = {'additional_features':[], 'addiitonal_quadtree_criteria':None}
             
         # Determine grid_len based on conditions
         if self.grid_len is None:
@@ -379,7 +387,7 @@ class AdaSTEM(BaseEstimator):
                 pass
         
         if isinstance(X_train, pd.DataFrame):
-            X_train_indexes = X_train[[self.Temporal1, self.Spatio1, self.Spatio2]]
+            X_train_indexes = X_train[[self.Temporal1, self.Spatio1, self.Spatio2] + quadtree_arg_dict['additional_features']]
         else:
             X_train_indexes = X_train
         
@@ -407,7 +415,8 @@ class AdaSTEM(BaseEstimator):
             save_gridding_plot=self.save_gridding_plot,
             ax=ax,
             completely_random_rotation=self.completely_random_rotation,
-            ensemble_bootstrap=self.ensemble_bootstrap
+            ensemble_bootstrap=self.ensemble_bootstrap,
+            quadtree_arg_dict=quadtree_arg_dict
         )
 
         if n_jobs > 1 and isinstance(n_jobs, int):
@@ -488,12 +497,12 @@ class AdaSTEM(BaseEstimator):
                 del self.x_names[self.x_names.index(i)]
         
 
-    def stixel_fitting(self, stixel):
+    def stixel_fitting(self, stixel, stixel_filter_func = None):
         """A sub module of SAC training. Fit one stixel
 
         Args:
-            stixel (pd.DataFrame): data sjoined with ensemble_df.
-            For a single stixel.
+            stixel (pd.DataFrame): data sjoined with ensemble_df. For a single stixel.
+            stixel_filter_func: filtering function applied on data.
         """
         
         if '__index_level_0__' in stixel.columns:
@@ -518,7 +527,8 @@ class AdaSTEM(BaseEstimator):
             sample_weights_for_classifier=self.sample_weights_for_classifier,
             subset_x_names=self.subset_x_names,
             stixel_X_train=stixel,
-            min_class_sample=self.min_class_sample
+            min_class_sample=self.min_class_sample,
+            stixel_filter_func=stixel_filter_func
         )
 
         if not status == "Success":
@@ -529,7 +539,7 @@ class AdaSTEM(BaseEstimator):
 
 
     def SAC_ensemble_training(self, single_ensemble_df: pd.DataFrame, X_train: Union[pd.DataFrame, str], y_train: Union[pd.DataFrame, str],
-                              temporal_window_prequery: bool = False):
+                              temporal_window_prequery: bool = False, stixel_filter_func = None):
         """A sub-module of SAC training function.
         Train only one ensemble.
 
@@ -538,6 +548,7 @@ class AdaSTEM(BaseEstimator):
             X_train (pd.DataFrame, str): input covariates to train
             y_train (pd.DataFrame, str): input ground truth labels
             temporal_window_prequery (bool): Whether to prequery the temporal windows as pd.DataFrame object to speed-up the stixel query. If set to True, query speed will be faster but with a moderate memory usage increase.
+            stixel_filter_func: filtering function applied on data.
         """
 
         # Calculate the start indices for the sliding window
@@ -655,7 +666,7 @@ class AdaSTEM(BaseEstimator):
                     X_y['ensemble_index'] = df['ensemble_index'].iloc[0]
                     X_y['unique_stixel_id'] = df['unique_stixel_id'].iloc[0]
                     X_y = X_y.sort_index() # To ensure the input dataframes for the two method (temporal_window_prequery or not) are the same so the tained base models are identical, at least with the same input data
-                    fitted_res = self.stixel_fitting(X_y)
+                    fitted_res = self.stixel_fitting(X_y, stixel_filter_func)
                     return fitted_res
 
                 # train
@@ -681,7 +692,7 @@ class AdaSTEM(BaseEstimator):
 
     def SAC_training(
         self, ensemble_df: pd.DataFrame, X_train: Union[pd.DataFrame, str], y_train: Union[pd.DataFrame, str], verbosity: int = 0, n_jobs: int = 1,
-        temporal_window_prequery: bool = False
+        temporal_window_prequery: bool = False, stixel_filter_func = None
     ):
         """This function is a training function with SAC strategy:
         Split (S), Apply(A), Combine (C). At ensemble level.
@@ -693,6 +704,7 @@ class AdaSTEM(BaseEstimator):
             y_train (pd.DataFrame, str): y_train
             verbosity (int, optional): Defaults to 0.
             temporal_window_prequery (bool): Whether to prequery the temporal windows as pd.DataFrame object to speed-up the stixel query. If set to True, query speed will be faster but with a moderate memory usage increase.
+            stixel_filter_func: filtering function applied on data.
         """
         assert isinstance(n_jobs, int)
 
@@ -700,10 +712,10 @@ class AdaSTEM(BaseEstimator):
 
         # Parallel wrapper
         if n_jobs == 1:
-            output_generator = (self.SAC_ensemble_training(single_ensemble_df=ensemble[1], X_train=X_train, y_train=y_train, temporal_window_prequery=temporal_window_prequery) for ensemble in groups)
+            output_generator = (self.SAC_ensemble_training(single_ensemble_df=ensemble[1], X_train=X_train, y_train=y_train, temporal_window_prequery=temporal_window_prequery, stixel_filter_func=stixel_filter_func) for ensemble in groups)
         else:
             def mp_train(ensemble, self=self):
-                res = self.SAC_ensemble_training(single_ensemble_df=ensemble[1], X_train=X_train, y_train=y_train, temporal_window_prequery=temporal_window_prequery)
+                res = self.SAC_ensemble_training(single_ensemble_df=ensemble[1], X_train=X_train, y_train=y_train, temporal_window_prequery=temporal_window_prequery, stixel_filter_func=stixel_filter_func)
                 return res
             
             parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.joblib_tmp_dir)
@@ -743,7 +755,9 @@ class AdaSTEM(BaseEstimator):
         ax=None,
         n_jobs: Union[None, int] = None,
         overwrite = False,
-        temporal_window_prequery: bool = False
+        temporal_window_prequery: bool = False,
+        ensemble_df: Union[None, pd.DataFrame] = None,
+        stixel_filter_func = None
     ):
         """Fitting method
 
@@ -756,7 +770,9 @@ class AdaSTEM(BaseEstimator):
             n_jobs: multiprocessing thread count. Default the n_jobs of model object.
             overwrite: overwrite files in lazy_loading_dir. If set to False and any file exists in lazy_loading_dir, an error will be raise.
             temporal_window_prequery: Whether to prequery the temporal windows as pd.DataFrame object to speed-up the stixel query. If set to True, query speed will be faster but with a moderate memory usage increase.
-
+            ensemble_df: Instead of runing model.split within the `fit` function, you can pass in a customized ensemble_df to skip the whole splitting process.
+            stixel_filter_func: filtering function applied on input data when fitting stixels. For example, you can pass `stixel_filter_func=lambda x:x[x['temp']*x['prec']]>25` to fit only using data where temperature * precipication is over 25, within each stixel. The function must return a dataframe.
+            
         Raises:
             TypeError: X_train is not a type of pd.DataFrame
             TypeError: y_train is not a type of np.ndarray or pd.DataFrame
@@ -783,8 +799,15 @@ class AdaSTEM(BaseEstimator):
             n_jobs = check_transform_n_jobs(self, n_jobs)
             self.store_x_names(X_train)
             
-            # Quadtree            
-            self.split(X_train, verbosity=verbosity, ax=ax, n_jobs=n_jobs)
+            if stixel_filter_func is not None:
+                assert callable(stixel_filter_func)
+            
+            if ensemble_df is None:
+                # Quadtree            
+                self.split(X_train, verbosity=verbosity, ax=ax, n_jobs=n_jobs)
+            else:
+                assert isinstance(ensemble_df, pd.DataFrame)
+                self.ensemble_df = ensemble_df
             
             # Deside whether to terminate the training process if avaliable ensmebles does not match with the targeted ensemble_fold
             if len(self.ensemble_df["ensemble_index"].unique()) < self.ensemble_fold:
@@ -796,8 +819,9 @@ class AdaSTEM(BaseEstimator):
                     delattr(self, rm_target)
 
             # Training
-            self.SAC_training(self.ensemble_df, X_train, y_train, verbosity, n_jobs, temporal_window_prequery)
+            self.SAC_training(self.ensemble_df, X_train, y_train, verbosity, n_jobs, temporal_window_prequery, stixel_filter_func)
             self.classes_ = np.unique(y_train)
+            
         except: # Remove the entire lazy_loading_dir since it includes failed models in this case
             if os.path.exists(self.lazy_loading_dir):
                 shutil.rmtree(self.lazy_loading_dir)
@@ -1597,7 +1621,7 @@ class AdaSTEMClassifier(AdaSTEM):
         plot_ylims=None,
         verbosity=0,
         plot_empty=False,
-        completely_random_rotation=False,
+        completely_random_rotation=True,
         lazy_loading = False,
         lazy_loading_dir = None,
         min_class_sample = 1,
@@ -1790,7 +1814,7 @@ class AdaSTEMRegressor(AdaSTEM):
         plot_ylims=None,
         verbosity=0,
         plot_empty=False,
-        completely_random_rotation=False,
+        completely_random_rotation=True,
         lazy_loading=False,
         lazy_loading_dir=None,
         min_class_sample=1,

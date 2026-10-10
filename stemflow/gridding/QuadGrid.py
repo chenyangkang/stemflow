@@ -34,7 +34,7 @@ class QuadGrid:
         rotation_angle: Union[float, int] = 0,
         calibration_point_x_jitter: Union[float, int] = 0,
         calibration_point_y_jitter: Union[float, int] = 0,
-        plot_empty: bool = False,
+        plot_empty: bool = False
     ):
         """Create a QuadTree object
 

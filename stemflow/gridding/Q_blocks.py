@@ -10,10 +10,13 @@ from typing import List, Tuple, Union
 class QPoint:
     """A Point class for recording data points"""
 
-    def __init__(self, index, x, y):
+    def __init__(self, index, x, y, additional_features=None):
         self.x = x
         self.y = y
         self.index = index
+        if additional_features is None:
+            additional_features = {}
+        self.additional_features = additional_features
 
 
 class QNode:
