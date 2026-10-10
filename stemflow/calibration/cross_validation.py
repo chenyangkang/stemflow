@@ -17,6 +17,9 @@ class SpatioTemporalKFold(BaseEstimator):
     ``rare_policy='allow'`` retains the first nonempty blocked split when the
     requested class support cannot be met. No random row split is substituted.
     ``period`` folds circular-year copies onto their original seasonal day.
+    Spatial and temporal block counts are configurable, independently of
+    ``n_splits``. They retain ST_KFold's linspace-cutpoint semantics and use
+    the observed range of the data passed to each split, without a buffer.
     """
 
     def __init__(self, n_splits=3, Spatio1="longitude", Spatio2="latitude",

@@ -181,3 +181,24 @@ def test_four_independent_estimator_choices(tuning, calibration):
         assert fitted.calibrator_.ridge == 100
         assert fitted.cv_.support_sufficient_
         assert "longitude" not in fitted.features_ or tuning
+
+
+@pytest.mark.parametrize("tuning", [False, True])
+def test_xgboost_recipe_accepts_custom_block_counts(tuning):
+    template = local_beta_xgboost(tuning=tuning, n_estimators=3,
+        tuning_n_estimators=2, n_trials=1, search="random",
+        Spatio_blocks_count=3, Temporal_blocks_count=4)
+    restored = clone(template)
+    assert restored.cv.Spatio_blocks_count == 3
+    assert restored.cv.Temporal_blocks_count == 4
+    if tuning:
+        assert restored.estimator.cv.Spatio_blocks_count == 3
+        assert restored.estimator.cv.Temporal_blocks_count == 4
+    rng = np.random.default_rng(7)
+    X = pd.DataFrame(dict(signal=rng.normal(size=600), DOY=rng.integers(1, 367, 600),
+        longitude=rng.uniform(-100, -70, 600), latitude=rng.uniform(20, 50, 600)))
+    y = rng.binomial(1, expit(X.signal.to_numpy()-1))
+    fitted = restored.fit(X, y)
+    assert fitted.status_ == "calibrated"
+    assert len(fitted.fold_models_) == 3
+    assert np.isfinite(fitted.predict_proba(X)).all()

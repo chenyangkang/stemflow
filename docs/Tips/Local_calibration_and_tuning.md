@@ -25,15 +25,18 @@ fixed = RandomForestClassifier(
 )
 tuned = SelfTuningClassifier(
     fixed, {"max_depth": [4, 8], "min_samples_leaf": [5, 20]},
-    cv=SpatioTemporalKFold(n_splits=2, random_state=59), n_trials=4,
+    cv=SpatioTemporalKFold(n_splits=2, Spatio_blocks_count=5,
+                         Temporal_blocks_count=5, random_state=59), n_trials=4,
 )
 calibrated_fixed = CrossValidatedCalibratedClassifier(
     fixed, calibrator=BetaCalibrator(ridge=100),
-    cv=SpatioTemporalKFold(n_splits=3, random_state=42),
+    cv=SpatioTemporalKFold(n_splits=3, Spatio_blocks_count=5,
+                         Temporal_blocks_count=5, random_state=42),
 )
 calibrated_tuned = CrossValidatedCalibratedClassifier(
     tuned, calibrator=BetaCalibrator(ridge=100),
-    cv=SpatioTemporalKFold(n_splits=3, random_state=42),
+    cv=SpatioTemporalKFold(n_splits=3, Spatio_blocks_count=5,
+                         Temporal_blocks_count=5, random_state=42),
 )
 
 # Choose one of these four objects.
@@ -53,7 +56,10 @@ For the XGBoost recipe below, `local_beta_xgboost(tuning=False)` is the short fo
 from stemflow.model.AdaSTEM import AdaSTEMClassifier
 from stemflow.tuning import local_beta_xgboost
 
-base = local_beta_xgboost(tuning=True, ridge=100, n_trials=4)
+base = local_beta_xgboost(
+    tuning=True, ridge=100, n_trials=4,
+    Spatio_blocks_count=5, Temporal_blocks_count=5,
+)
 model = AdaSTEMClassifier(
     base_model=base, ensemble_fold=50, min_ensemble_required=45,
     n_jobs=4, lazy_loading=True, sample_weights_for_classifier=False,
@@ -75,6 +81,8 @@ The factory follows the supplied pilot strategy:
 4. Retain the three fold models. Apply the local map to each fold prediction, then average. AdaSTEM subsequently averages eligible ensemble probabilities.
 
 The search space is depth `{3,4,6}`, learning rate `{0.1,0.3}`, minimum child weight `{1,5,10}` and L2 penalty `{1,5,10}`. Defaults use four trials, 40 trees during search and 100 trees for retained fold models. These match the supplied small search; they are not established optima for every species. `tuning=False` retains local beta calibration without hyperparameter search.
+
+`Spatio_blocks_count` and `Temporal_blocks_count` are configurable inputs, separate from `n_splits`. The factory forwards them to both calibration and nested tuning. Compose the wrappers explicitly to give those two stages different block counts. Bounds are calculated from the data passed to each splitter, so widths vary between stixels and nested training subsets. The existing `ST_KFold` uses that many `linspace` cutpoints: a count of 5 gives four equal-width interior intervals plus the maximum-boundary group on each axis. It does not specify five degrees or five days, and no exclusion buffer is added between adjacent blocks. The default granularity reproduces the earlier workflow; it has not been optimized for every species.
 
 The factory defaults to Optuna/TPE. Install optional dependencies in your own environment with `pip install -e '.[tuning]'`. `search="random"` explicitly selects sklearn's parameter sampler. Local validation exercised both routes. The four-trial Optuna probe produced identical selected parameters, beta coefficients and probabilities to the supplied standalone helper on the same fixture. Different candidate sequences mean random search is not identical to the TPE experiment.
 
@@ -104,11 +112,13 @@ from stemflow.tuning import SelfTuningClassifier
 forest = SelfTuningClassifier(
     RandomForestClassifier(n_estimators=40, n_jobs=1, random_state=42),
     {"max_depth": [4, 8], "min_samples_leaf": [5, 20]},
-    cv=SpatioTemporalKFold(n_splits=2), n_trials=4,
+    cv=SpatioTemporalKFold(n_splits=2, Spatio_blocks_count=5,
+                         Temporal_blocks_count=5), n_trials=4,
 )
 calibrated = CrossValidatedCalibratedClassifier(
     forest, calibrator=BetaCalibrator(ridge=100),
-    cv=SpatioTemporalKFold(n_splits=3),
+    cv=SpatioTemporalKFold(n_splits=3, Spatio_blocks_count=5,
+                         Temporal_blocks_count=5),
 )
 calibrated.fit(X_train, y_train)
 p = calibrated.predict_proba(X_test)[:, 1]

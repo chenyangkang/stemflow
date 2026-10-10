@@ -19,6 +19,8 @@ All four choices also work outside AdaSTEM. The generic wrappers require neither
 
 The short recipe `local_beta_xgboost(tuning=False)` calibrates fixed-parameter XGBoost; `tuning=True` adds the supplied small nested search. No new AdaSTEM task string is needed. Intentional dummy zero/one stixels still bypass the wrapper, and missing coverage remains missing.
 
+Examples explicitly show `Spatio_blocks_count=5` and `Temporal_blocks_count=5`. Both are also configurable factory inputs, forwarded to calibration and nested tuning; compose the wrappers directly to use different granularities for those stages. Defaults retain the original cutpoint behavior and do not change the measurements below.
+
 ## Execution changes
 
 - Mean aggregation consumes completed ensembles using per-row counts and Welford moments. Finite-output accumulators use 12 bytes per row for means, or 20 bytes for means and standard deviations, independent of ensemble count. IDs, current worker results, output arrays and queued results are additional memory. Standard deviations retain `ddof=1`, and logit aggregation reports standard deviation on the logit scale.
