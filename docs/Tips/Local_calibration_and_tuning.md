@@ -60,6 +60,7 @@ base = local_beta_xgboost(
     tuning=True, ridge=100, n_trials=4,
     n_splits=3, tuning_n_splits=2,
     Spatio_blocks_count=5, Temporal_blocks_count=5,
+    tuning_verbose=False,
 )
 model = AdaSTEMClassifier(
     base_model=base, ensemble_fold=50, min_ensemble_required=45,
@@ -88,6 +89,8 @@ The search space is depth `{3,4,6}`, learning rate `{0.1,0.3}`, minimum child we
 Both fold counts are configurable factory inputs and must be integers of at least 2. `n_splits` controls calibration; `tuning_n_splits` is used only with `tuning=True`. More calibration folds retain more models and generally cost more fitting time, storage and prediction work. More nested tuning folds increase search work. These settings do not change spatial or temporal block widths.
 
 The factory defaults to Optuna/TPE. Install optional dependencies in your own environment with `pip install -e '.[tuning]'`. `search="random"` explicitly selects sklearn's parameter sampler. Local validation exercised both routes. The four-trial Optuna probe produced identical selected parameters, beta coefficients and probabilities to the supplied standalone helper on the same fixture. Different candidate sequences mean random search is not identical to the TPE experiment.
+
+Optuna study and trial INFO messages are quiet by default. Set `tuning_verbose=True` in the factory, or `verbose=True` in `SelfTuningClassifier` / `SelfTuningRegressor`, to enable them. The setting is applied inside each fitting worker and the previous process-local Optuna logging level is restored after the search, including on failure. Warnings, errors, fitted search results, AdaSTEM progress bars and execution-monitor logs remain available. Configure the underlying estimator's own verbosity separately; this setting has no effect on random search.
 
 If your runner retains `longitude_tmp` and `latitude_tmp`, pass `Spatio1="longitude_tmp", Spatio2="latitude_tmp"` to the factory, as in the reference helper. Otherwise those copies would be ordinary estimator features. New workflows can use original coordinate names without creating copies.
 
