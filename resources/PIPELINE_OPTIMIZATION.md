@@ -133,3 +133,57 @@ python scripts/01_documentation/execute_notebook.py docs/Examples/11.Local_calib
 ```
 
 Optional tuning dependencies are in `pip install -e '.[tuning]'`. Generic random search avoids Optuna, and generic calibration avoids XGBoost entirely. Benchmark scripts accept supplied real-data paths and clean their scratch fixtures. Source databases and species Parquet files are opened read-only. No production models or full prediction matrices are retained in these new reports.
+
+## Planar rotation and spatial jitter audit
+
+The evenly spaced setting uses `angle = 90 * ensemble_index / ensemble_fold`.
+A 50-ensemble `.split()` audit produced 0, 1.8, 3.6, ..., 88.2 degrees, within
+1.42e-14 degrees of that expression. Coordinate round trips, distance preservation
+and the correspondence between plotted rectangles and inverse-transformed cells
+passed. There is no angle-division or clockwise/counterclockwise plotting error
+in these planar paths.
+
+There is a separate, pre-existing spatial jitter defect in both `QTree` and
+`QuadGrid`: coordinates are shifted by a common offset, then the grid is anchored
+to the minimum of those shifted coordinates. Writing rotated coordinates as `z`
+and the jitter as `j`, the grid origin becomes `min(z) + j`. Relative positions
+are therefore `(z + j) - (min(z) + j) = z - min(z)`. Extents, subdivisions and
+inverse-transformed cell locations are unchanged mathematically. Exported
+six-decimal rounding and floating-point boundary effects can create tiny
+differences; these do not provide the intended random grid phase. This logic was
+already present in the merged baseline and predates the execution rewrite.
+
+On 2,400 synthetic points, offsets `(0, 0)` and `(17.25, -31.5)` yielded identical
+membership lists in adaptive and fixed grids at 0, 27.5 and 88.2 degrees. The
+largest inverse-transformed vertex difference was 1.42e-14 coordinate units.
+
+The audit also isolates angle scheduling using the same observations, without
+temporal jitter or bootstrap. Adjacent evenly spaced angles produce much more
+similar partitions than adjacent independent random angles. Average similarity
+over *all* ensemble pairs is similar for the two schedules in this single
+synthetic probe. Adjusted Rand index measures point partition agreement, not
+geometric intersection area, prediction correlation or statistical accuracy.
+The result supports an ordering effect and missing spatial phase jitter, not a
+claim that random angles universally produce a better ensemble.
+
+| Schedule | Mean adjacent-pair ARI | Mean all-pair ARI |
+| --- | ---: | ---: |
+| Evenly spaced | 0.8390 | 0.4551 |
+| Independent random | 0.4621 | 0.4618 |
+
+Each pair uses only observations assigned in both partitions. At most one of
+the 2,400 observations per partition was unassigned at a floating-point outer
+boundary in this direct spatial probe; counts are retained in the audit.
+
+The audit and eight tests preserve production gridding behavior. A correction
+must randomize grid boundaries relative to the observations, independently of
+the shifted minimum, while padding the root to retain coverage. Reordering the
+same evenly spaced angles changes only the order, not final ensemble diversity.
+Changing the jitter implementation would change fitted stixels and needs
+explicit compatibility and coverage tests before adoption.
+
+Reproduce with `PYTHONPATH=. python scripts/03_gridding/audit_rotation.py` and
+`python -m pytest tests/test_gridding_rotation.py -q`. Small numerical outputs
+are in `data/03_gridding/rotation_audit/`, and the figure is in
+`figures/03_gridding/rotation_audit/rotation_audit.png`. No base models are fitted
+or saved by this audit.
