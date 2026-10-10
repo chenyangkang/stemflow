@@ -72,14 +72,19 @@ def train_one_stixel(
     # fit
     if (not task == "regression") and ((len(unique_sub_y_train_binary) == 1) or min_sample_count_each_class < min_class_sample):
         trained_model = dummy_model1(float(unique_sub_y_train_binary[0]))
+        trained_model._stemflow_training_support_ = dict(n=len(sub_y_train),
+            positives=int((sub_y_train > 0).sum()))
         return (trained_model, [], "Success")
     else:
         # Remove the variables that have no variation
         stixel_specific_x_names = x_names.copy()
 
         if subset_x_names:
+            metadata = getattr(base_model, "required_metadata_columns", ())
+            constant = set(sub_X_train.columns[sub_X_train.std(axis=0) == 0])
             stixel_specific_x_names = [
-                i for i in stixel_specific_x_names if i not in list(sub_X_train.columns[sub_X_train.std(axis=0) == 0])
+                i for i in stixel_specific_x_names if i in metadata or
+                i not in constant
             ]
 
         # continue, if no variable left
@@ -102,6 +107,8 @@ def train_one_stixel(
         else:
             trained_model.fit(sub_X_train[stixel_specific_x_names], sub_y_train)
 
+    trained_model._stemflow_training_support_ = dict(n=len(sub_y_train),
+        positives=int((sub_y_train > 0).sum()))
     return (trained_model, stixel_specific_x_names, "Success")
 
 

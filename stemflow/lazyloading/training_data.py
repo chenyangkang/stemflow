@@ -122,20 +122,25 @@ class SharedTrainingData:
 
     def frame(self, positions, columns=None):
         columns = [c for c in self.paths if c != INDEX] if columns is None else columns
-        selected, values = {}, {}
+        groups = {}
         for column in columns:
             location = self.paths[column]
-            if isinstance(location, str):
-                values[column] = self.array(column)[positions]
-            else:
-                path, position = location
-                if path not in selected:
-                    if path not in self._arrays:
-                        self._arrays[path] = np.load(path, mmap_mode="r", allow_pickle=False)
-                    selected[path] = self._arrays[path][positions]
-                values[column] = selected[path][:, position]
-        return pd.DataFrame(values,
-                            index=pd.Index(self.index[positions], name=INDEX), copy=False)
+            path, position = (location, None) if isinstance(location, str) else location
+            groups.setdefault(path, []).append((column, position))
+        index = pd.Index(self.index[positions], name=INDEX)
+        blocks = []
+        for path, members in groups.items():
+            if path not in self._arrays:
+                self._arrays[path] = np.load(path, mmap_mode="r", allow_pickle=False)
+            # Fancy indexing makes a private stixel workspace, grouped by dtype.
+            values = self._arrays[path][positions]
+            names, offsets = zip(*members)
+            if values.ndim == 2 and tuple(offsets) != tuple(range(values.shape[1])):
+                values = values[:, list(offsets)]
+            blocks.append(pd.DataFrame(values, columns=list(names), index=index, copy=False))
+        if not blocks:
+            return pd.DataFrame(index=index)
+        return pd.concat(blocks, axis=1).loc[:, columns]
 
     def training_rows(self, positions):
         frame = self.frame(positions)
@@ -187,6 +192,13 @@ class TrainingWindow:
     def select(self, mask):
         positions = np.flatnonzero(mask) if self.sample_positions is None else (
             self.sample_positions[np.asarray(mask)[self.sample_positions]])
+        return self.fetch_rows(positions)
+
+    def select_positions(self, positions):
+        if self.sample_positions is not None:
+            mask = np.zeros(len(self.coordinates), dtype=bool)
+            mask[positions] = True
+            positions = self.sample_positions[mask[self.sample_positions]]
         return self.fetch_rows(positions)
 
 

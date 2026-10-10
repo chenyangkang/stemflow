@@ -1,5 +1,7 @@
 # AdaSTEM execution rewrite
 
+The subsequent [prediction, profiling and modular calibration report](PIPELINE_OPTIMIZATION.md) measures further changes against the first rewrite. The benchmarks below retain their original merged-baseline comparison.
+
 The `codex-rewrite` branch combines main's Python updates with `community_proj` and retains the existing public model API. The default input route remains native Pandas, DuckDB or Parquet. Optional shared numeric arrays reduce repeated training-window copies, and built-in planar prediction sends each task only its assigned ensemble's models.
 
 The largest measured benefit was prediction with resident Random Forest models: the complete job fell from 43.47 to 25.72 seconds and peak macOS footprint from 2,476 to 1,465 MiB. Already lazy-loaded small forests showed almost no whole-job change. These are single local runs, not an HPC memory guarantee.

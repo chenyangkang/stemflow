@@ -1,0 +1,51 @@
+{
+  "results": [
+    {
+      "tuning": false,
+      "training_rows": 1000,
+      "independent_prediction_rows": 400,
+      "original_seconds": 0.018873457796871662,
+      "rewrite_seconds": 0.017315833130851388,
+      "maximum_probability_difference": 0.0,
+      "maximum_beta_parameter_difference": 0.0,
+      "selected_parameters_match": true,
+      "selected_parameters": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "tuning": true,
+      "training_rows": 1000,
+      "independent_prediction_rows": 400,
+      "original_seconds": 0.1463460410013795,
+      "rewrite_seconds": 0.10119629185646772,
+      "maximum_probability_difference": 0.0,
+      "maximum_beta_parameter_difference": 0.0,
+      "selected_parameters_match": true,
+      "selected_parameters": [
+        {
+          "max_depth": 4,
+          "learning_rate": 0.1,
+          "min_child_weight": 10,
+          "reg_lambda": 5.0
+        },
+        {
+          "max_depth": 3,
+          "learning_rate": 0.3,
+          "min_child_weight": 5,
+          "reg_lambda": 5.0
+        },
+        {
+          "max_depth": 4,
+          "learning_rate": 0.1,
+          "min_child_weight": 10,
+          "reg_lambda": 5.0
+        }
+      ]
+    }
+  ],
+  "optuna_version": "5.0.0",
+  "note": "Numerical equivalence probe, not a calibration-quality or copula-recovery experiment."
+}

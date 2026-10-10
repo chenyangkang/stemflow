@@ -8,6 +8,7 @@ import argparse
 from contextlib import contextmanager
 import ctypes
 import io
+import importlib.util
 import json
 import os
 import platform
@@ -207,6 +208,8 @@ def worker(args):
     rng = np.random.default_rng(args.seed)
     held = rng.random(len(frame)) < .2
     X = frame.drop(columns="occurrence")
+    if args.base_model in {"local_beta", "tuned_local_beta"}:
+        X["longitude_tmp"], X["latitude_tmp"] = X.longitude, X.latitude
     X.index = np.arange(len(X)) * 3 + 10
     y = pd.DataFrame({"occ": frame.occurrence.to_numpy()}, index=X.index)
     heldout_X = X.loc[held].copy()
@@ -242,6 +245,20 @@ def worker(args):
             n_jobs=args.threads, tree_method="hist", random_state=args.seed) if args.base_model == "xgboost"
             else RandomForestClassifier(n_estimators=args.trees, max_depth=args.depth,
                                         n_jobs=args.threads, random_state=args.seed))
+        if args.base_model in {"local_beta", "tuned_local_beta"}:
+            options = dict(tuning=args.base_model == "tuned_local_beta", ridge=100.,
+                n_trials=args.tuning_trials, n_estimators=args.trees,
+                tuning_n_estimators=args.tuning_trees, random_state=args.seed)
+            if args.variant == "baseline":
+                if args.calibration_helper is None:
+                    raise ValueError("A supplied --calibration-helper is required for the baseline beta strategy.")
+                import importlib
+                sys.path.insert(0, str(args.calibration_helper.parent))
+                module = importlib.import_module("reference_calibration")
+                estimator = module.TunedLocalBetaXGBClassifier(**options)
+            else:
+                from stemflow.tuning import local_beta_xgboost
+                estimator = local_beta_xgboost(**options, Spatio1="longitude_tmp", Spatio2="latitude_tmp")
         model = ProfiledAdaSTEMClassifier(base_model=estimator,
             ensemble_fold=args.ensembles, min_ensemble_required=1,
             grid_len_upper_threshold=25, grid_len_lower_threshold=5,
@@ -250,12 +267,14 @@ def worker(args):
             n_jobs=args.jobs, sample_weights_for_classifier=False,
             save_gridding_plot=False, random_state=args.seed, max_mem="500MB",
             lazy_loading=not args.resident_models, lazy_loading_dir=str(temporary / "models"), verbosity=0)
+        model.subset_x_names = args.subset_x_names
         del frame, y
         if args.input != "pandas":
             del train, labels, X
         gc.collect()
         extra = {} if args.variant == "baseline" else {"training_data_backend": args.backend,
-                                                       "inner_max_num_threads": args.threads}
+                                                       "inner_max_num_threads": args.threads,
+                                                       "persist_prediction_state": False}
         phases.begin("partitioning")
         model.split(xs)
         grid = model.ensemble_df
@@ -286,6 +305,7 @@ def worker(args):
             versions=dict(numpy=np.__version__, pandas=pd.__version__, duckdb=duckdb.__version__,
                           sklearn=sklearn.__version__, xgboost=xgboost.__version__),
             execution_info=getattr(model, "execution_info_", None))
+        metrics["prediction_execution_info"] = getattr(model, "prediction_execution_info_", None)
         records = [json.loads(p.read_text()) for p in telemetry.glob("fits_*.json")]
         if records:
             metrics["stixel_measurements"] = {key: (sum(r[key] for r in records) if key in {"fit_calls", "fit_seconds_sum"}
@@ -311,7 +331,11 @@ def main():
     parser.add_argument("--trees", type=int, default=20)
     parser.add_argument("--jobs", type=int, default=2)
     parser.add_argument("--input", choices=["pandas", "duckdb", "parquet"], default="duckdb")
-    parser.add_argument("--base-model", choices=["xgboost", "random_forest"], default="xgboost")
+    parser.add_argument("--base-model", choices=["xgboost", "random_forest", "local_beta", "tuned_local_beta"], default="xgboost")
+    parser.add_argument("--subset-x-names", action="store_true")
+    parser.add_argument("--calibration-helper", type=Path)
+    parser.add_argument("--tuning-trials", type=int, default=4)
+    parser.add_argument("--tuning-trees", type=int, default=40)
     parser.add_argument("--depth", type=int, default=4)
     parser.add_argument("--sample-per-mille", type=int, default=200)
     parser.add_argument("--resident-models", action="store_true")
@@ -319,12 +343,17 @@ def main():
     parser.add_argument("--threads", type=int, default=1)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--baseline", default="368acf6")
+    parser.add_argument("--profile-dir", type=Path, help="Opt-in detailed profiles; use separate runs from timing comparisons.")
+    parser.add_argument("--extra-site-packages", type=Path,
+        help="Append optional validation dependencies without replacing runtime packages.")
     parser.add_argument("--output", type=Path, default=ROOT / "data/00_benchmarks/comparison.json")
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--work", type=Path, help=argparse.SUPPRESS)
     parser.add_argument("--variant", default="baseline", help=argparse.SUPPRESS)
     parser.add_argument("--backend", default="native", help=argparse.SUPPRESS)
     args = parser.parse_args()
+    if args.extra_site_packages is not None:
+        sys.path.append(str(args.extra_site_packages.resolve()))
     if args.worker:
         worker(args)
         return
@@ -336,6 +365,14 @@ def main():
         with tarfile.open(fileobj=io.BytesIO(archive)) as handle:
             handle.extractall(baseline, filter="data")
         fixture = build_fixture(args, work)
+        # Warm the common font cache before timing any variant.
+        subprocess.run([sys.executable, "-c", "import matplotlib.font_manager"], check=True,
+            env={**os.environ, "MPLCONFIGDIR": str(work / "matplotlib"), "MPLBACKEND": "Agg"},
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        reference_helper = None
+        if args.calibration_helper is not None:
+            reference_helper = work / "reference_calibration.py"
+            reference_helper.write_text(args.calibration_helper.read_text())
         results = []
         for variant, backend, package in [("baseline", "native", baseline),
                                           ("rewrite_native", "native", ROOT),
@@ -345,13 +382,23 @@ def main():
                        "--threads", str(args.threads), "--ensembles", str(args.ensembles),
                        "--trees", str(args.trees), "--seed", str(args.seed), "--input", args.input,
                        "--base-model", args.base_model, "--depth", str(args.depth)]
+            command += ["--tuning-trials", str(args.tuning_trials), "--tuning-trees", str(args.tuning_trees)]
+            if reference_helper is not None:
+                command += ["--calibration-helper", str(reference_helper)]
+            if args.subset_x_names:
+                command.append("--subset-x-names")
+            if args.extra_site_packages is not None:
+                command += ["--extra-site-packages", str(args.extra_site_packages.resolve())]
             if not args.detail:
                 command.append("--no-detail")
             if args.resident_models:
                 command.append("--resident-models")
-            env = {**os.environ, "PYTHONPATH": str(package), "PYTHONDONTWRITEBYTECODE": "1",
+            env = {**os.environ, "PYTHONPATH": os.pathsep.join([str(package), str(work)]), "PYTHONDONTWRITEBYTECODE": "1",
                    "OMP_NUM_THREADS": str(args.threads), "OPENBLAS_NUM_THREADS": "1",
-                   "MKL_NUM_THREADS": "1", "MPLBACKEND": "Agg"}
+                   "MKL_NUM_THREADS": "1", "MPLBACKEND": "Agg",
+                   "MPLCONFIGDIR": str(work / "matplotlib")}
+            if args.profile_dir is not None:
+                env["STEMFLOW_PROFILE_DIR"] = str(args.profile_dir.resolve() / variant)
             with (work / f"{variant}.log").open("w") as log:
                 wall_started = time.perf_counter()
                 process = subprocess.Popen(command, stdout=log, stderr=log, env=env)
@@ -414,13 +461,20 @@ def main():
             full = np.load(work / f"{result['variant']}_full_pred.npy")
             result["same_full_nan_mask"] = bool(np.array_equal(np.isnan(full_reference), np.isnan(full)))
             result["max_full_prediction_difference"] = float(np.nanmax(np.abs(full_reference - full)))
+            result["equivalent_within_1e6"] = bool(
+                np.allclose(reference, p, atol=1e-6, rtol=1e-6, equal_nan=True) and
+                np.allclose(full_reference, full, atol=1e-6, rtol=1e-6, equal_nan=True))
+            if not result["equivalent_within_1e6"]:
+                raise RuntimeError(f"Prediction equivalence check failed: {result['variant']}")
         report = dict(fixture=fixture, baseline=args.baseline, results=results,
             sampler_version=2,
             host=dict(platform=platform.platform(), machine=platform.machine(),
                       python=platform.python_version(), logical_cpus=os.cpu_count()),
             configuration=dict(source=args.source, input=args.input, ensembles=args.ensembles,
                 trees=args.trees, depth=args.depth, jobs=args.jobs, threads=args.threads,
-                base_model=args.base_model, seed=args.seed, resident_models=args.resident_models),
+                base_model=args.base_model, seed=args.seed, resident_models=args.resident_models,
+                subset_x_names=args.subset_x_names, tuning_trials=args.tuning_trials,
+                tuning_trees=args.tuning_trees, font_cache_warmed=True),
             memory_metric=("macOS physical footprint" if sys.platform == "darwin" else "Linux PSS"),
             limitations="Sampled every 100 ms; RSS sums double-count shared pages. "
                         "Footprint/PSS excludes some job-wide memory. Validate Slurm cgroup peak on HPC. "

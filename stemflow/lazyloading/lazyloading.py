@@ -45,6 +45,7 @@ class LazyLoadingEstimator(BaseEstimator, MetaEstimatorMixin):
         auto_load: bool = True,
         auto_dump: bool = False,
         keep_loaded: bool = False,
+        dump_on_read: bool = True,
     ):
         self.estimator = estimator
         self.dump_dir = None if dump_dir is None else Path(dump_dir)
@@ -53,6 +54,7 @@ class LazyLoadingEstimator(BaseEstimator, MetaEstimatorMixin):
         self.auto_load = auto_load
         self.auto_dump = auto_dump
         self.keep_loaded = keep_loaded
+        self.dump_on_read = dump_on_read
 
         # intra-process safety (not cross-process)
         self._lock = threading.RLock()
@@ -222,7 +224,12 @@ class LazyLoadingEstimator(BaseEstimator, MetaEstimatorMixin):
             # We dump after .fit (write_intent=True), or if auto_dump=True (always), unless keep_loaded=True.
             if (write_intent or self.auto_dump) and not self.keep_loaded:
                 try:
-                    self.dump()
+                    if write_intent or self.dump_on_read:
+                        self.dump()
+                    else:
+                        # Prediction can release a persisted model without another write.
+                        with self._lock:
+                            self.estimator = None
                 except Exception as e:
                     # Don't hide exceptions during user calls; re-raise to surface issues.
                     raise
@@ -242,6 +249,7 @@ class LazyLoadingEstimator(BaseEstimator, MetaEstimatorMixin):
         Rebuild runtime-only attributes after unpickling.
         """
         self.__dict__.update(state)
+        self.__dict__.setdefault("dump_on_read", True)
         # Recreate a fresh lock for this process
         self._lock = threading.RLock()
-        
+

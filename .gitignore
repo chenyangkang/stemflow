@@ -3,6 +3,7 @@ stemflow_mini_test/*
 *.cache
 */dataset/test_data/*
 *.csv
+!data/02_calibration/**/*.csv
 !*/mini_data/*
 *.txt
 */__pycache__/*

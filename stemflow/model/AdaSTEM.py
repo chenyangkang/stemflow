@@ -74,6 +74,7 @@ from ..utils.wrapper import model_wrapper
 from ..lazyloading.open_db_connection import open_db_connection, duckdb_config, open_both_Xy_db_connection
 from ..lazyloading.lazyloading import LazyLoadingEstimator
 from ..lazyloading.training_data import SharedTrainingData, TrainingWindow, native_window, prediction_window, quote_identifier
+from ..lazyloading.prediction import PredictionMoments, SpatialWindowIndex
     
 from .dummy_model import dummy_model1
 from .Hurdle import Hurdle
@@ -86,6 +87,7 @@ from .static_func_AdaSTEM import (  # predict_one_ensemble
 )
 
 from ..utils.generate_random import generate_random_saving_code
+from ..utils.execution_profile import profile_execution
 
 class AdaSTEM(BaseEstimator):
     """An AdaSTEM model class inherited by AdaSTEMClassifier and AdaSTEMRegressor"""
@@ -498,6 +500,10 @@ class AdaSTEM(BaseEstimator):
         for i in [self.Spatio1, self.Spatio2]:
             if i in self.x_names:
                 del self.x_names[self.x_names.index(i)]
+        # Estimator-declared metadata supports local CV without manual coordinate copies.
+        for name in getattr(self.base_model, "required_metadata_columns", ()):
+            if name not in self.x_names:
+                self.x_names.append(name)
         
 
     def stixel_fitting(self, stixel, stixel_filter_func = None):
@@ -518,7 +524,9 @@ class AdaSTEM(BaseEstimator):
             base_model = LazyLoadingEstimator(estimator=self.base_model, 
                                                dump_dir=os.path.join(self.lazy_loading_dir, 'models', 'ensemble_' + ensemble_index), 
                                                filename=f"model_{unique_stixel_id}.pkl", 
-                                               auto_dump=True, auto_load=True, keep_loaded=False)
+                                               auto_dump=True, auto_load=True, keep_loaded=False,
+                                               dump_on_read=getattr(self, "persist_prediction_state_", True))
+            base_model.required_metadata_columns = getattr(self.base_model, "required_metadata_columns", ())
         else:
             base_model = self.base_model
             
@@ -541,6 +549,7 @@ class AdaSTEM(BaseEstimator):
             return [unique_stixel_id, model, stixel_specific_x_names]
 
 
+    @profile_execution
     def SAC_ensemble_training(self, single_ensemble_df: pd.DataFrame, X_train, y_train,
                               temporal_window_prequery=False, stixel_filter_func=None):
         """Fit one ensemble, holding one window and one stixel workspace at a time."""
@@ -584,14 +593,12 @@ class AdaSTEM(BaseEstimator):
                     x = coordinates[f"{self.Spatio1}_new"].to_numpy()
                     y = coordinates[f"{self.Spatio2}_new"].to_numpy()
                     time_grid = single_ensemble_df[single_ensemble_df[f"{self.Temporal1}_start"] == start]
+                    spatial_index = SpatialWindowIndex(x, y, len(time_grid))
                     time_results = []
                     for stixel_id, grid in time_grid.groupby("unique_stixel_id", sort=True):
                         grid = grid.iloc[0]
-                        mask = ((x >= grid["stixel_calibration_point_transformed_left_bound"]) &
-                                (x < grid["stixel_calibration_point_transformed_right_bound"]) &
-                                (y >= grid["stixel_calibration_point_transformed_lower_bound"]) &
-                                (y < grid["stixel_calibration_point_transformed_upper_bound"]))
-                        stixel = window.select(mask)
+                        positions = spatial_index.select(grid)
+                        stixel = window.select_positions(positions)
                         if len(stixel):
                             stixel['ensemble_index'] = ensemble_id
                             stixel['unique_stixel_id'] = stixel_id
@@ -600,7 +607,7 @@ class AdaSTEM(BaseEstimator):
                         del stixel
                     results.append(time_results)
                     # Drop the old cache before allocating the following window.
-                    del window, coordinates, x, y
+                    del window, coordinates, x, y, spatial_index
                 return results
         except Exception as error:
             if hasattr(error, "add_note"):
@@ -680,6 +687,7 @@ class AdaSTEM(BaseEstimator):
                                        for name in names if name in stixel_specific_x_names}
         return self
 
+    @profile_execution
     def fit(
         self,
         X_train: Union[pd.DataFrame, str],
@@ -693,7 +701,8 @@ class AdaSTEM(BaseEstimator):
         stixel_filter_func = None,
         training_data_backend: str = "native",
         inner_max_num_threads: Optional[int] = None,
-        max_concurrent_ensembles: Optional[int] = None
+        max_concurrent_ensembles: Optional[int] = None,
+        persist_prediction_state: bool = True
     ):
         """Fitting method
 
@@ -715,6 +724,8 @@ class AdaSTEM(BaseEstimator):
                 Also set the base estimator's own n_jobs when it exposes that parameter.
             max_concurrent_ensembles: Optional cap on concurrent partitioning/training tasks,
                 independently of the total ensemble_fold. This is not a hard RAM limit.
+            persist_prediction_state: Preserve legacy lazy-model writes after prediction.
+                Set False for read-only prediction estimators to release models without rewriting.
             
         Raises:
             TypeError: X_train is not a type of pd.DataFrame
@@ -730,6 +741,9 @@ class AdaSTEM(BaseEstimator):
                 raise ValueError(f"{name} must be a positive integer or None.")
         if inner_max_num_threads is not None and self.joblib_backend != "loky":
             raise ValueError("inner_max_num_threads requires the loky backend.")
+        if not isinstance(persist_prediction_state, bool):
+            raise ValueError("persist_prediction_state must be a bool.")
+        self.persist_prediction_state_ = persist_prediction_state
         fit_start = time.perf_counter()
         # Setup lazy_loading_dir and joblib_tmp_dir
         if overwrite and self.lazy_loading_dir and os.path.isdir(self.lazy_loading_dir):
@@ -782,6 +796,7 @@ class AdaSTEM(BaseEstimator):
             self._inner_max_num_threads = inner_max_num_threads
             self.execution_info_ = dict(training_data_backend=training_data_backend,
                                         workers=workers, shared_input_bytes=0,
+                                        persist_prediction_state=persist_prediction_state,
                                         partition_seconds=partition_seconds)
             preparation_start = time.perf_counter()
             if training_data_backend == "memmap":
@@ -858,6 +873,7 @@ class AdaSTEM(BaseEstimator):
         else:
             return pred
 
+    @profile_execution
     def SAC_ensemble_predict(
         self, single_ensemble_df: pd.DataFrame, data: Union[pd.DataFrame, str], temporal_window_prequery: bool = False
     ) -> pd.DataFrame:
@@ -882,22 +898,20 @@ class AdaSTEM(BaseEstimator):
                     x = coordinates[f"{self.Spatio1}_new"].to_numpy()
                     y = coordinates[f"{self.Spatio2}_new"].to_numpy()
                     time_grid = single_ensemble_df[single_ensemble_df[f"{self.Temporal1}_start"] == start]
+                    spatial_index = SpatialWindowIndex(x, y, len(time_grid))
                     for stixel_id, grid in time_grid.groupby("unique_stixel_id", sort=True):
                         grid = grid.iloc[0]
-                        mask = ((x >= grid["stixel_calibration_point_transformed_left_bound"]) &
-                                (x < grid["stixel_calibration_point_transformed_right_bound"]) &
-                                (y >= grid["stixel_calibration_point_transformed_lower_bound"]) &
-                                (y < grid["stixel_calibration_point_transformed_upper_bound"]))
-                        if not np.any(mask):
+                        positions = spatial_index.select(grid)
+                        if not len(positions):
                             continue
-                        stixel = window.select(mask)
+                        stixel = window.select_positions(positions)
                         stixel['ensemble_index'] = ensemble_id
                         stixel['unique_stixel_id'] = stixel_id
                         prediction = self.stixel_predict(stixel)
                         if prediction is not None:
                             pieces.append(prediction)
                         del stixel
-                    del window, coordinates, x, y
+                    del window, coordinates, x, y, spatial_index
         except Exception as error:
             if hasattr(error, "add_note"):
                 error.add_note(f"AdaSTEM prediction ensemble={ensemble_id}, window_start={start}, "
@@ -923,7 +937,7 @@ class AdaSTEM(BaseEstimator):
         worker.__dict__.pop("_finalizer", None)
         return worker
 
-    def SAC_predict(
+    def _iter_ensemble_predictions(
         self, ensemble_df: pd.DataFrame, data: Union[pd.DataFrame, str], verbosity: int = 0, n_jobs: int = 1, temporal_window_prequery: bool = False
         
     ) -> pd.DataFrame:
@@ -964,12 +978,16 @@ class AdaSTEM(BaseEstimator):
                 output_generator, total=len(ensemble_df["ensemble_index"].unique()), desc="Predicting: "
             )
 
-        # Prediction
         try:
-            pred = dict(output_generator)
+            yield from output_generator
         finally:
             get_reusable_executor().shutdown(wait=True)
-        
+
+    def SAC_predict(self, ensemble_df, data, verbosity=0, n_jobs=1,
+                    temporal_window_prequery=False):
+        """Return all ensemble columns for callers that require the full matrix."""
+        pred = dict(self._iter_ensemble_predictions(ensemble_df, data, verbosity, n_jobs,
+                                                    temporal_window_prequery))
         pred = pd.concat([pred[position] for position in sorted(pred)], axis=1)
         
         if len(pred) == 0:
@@ -980,6 +998,35 @@ class AdaSTEM(BaseEstimator):
         pred.columns = list(range(self.ensemble_fold))
         return pred
 
+    def _stream_prediction(self, X_test, verbosity, n_jobs, prequery, return_std, logit):
+        if isinstance(X_test, pd.DataFrame):
+            index = X_test.index
+        else:
+            with open_db_connection(X_test, self.duckdb_config) as (source, con):
+                con.register("prediction_index_source", source)
+                index = con.sql("SELECT __index_level_0__ FROM prediction_index_source").fetchnumpy()["__index_level_0__"]
+        reducer = PredictionMoments(index, with_std=return_std, logit=logit)
+        try:
+            for _, prediction in self._iter_ensemble_predictions(
+                    self.ensemble_df, X_test, verbosity, n_jobs, prequery):
+                reducer.update(prediction)
+                del prediction
+        finally:
+            if os.path.exists(self.joblib_tmp_dir):
+                shutil.rmtree(self.joblib_tmp_dir)
+        if not reducer.seen:
+            raise ValueError("All samples are not predictable based on current settings!")
+        mean, std = reducer.finish(self.min_ensemble_required)
+        self.prediction_execution_info_ = dict(aggregation_backend="streaming",
+            accumulator_bytes=reducer.count.nbytes + reducer.mean.nbytes +
+                (reducer.m2.nbytes if reducer.m2 is not None else 0),
+            rows=len(index), ensembles=self.ensemble_fold)
+        missing = np.count_nonzero(np.isnan(mean))
+        warnings.warn(f"There are {100 * missing / len(mean):.3g}% points ({missing} points) falling out of predictable range.")
+        result = np.column_stack([1 - mean, mean]) if self.task == "classification" else mean
+        return (result, std) if return_std else result
+
+    @profile_execution
     def predict_proba(
         self,
         X_test: Union[pd.DataFrame, str],
@@ -991,6 +1038,7 @@ class AdaSTEM(BaseEstimator):
         logit_agg: bool = False,
         base_model_method: Union[None, str] = None,
         temporal_window_prequery: bool = False,
+        streaming: bool = True,
         **base_model_prediction_param
     ) -> Union[np.ndarray, Tuple[np.ndarray]]:
         """Predict probability
@@ -1018,6 +1066,11 @@ class AdaSTEM(BaseEstimator):
                 The name of the prediction method for base models. If None, `predict` or `predict_proba` will be used depending on the tasks. This argument is handy if you have a custom base model class that has a special prediction function. Notice that dummy model will still predict 0, so the ensemble-aggregated result is still an average of zeros and your special prediction function output. Therefore, it may only make sense if your special prediction function predicts 0 as the absense/control value. Defaults to None.
             temporal_window_prequery:
                 Whether to prequery the temporal windows as pd.DataFrame object to speed-up the stixel query. If set to True, query speed will be faster but with a moderate memory usage increase.
+            streaming:
+                Reduce mean predictions as ensembles finish, without a full sample-by-ensemble
+                matrix. Standard deviations use ddof=1 (logit scale when requested).
+                Median, separate-ensemble returns and custom SAC_predict overrides retain
+                their original matrix route. Set False for comparison with that route.
             base_model_prediction_param:
                 Any other paramters to pass into the prediction method of the base models. e.g., base_model_prediction_param={'n_jobs':1} (set n_jobs=1 for the *base model*). 
         Raises:
@@ -1045,6 +1098,12 @@ class AdaSTEM(BaseEstimator):
         n_jobs = check_transform_n_jobs(self, n_jobs)
         self.base_model_method = base_model_method
         self.base_model_prediction_param = base_model_prediction_param
+
+        if (streaming and aggregation == "mean" and not return_by_separate_ensembles
+                and type(self).SAC_predict is AdaSTEM.SAC_predict):
+            return self._stream_prediction(X_test, verbosity, n_jobs, temporal_window_prequery,
+                return_std, self.task == "classification" and logit_agg)
+        self.prediction_execution_info_ = dict(aggregation_backend="matrix")
         
         try:
             # predict
@@ -1267,6 +1326,17 @@ class AdaSTEM(BaseEstimator):
         score_dict = AdaSTEM.eval_STEM_res(self.task, np.array(y_test).flatten(), np.array(y_pred).flatten())
         self.score_dict = score_dict
         return self.score_dict
+
+    @staticmethod
+    def eval_calibration(y_test, y_pred, n_bins=8):
+        """Binary probability scores and bin support; evaluate on held-out rows."""
+        from ..calibration import calibration_scores
+        return calibration_scores(y_test, y_pred, n_bins)
+
+    def calibration_diagnostics(self, X_test, y_test, pred=None, **kwargs):
+        """Held-out overall, spatial, temporal and actual-stixel calibration."""
+        from ..calibration import stixel_calibration_diagnostics
+        return stixel_calibration_diagnostics(self, X_test, y_test, pred, **kwargs)
 
     def calculate_feature_importances(self):
         """A method to generate feature importance values for each stixel.

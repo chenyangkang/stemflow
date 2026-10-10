@@ -194,6 +194,10 @@ model.fit(X_path, y_path, temporal_window_prequery=True,
 
 DuckDB remains the default training route. See the [parallel execution guide](https://chenyangkang.github.io/stemflow/Tips/Tips_for_parallel_execution.html) and [executed example](https://chenyangkang.github.io/stemflow/Examples/10.Execution_and_memory.html) for compatibility, scratch-space requirements and complete-job memory trade-offs. The repository also contains reproducible benchmarks in `scripts/00_benchmarks/` and measured comparisons in `resources/REWRITE.md`.
 
+Mean predictions now support streaming ensemble aggregation. Optional [calibration and tuning wrappers](Tips/Local_calibration_and_tuning.md) can be used independently or together, inside or outside AdaSTEM. The repository's `resources/PIPELINE_OPTIMIZATION.md` compares timings, peak memory, calibration diagnostics and compatibility limits.
+
+Mean predictions now support streaming ensemble aggregation. Optional [calibration and tuning wrappers](docs/Tips/Local_calibration_and_tuning.md) can be used independently or together, inside or outside AdaSTEM. The [pipeline report](resources/PIPELINE_OPTIMIZATION.md) compares timings, peak memory, calibration diagnostics and compatibility limits.
+
 -----
 
 ## Plot QuadTree ensembles :evergreen_tree:

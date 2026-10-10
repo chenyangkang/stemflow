@@ -1,0 +1,27 @@
+{
+  "results": [
+    {
+      "mode": "matrix",
+      "rows": 500000,
+      "ensembles": 50,
+      "aggregation_seconds": 0.5585717910435051,
+      "logical_storage_bytes": 200000000,
+      "mean_sum": 249999.083168843,
+      "std_sum": 144014.3640613029,
+      "peak_rss_bytes": 999981056,
+      "peak_accounted_bytes": 923864576
+    },
+    {
+      "mode": "streaming",
+      "rows": 500000,
+      "ensembles": 50,
+      "aggregation_seconds": 0.42124075000174344,
+      "logical_storage_bytes": 10000000,
+      "mean_sum": 249999.083168843,
+      "std_sum": 144014.3640613029,
+      "peak_rss_bytes": 158334976,
+      "peak_accounted_bytes": 79464448
+    }
+  ],
+  "note": "Synthetic aggregation-only workload; includes generation and alignment. Process peaks include imports; not a whole AdaSTEM benchmark."
+}

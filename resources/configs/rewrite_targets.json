@@ -18,7 +18,11 @@
     "Vary dataset size, feature count, ensemble count, input format and base estimator complexity.",
     "Document local and single-node HPC use and the limitations of shared paths on multiple nodes.",
     "Keep existing notebooks; add executed examples and update documentation after code and benchmarks.",
-    "Keep intermediate files temporary and avoid duplicating full source databases."
+    "Keep intermediate files temporary and avoid duplicating full source databases.",
+    "Stream eligible ensemble mean/std reductions instead of retaining the full prediction matrix.",
+    "Profile expensive functions, package lines and Python allocation sites separately from timing benchmarks.",
+    "Provide composable standalone calibration and sequential tuning, including the supplied stixel-local identity-ridge beta strategy.",
+    "Evaluate held-out final probabilities in actual stixels and spatial, temporal and space-time groups; preserve rare-bin support diagnostics."
   ],
   "compatibility_exceptions": [
     "Bootstrap occurrences must be counted once rather than squared by duplicate-ID selection.",

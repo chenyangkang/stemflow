@@ -71,6 +71,37 @@ Training and prediction bound queued ensemble tasks to the worker count, consume
 
 ## Account for the entire job
 
+### Stream ensemble means and standard deviations
+
+Built-in mean aggregation now consumes each completed ensemble and updates per-row running moments. It retains counts and means, plus a second-moment array only when `return_std=True`. For `N` rows this uses `12N` accumulator bytes for means or `20N` for means and standard deviations, rather than an `N × ensembles` float64 matrix. These sizes exclude indexes, current worker results, outputs and estimator memory.
+
+```python
+mean, std = model.predict_proba(prediction_path, return_std=True,
+    temporal_window_prequery=True, streaming=True)
+print(model.prediction_execution_info_)
+```
+
+The existing sample standard deviation (`ddof=1`), missing-ensemble coverage and logit-space standard deviation convention are retained. Float64 accumulation can differ by rounding from the previous float32 reduction. Parallel completion order can also produce tiny floating-point differences.
+
+Median aggregation and `return_by_separate_ensembles=True` retain the full matrix. Custom `SAC_predict` overrides retain their own route. `streaming=False` explicitly selects the matrix reduction for comparisons.
+
+For estimators with read-only prediction, `fit(..., persist_prediction_state=False)` lets lazy models be loaded and released without rewriting their files. The default is True, preserving custom estimators whose prediction-time mutations must persist. This choice is independent of streaming aggregation. The standalone `LazyLoadingEstimator` offers the corresponding `dump_on_read` option and also defaults to True. Performance comparisons explicitly disable repeated writes for the tested forests/XGBoost models.
+
+### Attribute expensive steps
+
+Profiling is opt-in and records compact JSON per parent fit/predict and per ensemble worker:
+
+```bash
+export STEMFLOW_PROFILE_DIR="$PWD/data/execution_profiles"
+export STEMFLOW_PROFILE_LINES=1
+export STEMFLOW_PROFILE_ALLOCATIONS=1
+python run_model.py
+```
+
+`STEMFLOW_PROFILE_DIR` alone enables function timing with file/line attribution. `STEMFLOW_PROFILE_LINES=1` adds line timings within stemflow, including called work. `STEMFLOW_PROFILE_ALLOCATIONS=1` adds net retained Python allocations by source line and a traced Python peak. Native XGBoost/forest allocations, mapped pages and GPU device memory are not measured by `tracemalloc`. Use the benchmark process-tree sampler and scheduler accounting for whole-job peaks. Inclusive function/line timings overlap and must not be summed as independent components.
+
+Profiling adds overhead, particularly with line and allocation tracing. Run detailed profiles separately from comparative timing runs. It is intended for serial or process workers; concurrent threads share profiler state. Unset these variables for normal execution. A failed profile write emits a warning while preserving the model call's result or exception.
+
 Peak memory can occur during input preparation, partitioning, training or prediction. Training workspace is only one component:
 
 | Component | Practical control |

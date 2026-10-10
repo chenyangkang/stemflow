@@ -87,11 +87,13 @@ nav:
     - 'Lazy-loading': Examples/08.Lazy_loading.ipynb
     - 'Database query': Examples/09.Database_query.ipynb
     - 'Parallel execution and memory': Examples/10.Execution_and_memory.ipynb
+    - 'Local calibration and profiling': Examples/11.Local_calibration_and_profiling.ipynb
   - Tips:
     - 'Tips for spatiotemporal indexing': Tips/Tips_for_spatiotemporal_indexing.md
     - 'Tips for data types': Tips/Tips_for_data_types.md
     - 'Tips for different tasks': Tips/Tips_for_different_tasks.md
     - 'Parallel execution and memory': Tips/Tips_for_parallel_execution.md
+    - 'Local calibration and tuning': Tips/Local_calibration_and_tuning.md
   - API Documentation:
     - stemflow.model:
       - 'AdaSTEM': API_Documentation/model/stemflow.model.AdaSTEM.md
@@ -124,6 +126,8 @@ nav:
       - 'validation': API_Documentation/utils/stemflow.utils.validation.md
       - 'wrapper': API_Documentation/utils/stemflow.utils.wrapper.md
     - stemflow.model_selection: API_Documentation/stemflow.model_selection.md
+    - stemflow.calibration: API_Documentation/stemflow.calibration.md
+    - stemflow.tuning: API_Documentation/stemflow.tuning.md
 
   - Fun Visualization:
     - 'Global Bird Diversity': Fun_Visualization/Global_Bird_Shannon_H_Index.md
