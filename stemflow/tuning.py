@@ -160,24 +160,30 @@ class SelfTuningRegressor(RegressorMixin, _SelfTuning, BaseEstimator):
 def local_beta_xgboost(*, tuning=True, ridge=100., n_trials=4, n_estimators=100,
                        tuning_n_estimators=40, random_state=42, max_trials=10,
                        Spatio1="longitude", Spatio2="latitude", Temporal1="DOY",
-                       search="optuna", Spatio_blocks_count=5, Temporal_blocks_count=5):
+                       search="optuna", Spatio_blocks_count=5, Temporal_blocks_count=5,
+                       n_splits=3, tuning_n_splits=2):
     """Compose the supplied pilot's XGBoost search and stixel-local beta map.
 
     XGBoost is imported only when this factory is called; Optuna only during
     tuning. No classifier balancing or final global probability map is added.
     Block counts configure both calibration and nested tuning splits. Compose
     the wrappers directly when those two stages need different granularities.
+    ``n_splits`` controls calibration folds; ``tuning_n_splits`` controls the
+    nested search folds and is used only when tuning is enabled.
     """
+    for name, count in (("n_splits", n_splits), ("tuning_n_splits", tuning_n_splits)):
+        if isinstance(count, (bool, np.bool_)) or not isinstance(count, (int, np.integer)) or count < 2:
+            raise ValueError(f"{name} must be an integer >= 2.")
     from xgboost import XGBClassifier
     from .calibration import BetaCalibrator, CrossValidatedCalibratedClassifier
     base = XGBClassifier(n_estimators=n_estimators, max_depth=6, learning_rate=.3,
         min_child_weight=1, reg_lambda=1., n_jobs=1, tree_method="hist", verbosity=0,
         random_state=random_state, eval_metric="logloss")
-    outer = SpatioTemporalKFold(3, Spatio1=Spatio1, Spatio2=Spatio2,
+    outer = SpatioTemporalKFold(int(n_splits), Spatio1=Spatio1, Spatio2=Spatio2,
         Temporal1=Temporal1, random_state=random_state, max_trials=max_trials,
         Spatio_blocks_count=Spatio_blocks_count, Temporal_blocks_count=Temporal_blocks_count)
     if tuning:
-        inner = SpatioTemporalKFold(2, Spatio1=Spatio1, Spatio2=Spatio2,
+        inner = SpatioTemporalKFold(int(tuning_n_splits), Spatio1=Spatio1, Spatio2=Spatio2,
             Temporal1=Temporal1, random_state=random_state+17, max_trials=max_trials,
             Spatio_blocks_count=Spatio_blocks_count, Temporal_blocks_count=Temporal_blocks_count)
         base = SelfTuningClassifier(base, dict(max_depth=[3, 4, 6], learning_rate=[.1, .3],

@@ -58,6 +58,7 @@ from stemflow.tuning import local_beta_xgboost
 
 base = local_beta_xgboost(
     tuning=True, ridge=100, n_trials=4,
+    n_splits=3, tuning_n_splits=2,
     Spatio_blocks_count=5, Temporal_blocks_count=5,
 )
 model = AdaSTEMClassifier(
@@ -75,14 +76,16 @@ Use your established gridding, temporal windows and sample thresholds in the con
 
 The factory follows the supplied pilot strategy:
 
-1. Within each stixel, make three spatial-temporal folds. Longitude and latitude are splitting metadata, excluded from XGBoost predictors; DOY remains a predictor.
-2. Within each training fold, tune a small XGBoost using two additional spatial-temporal folds. Search sequentially, so AdaSTEM controls ensemble parallelism.
+1. Within each stixel, make `n_splits` spatial-temporal calibration folds (default 3). Longitude and latitude are splitting metadata, excluded from XGBoost predictors; DOY remains a predictor.
+2. Within each training fold, tune a small XGBoost using `tuning_n_splits` additional spatial-temporal folds (default 2). Search sequentially, so AdaSTEM controls ensemble parallelism.
 3. Pool out-of-fold probabilities and fit one increasing beta map for that stixel.
-4. Retain the three fold models. Apply the local map to each fold prediction, then average. AdaSTEM subsequently averages eligible ensemble probabilities.
+4. Retain the `n_splits` fold models. Apply the local map to each fold prediction, then average. AdaSTEM subsequently averages eligible ensemble probabilities.
 
 The search space is depth `{3,4,6}`, learning rate `{0.1,0.3}`, minimum child weight `{1,5,10}` and L2 penalty `{1,5,10}`. Defaults use four trials, 40 trees during search and 100 trees for retained fold models. These match the supplied small search; they are not established optima for every species. `tuning=False` retains local beta calibration without hyperparameter search.
 
 `Spatio_blocks_count` and `Temporal_blocks_count` are configurable inputs, separate from `n_splits`. The factory forwards them to both calibration and nested tuning. Compose the wrappers explicitly to give those two stages different block counts. Bounds are calculated from the data passed to each splitter, so widths vary between stixels and nested training subsets. The existing `ST_KFold` uses that many `linspace` cutpoints: a count of 5 gives four equal-width interior intervals plus the maximum-boundary group on each axis. It does not specify five degrees or five days, and no exclusion buffer is added between adjacent blocks. The default granularity reproduces the earlier workflow; it has not been optimized for every species.
+
+Both fold counts are configurable factory inputs and must be integers of at least 2. `n_splits` controls calibration; `tuning_n_splits` is used only with `tuning=True`. More calibration folds retain more models and generally cost more fitting time, storage and prediction work. More nested tuning folds increase search work. These settings do not change spatial or temporal block widths.
 
 The factory defaults to Optuna/TPE. Install optional dependencies in your own environment with `pip install -e '.[tuning]'`. `search="random"` explicitly selects sklearn's parameter sampler. Local validation exercised both routes. The four-trial Optuna probe produced identical selected parameters, beta coefficients and probabilities to the supplied standalone helper on the same fixture. Different candidate sequences mean random search is not identical to the TPE experiment.
 

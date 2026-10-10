@@ -21,6 +21,8 @@ The short recipe `local_beta_xgboost(tuning=False)` calibrates fixed-parameter X
 
 Examples explicitly show `Spatio_blocks_count=5` and `Temporal_blocks_count=5`. Both are also configurable factory inputs, forwarded to calibration and nested tuning; compose the wrappers directly to use different granularities for those stages. Defaults retain the original cutpoint behavior and do not change the measurements below.
 
+The factory also exposes `n_splits=3` for calibration and `tuning_n_splits=2` for nested tuning. These are independent of block counts. Changing calibration folds changes the number of retained fold models and its time/storage cost; changing tuning folds changes search work. Default values preserve the measured recipe.
+
 ## Execution changes
 
 - Mean aggregation consumes completed ensembles using per-row counts and Welford moments. Finite-output accumulators use 12 bytes per row for means, or 20 bytes for means and standard deviations, independent of ensemble count. IDs, current worker results, output arrays and queued results are additional memory. Standard deviations retain `ddof=1`, and logit aggregation reports standard deviation on the logit scale.
