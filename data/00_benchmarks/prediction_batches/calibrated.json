@@ -1,0 +1,179 @@
+{
+  "settings": {
+    "rows": 1000000,
+    "train_rows": 10000,
+    "features": 116,
+    "ensembles": 4,
+    "jobs": 2,
+    "trees": 10,
+    "calibrated": true,
+    "max_mem": "500MB",
+    "batches": [
+      0,
+      50000,
+      100000
+    ],
+    "repeat": 3,
+    "output": "data/00_benchmarks/prediction_batches/calibrated.json",
+    "work": null,
+    "mode": null,
+    "batch_size": 0
+  },
+  "platform": "darwin",
+  "accounted_metric": "physical_footprint",
+  "runs": [
+    {
+      "seconds": 7.727073124842718,
+      "coverage": 1.0,
+      "execution": {
+        "aggregation_backend": "streaming",
+        "accumulator_bytes": 20000000,
+        "rows": 1000000,
+        "ensembles": 4,
+        "prediction_batch_size": null
+      },
+      "repeat": 1,
+      "batch_size": null,
+      "peak_tree_rss_bytes": 5240160256,
+      "peak_tree_accounted_bytes": 3936833024,
+      "same_nan_mask": true,
+      "max_absolute_difference": 0.0
+    },
+    {
+      "seconds": 10.341968792025,
+      "coverage": 1.0,
+      "execution": {
+        "aggregation_backend": "streaming",
+        "accumulator_bytes": 20000000,
+        "rows": 1000000,
+        "ensembles": 4,
+        "prediction_batch_size": 50000
+      },
+      "repeat": 1,
+      "batch_size": 50000,
+      "peak_tree_rss_bytes": 4285202432,
+      "peak_tree_accounted_bytes": 1790112576,
+      "same_nan_mask": true,
+      "max_absolute_difference": 5.551115123125783e-17
+    },
+    {
+      "seconds": 8.544083999935538,
+      "coverage": 1.0,
+      "execution": {
+        "aggregation_backend": "streaming",
+        "accumulator_bytes": 20000000,
+        "rows": 1000000,
+        "ensembles": 4,
+        "prediction_batch_size": 100000
+      },
+      "repeat": 1,
+      "batch_size": 100000,
+      "peak_tree_rss_bytes": 4846469120,
+      "peak_tree_accounted_bytes": 2130212672,
+      "same_nan_mask": true,
+      "max_absolute_difference": 5.551115123125783e-17
+    },
+    {
+      "seconds": 9.265678207855672,
+      "coverage": 1.0,
+      "execution": {
+        "aggregation_backend": "streaming",
+        "accumulator_bytes": 20000000,
+        "rows": 1000000,
+        "ensembles": 4,
+        "prediction_batch_size": 100000
+      },
+      "repeat": 2,
+      "batch_size": 100000,
+      "peak_tree_rss_bytes": 4427694080,
+      "peak_tree_accounted_bytes": 1989507008,
+      "same_nan_mask": true,
+      "max_absolute_difference": 5.551115123125783e-17
+    },
+    {
+      "seconds": 10.425402333959937,
+      "coverage": 1.0,
+      "execution": {
+        "aggregation_backend": "streaming",
+        "accumulator_bytes": 20000000,
+        "rows": 1000000,
+        "ensembles": 4,
+        "prediction_batch_size": 50000
+      },
+      "repeat": 2,
+      "batch_size": 50000,
+      "peak_tree_rss_bytes": 4288610304,
+      "peak_tree_accounted_bytes": 1812740224,
+      "same_nan_mask": true,
+      "max_absolute_difference": 5.551115123125783e-17
+    },
+    {
+      "seconds": 8.017151749925688,
+      "coverage": 1.0,
+      "execution": {
+        "aggregation_backend": "streaming",
+        "accumulator_bytes": 20000000,
+        "rows": 1000000,
+        "ensembles": 4,
+        "prediction_batch_size": null
+      },
+      "repeat": 2,
+      "batch_size": null,
+      "peak_tree_rss_bytes": 6189023232,
+      "peak_tree_accounted_bytes": 3537912448,
+      "same_nan_mask": true,
+      "max_absolute_difference": 5.551115123125783e-17
+    },
+    {
+      "seconds": 6.9634064577985555,
+      "coverage": 1.0,
+      "execution": {
+        "aggregation_backend": "streaming",
+        "accumulator_bytes": 20000000,
+        "rows": 1000000,
+        "ensembles": 4,
+        "prediction_batch_size": null
+      },
+      "repeat": 3,
+      "batch_size": null,
+      "peak_tree_rss_bytes": 6440976384,
+      "peak_tree_accounted_bytes": 2938092736,
+      "same_nan_mask": true,
+      "max_absolute_difference": 0.0
+    },
+    {
+      "seconds": 10.346870166016743,
+      "coverage": 1.0,
+      "execution": {
+        "aggregation_backend": "streaming",
+        "accumulator_bytes": 20000000,
+        "rows": 1000000,
+        "ensembles": 4,
+        "prediction_batch_size": 50000
+      },
+      "repeat": 3,
+      "batch_size": 50000,
+      "peak_tree_rss_bytes": 4599152640,
+      "peak_tree_accounted_bytes": 1852208640,
+      "same_nan_mask": true,
+      "max_absolute_difference": 5.551115123125783e-17
+    },
+    {
+      "seconds": 9.02906541689299,
+      "coverage": 1.0,
+      "execution": {
+        "aggregation_backend": "streaming",
+        "accumulator_bytes": 20000000,
+        "rows": 1000000,
+        "ensembles": 4,
+        "prediction_batch_size": 100000
+      },
+      "repeat": 3,
+      "batch_size": 100000,
+      "peak_tree_rss_bytes": 4943020032,
+      "peak_tree_accounted_bytes": 1804581056,
+      "same_nan_mask": true,
+      "max_absolute_difference": 5.551115123125783e-17
+    }
+  ]
+}

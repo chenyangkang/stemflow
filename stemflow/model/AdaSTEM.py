@@ -73,7 +73,7 @@ from ..utils.validation import normalize_quadtree_args
 from ..utils.wrapper import model_wrapper
 from ..lazyloading.open_db_connection import open_db_connection, duckdb_config, open_both_Xy_db_connection
 from ..lazyloading.lazyloading import LazyLoadingEstimator
-from ..lazyloading.training_data import SharedTrainingData, TrainingWindow, native_window, prediction_window, quote_identifier
+from ..lazyloading.training_data import SharedTrainingData, TrainingWindow, native_window, iter_prediction_windows, quote_identifier
 from ..lazyloading.prediction import PredictionMoments, SpatialWindowIndex
     
 from .dummy_model import dummy_model1
@@ -918,27 +918,35 @@ class AdaSTEM(BaseEstimator):
         try:
             with open_db_connection(data, config) as (source, con):
                 for start in sorted(single_ensemble_df[f"{self.Temporal1}_start"].unique()):
-                    window = prediction_window(source, con, start,
-                        start + self.temporal_bin_interval, columns, temporal_window_prequery)
-                    coordinates = transform_pred_set_to_STEM_quad(
-                        self.Spatio1, self.Spatio2, window.coordinates, single_ensemble_df)
-                    x = coordinates[f"{self.Spatio1}_new"].to_numpy()
-                    y = coordinates[f"{self.Spatio2}_new"].to_numpy()
                     time_grid = single_ensemble_df[single_ensemble_df[f"{self.Temporal1}_start"] == start]
-                    spatial_index = SpatialWindowIndex(x, y, len(time_grid))
-                    for stixel_id, grid in time_grid.groupby("unique_stixel_id", sort=True):
-                        grid = grid.iloc[0]
-                        positions = spatial_index.select(grid)
-                        if not len(positions):
-                            continue
-                        stixel = window.select_positions(positions)
-                        stixel['ensemble_index'] = ensemble_id
-                        stixel['unique_stixel_id'] = stixel_id
-                        prediction = self.stixel_predict(stixel)
-                        if prediction is not None:
-                            pieces.append(prediction)
-                        del stixel
-                    del window, coordinates, x, y, spatial_index
+                    stixels = [(name, rows.iloc[0]) for name, rows in
+                               time_grid.groupby("unique_stixel_id", sort=True)]
+                    if type(self).stixel_predict is AdaSTEM.stixel_predict:
+                        stixels = [(name, grid) for name, grid in stixels
+                                   if f"{name}_model" in self.model_dict]
+                    if not stixels:
+                        continue
+                    windows = iter_prediction_windows(source, con, start,
+                        start + self.temporal_bin_interval, columns, temporal_window_prequery,
+                        getattr(self, "_prediction_batch_size", None))
+                    for window in windows:
+                        coordinates = transform_pred_set_to_STEM_quad(
+                            self.Spatio1, self.Spatio2, window.coordinates, single_ensemble_df)
+                        x = coordinates[f"{self.Spatio1}_new"].to_numpy()
+                        y = coordinates[f"{self.Spatio2}_new"].to_numpy()
+                        spatial_index = SpatialWindowIndex(x, y, len(time_grid))
+                        for stixel_id, grid in stixels:
+                            positions = spatial_index.select(grid)
+                            if not len(positions):
+                                continue
+                            stixel = window.select_positions(positions)
+                            stixel['ensemble_index'] = ensemble_id
+                            stixel['unique_stixel_id'] = stixel_id
+                            prediction = self.stixel_predict(stixel)
+                            if prediction is not None:
+                                pieces.append(prediction)
+                            del stixel
+                        del window, coordinates, x, y, spatial_index
         except Exception as error:
             if hasattr(error, "add_note"):
                 error.add_note(f"AdaSTEM prediction ensemble={ensemble_id}, window_start={start}, "
@@ -1051,7 +1059,8 @@ class AdaSTEM(BaseEstimator):
             self.prediction_execution_info_ = dict(aggregation_backend="streaming",
                 accumulator_bytes=reducer.count.nbytes + reducer.mean.nbytes +
                     (reducer.m2.nbytes if reducer.m2 is not None else 0),
-                rows=len(index), ensembles=self.ensemble_fold)
+                rows=len(index), ensembles=self.ensemble_fold,
+                prediction_batch_size=getattr(self, "_prediction_batch_size", None))
             missing = np.count_nonzero(np.isnan(mean))
             warnings.warn(f"There are {100 * missing / len(mean):.3g}% points ({missing} points) falling out of predictable range.")
             result = np.column_stack([1 - mean, mean]) if self.task == "classification" else mean
@@ -1071,6 +1080,7 @@ class AdaSTEM(BaseEstimator):
         base_model_method: Union[None, str] = None,
         temporal_window_prequery: bool = False,
         streaming: bool = True,
+        prediction_batch_size: Optional[int] = None,
         **base_model_prediction_param
     ) -> Union[np.ndarray, Tuple[np.ndarray]]:
         """Predict probability
@@ -1103,6 +1113,15 @@ class AdaSTEM(BaseEstimator):
                 matrix. Standard deviations use ddof=1 (logit scale when requested).
                 Median, separate-ensemble returns and custom SAC_predict overrides retain
                 their original matrix route. Set False for comparison with that route.
+            prediction_batch_size:
+                Optional positive row limit for each temporal-query batch. Requires
+                temporal_window_prequery=True and built-in planar ensemble prediction.
+                Each window is still queried once; workers keep only one batch of
+                covariates. Default None retains whole-window prediction calls.
+                Use for estimators whose predictions are independent of other rows
+                in the prediction batch, such as XGBoost and Random Forests. Custom
+                batch-dependent or prediction-stateful estimators should retain None.
+                This bounds input batches, not total worker or job RAM.
             base_model_prediction_param:
                 Any other paramters to pass into the prediction method of the base models. e.g., base_model_prediction_param={'n_jobs':1} (set n_jobs=1 for the *base model*). 
         Raises:
@@ -1127,6 +1146,16 @@ class AdaSTEM(BaseEstimator):
             return_by_separate_ensembles, return_std = check_prediction_return(return_by_separate_ensembles, return_std)
             verbosity = check_verbosity(self, verbosity)
             n_jobs = check_transform_n_jobs(self, n_jobs)
+            if prediction_batch_size is not None:
+                if (isinstance(prediction_batch_size, bool) or
+                        not isinstance(prediction_batch_size, (int, np.integer)) or
+                        prediction_batch_size <= 0):
+                    raise ValueError("prediction_batch_size must be a positive integer or None.")
+                if not temporal_window_prequery:
+                    raise ValueError("prediction_batch_size requires temporal_window_prequery=True.")
+                if type(self).SAC_ensemble_predict is not AdaSTEM.SAC_ensemble_predict:
+                    raise NotImplementedError("prediction_batch_size requires built-in planar ensemble prediction.")
+            self._prediction_batch_size = prediction_batch_size
             self.base_model_method = base_model_method
             self.base_model_prediction_param = base_model_prediction_param
 

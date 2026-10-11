@@ -87,6 +87,42 @@ Median aggregation and `return_by_separate_ensembles=True` retain the full matri
 
 For estimators with read-only prediction, `fit(..., persist_prediction_state=False)` lets lazy models be loaded and released without rewriting their files. The default is True, preserving custom estimators whose prediction-time mutations must persist. This choice is independent of streaming aggregation. The standalone `LazyLoadingEstimator` offers the corresponding `dump_on_read` option and also defaults to True. Performance comparisons explicitly disable repeated writes for the tested forests/XGBoost models.
 
+### Bound predictor batches within temporal queries
+
+Streaming ensemble aggregation bounds the parent's reduction arrays. It does not
+bound a worker's temporal-window covariates: a wide prediction window is otherwise
+materialized once in each concurrent worker. For pointwise estimators such as
+XGBoost, Random Forests and their local beta wrappers, opt into bounded batches:
+
+```python
+pred = model.predict_proba(prediction_path, n_jobs=30,
+    temporal_window_prequery=True, streaming=True,
+    prediction_batch_size=100_000)
+```
+
+Each worker still issues one query per temporal window. DuckDB yields Arrow
+record batches and only the current batch becomes a Pandas covariate table;
+stixel geometry, probabilities, overlapping-window means and coverage rules are
+retained. Pandas and Parquet inputs are also supported. No prediction copy of the
+full covariate dataset is saved to scratch. The option is independent of the
+training backend, lazy loading and total number of ensembles.
+
+The row limit is per worker, not a total RAM cap. DuckDB caches, fitted models,
+ensemble results, indexes and parent output arrays still consume memory. Smaller
+batches reduce input memory but can increase model loads and prediction calls;
+compare 25,000, 50,000 and 100,000 on the target workload. Keep `None` (the default)
+for custom batch-dependent or prediction-stateful estimators, because splitting
+their prediction calls can change their behavior. Custom ensemble prediction
+overrides, including SphereAdaSTEM, reject this option explicitly rather than
+silently ignoring it. Median and separate-ensemble returns still require their
+full result matrix even when input batches are bounded.
+
+An isolated, repeatable comparison is available with
+`python scripts/00_benchmarks/compare_prediction_batches.py --calibrated`.
+It checks predictions, standard deviations and missing-value masks against the
+whole-window route, reports sampled prediction memory and time, and removes its
+temporary databases, model files and prediction arrays afterward.
+
 ### Monitor a running workflow
 
 Install the optional monitoring dependency in the environment that runs the model:
