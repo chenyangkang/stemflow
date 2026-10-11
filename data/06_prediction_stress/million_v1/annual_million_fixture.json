@@ -1,0 +1,63 @@
+{
+  "case": "annual_million",
+  "specification": {
+    "train_rows": 12000,
+    "rows": 1000000,
+    "features": 116,
+    "dtype": "float64",
+    "ensembles": 6,
+    "trees": 20,
+    "depth": 4,
+    "base": "beta",
+    "upper": 25,
+    "lower": 6,
+    "minimum": 200,
+    "period": 366,
+    "step": 40,
+    "interval": 60
+  },
+  "training_seconds": 18.06716433307156,
+  "trained_stixels": 218,
+  "partition_stixels": 218,
+  "model_files_bytes": 27565182,
+  "largest_model_file_bytes": 164171,
+  "prediction_database_bytes": 1084764160,
+  "train_detections": 1941,
+  "inventory_totals": {
+    "fitted_estimators": 654,
+    "retained_trees": 13080,
+    "trial_records": 0
+  },
+  "inventory_maxima": {
+    "fitted_estimators": 3,
+    "retained_trees": 60,
+    "trial_records": 0
+  },
+  "training_dataframe_bytes": 11712000,
+  "largest_temporal_window_rows": 164278,
+  "measurement": {
+    "exit_code": 0,
+    "guard_reason": null,
+    "wall_seconds": 32.712934541050345,
+    "phase_peaks": {
+      "startup": {
+        "rss_bytes": 244482048,
+        "footprint_bytes": 169478528,
+        "parent_rss_bytes": 244482048,
+        "descendants_rss_bytes": 0
+      },
+      "fixture_preparation": {
+        "rss_bytes": 1770897408,
+        "footprint_bytes": 517656256,
+        "parent_rss_bytes": 1770897408,
+        "descendants_rss_bytes": 0
+      },
+      "training": {
+        "rss_bytes": 2914041856,
+        "footprint_bytes": 802435776,
+        "parent_rss_bytes": 1634287616,
+        "descendants_rss_bytes": 1279803392
+      }
+    }
+  }
+}

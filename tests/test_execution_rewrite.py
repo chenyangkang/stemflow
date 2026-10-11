@@ -73,6 +73,30 @@ def sources(X, y, kind, path):
 
 
 @pytest.mark.parametrize("kind", ["pandas", "duckdb", "parquet"])
+def test_memmap_name_matches_shared_alias(sample, tmp_path, kind):
+    X, y = sample
+    xs, ys = sources(X, y, kind, tmp_path)
+    legacy = make_model(ensemble_bootstrap=True).fit(
+        xs, ys, training_data_backend="shared", temporal_window_prequery=True)
+    shared = make_model(ensemble_bootstrap=True).fit(
+        xs, ys, training_data_backend="memmap", temporal_window_prequery=True)
+    pd.testing.assert_frame_equal(shared.ensemble_df, legacy.ensemble_df)
+    for key, estimator in shared.model_dict.items():
+        reference = legacy.model_dict[key]
+        if hasattr(estimator, "rows_"):
+            assert_array_equal(estimator.rows_, reference.rows_)
+            assert_array_equal(estimator.labels_, reference.labels_)
+    expected = legacy.predict_proba(xs, return_by_separate_ensembles=True)
+    actual = shared.predict_proba(xs, prediction_backend="memmap",
+                                  return_by_separate_ensembles=True)
+    assert_allclose(actual, expected, equal_nan=True, atol=1e-13, rtol=0)
+    for model in [shared, legacy]:
+        assert model.execution_info_["training_data_backend"] == "memmap"
+        assert model.execution_info_["shared_input_bytes"] > 0
+        assert not os.path.exists(model.joblib_tmp_dir)
+
+
+@pytest.mark.parametrize("kind", ["pandas", "duckdb", "parquet"])
 @pytest.mark.parametrize("backend", ["native", "memmap"])
 @pytest.mark.parametrize("bootstrap", [False, True])
 @pytest.mark.parametrize("prequery", [False, True])

@@ -1,0 +1,32 @@
+{
+  "case": "result_pressure",
+  "repeat": 1,
+  "strategy": "baseline",
+  "jobs": 4,
+  "end_to_end": false,
+  "measurement": {
+    "exit_code": -2,
+    "guard_reason": "stopped_at_local_memory_guard",
+    "wall_seconds": 4.172477332875133,
+    "phase_peaks": {
+      "startup": {
+        "rss_bytes": 226836480,
+        "footprint_bytes": 155732224,
+        "parent_rss_bytes": 226836480,
+        "descendants_rss_bytes": 0
+      },
+      "model_loading": {
+        "rss_bytes": 233619456,
+        "footprint_bytes": 162040064,
+        "parent_rss_bytes": 233619456,
+        "descendants_rss_bytes": 0
+      },
+      "prediction": {
+        "rss_bytes": 6566100992,
+        "footprint_bytes": 6225900160,
+        "parent_rss_bytes": 516734976,
+        "descendants_rss_bytes": 6142902272
+      }
+    }
+  }
+}

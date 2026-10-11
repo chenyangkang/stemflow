@@ -1,0 +1,69 @@
+{
+  "case": "result_pressure",
+  "repeat": 1,
+  "strategy": "shared",
+  "jobs": 1,
+  "end_to_end": false,
+  "measurement": {
+    "exit_code": 0,
+    "guard_reason": null,
+    "wall_seconds": 6.462700250092894,
+    "phase_peaks": {
+      "startup": {
+        "rss_bytes": 233095168,
+        "footprint_bytes": 162007616,
+        "parent_rss_bytes": 233095168,
+        "descendants_rss_bytes": 0
+      },
+      "shared_preparation": {
+        "rss_bytes": 891764736,
+        "footprint_bytes": 435801984,
+        "parent_rss_bytes": 891764736,
+        "descendants_rss_bytes": 0
+      },
+      "prediction": {
+        "rss_bytes": 2462302208,
+        "footprint_bytes": 818010112,
+        "parent_rss_bytes": 2444197888,
+        "descendants_rss_bytes": 18104320
+      },
+      "verification_output": {
+        "rss_bytes": 2482683904,
+        "footprint_bytes": 219717312,
+        "parent_rss_bytes": 2444361728,
+        "descendants_rss_bytes": 38322176
+      },
+      "done": {
+        "rss_bytes": 2122694656,
+        "footprint_bytes": 219585728,
+        "parent_rss_bytes": 2084372480,
+        "descendants_rss_bytes": 38322176
+      }
+    }
+  },
+  "resident": false,
+  "prediction_seconds": 4.673890083096921,
+  "preparation_seconds": 0.42365270806476474,
+  "total_seconds": 5.097542791161686,
+  "cache_disk_bytes": 320000640,
+  "coverage": 1.0,
+  "logit": false,
+  "versions": {
+    "python": "3.13.15",
+    "numpy": "2.5.1",
+    "pandas": "3.0.5",
+    "duckdb": "1.5.5",
+    "sklearn": "1.9.0",
+    "xgboost": "3.3.0"
+  },
+  "equivalence": {
+    "missing_masks_equal": true,
+    "std_missing_masks_equal": true,
+    "maximum_prediction_difference": 1.4901161193847656e-08,
+    "maximum_std_difference": 0.0,
+    "strict_tolerance": 1e-12,
+    "float32_tolerance": 1e-06,
+    "strict_passed": false,
+    "passed": true
+  }
+}

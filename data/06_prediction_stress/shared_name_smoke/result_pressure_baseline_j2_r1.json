@@ -1,0 +1,73 @@
+{
+  "case": "result_pressure",
+  "repeat": 1,
+  "strategy": "baseline",
+  "jobs": 2,
+  "end_to_end": false,
+  "measurement": {
+    "exit_code": 0,
+    "guard_reason": null,
+    "wall_seconds": 2.719109792029485,
+    "phase_peaks": {
+      "startup": {
+        "rss_bytes": 229605376,
+        "footprint_bytes": 156355072,
+        "parent_rss_bytes": 229605376,
+        "descendants_rss_bytes": 0
+      },
+      "model_loading": {
+        "rss_bytes": 235896832,
+        "footprint_bytes": 162171392,
+        "parent_rss_bytes": 235896832,
+        "descendants_rss_bytes": 0
+      },
+      "prediction": {
+        "rss_bytes": 802684928,
+        "footprint_bytes": 540896128,
+        "parent_rss_bytes": 246693888,
+        "descendants_rss_bytes": 556023808
+      },
+      "done": {
+        "rss_bytes": 307462144,
+        "footprint_bytes": 208098240,
+        "parent_rss_bytes": 251691008,
+        "descendants_rss_bytes": 55771136
+      }
+    }
+  },
+  "resident": false,
+  "prediction_seconds": 1.4254329160321504,
+  "preparation_seconds": 0.0,
+  "total_seconds": 1.4254329160321504,
+  "cache_disk_bytes": 0,
+  "coverage": 1.0,
+  "logit": false,
+  "separate": true,
+  "output_bytes": 80000,
+  "execution_info": {
+    "aggregation_backend": "matrix"
+  },
+  "versions": {
+    "python": "3.13.15",
+    "numpy": "2.5.1",
+    "pandas": "3.0.5",
+    "duckdb": "1.5.5",
+    "sklearn": "1.9.0",
+    "xgboost": "3.3.0"
+  },
+  "source_sha256": {
+    "stemflow/model/AdaSTEM.py": "3886f3e47c388bea179e8c64e34d5078562e3a9dbc2a042279dda2cbc5d91f28",
+    "stemflow/lazyloading/shared_prediction.py": "5a06b224f31f2de61d65fc9ee48c8727da49e461c04f4558425c6549343d2222",
+    "scripts/06_prediction_stress/strategies.py": "ee17a02ed2aec4d4feca0826e52e6580fe6496d0659d2b6bcfdffe85efef7f8b"
+  },
+  "equivalence": {
+    "missing_masks_equal": true,
+    "std_missing_masks_equal": true,
+    "maximum_prediction_difference": 0.0,
+    "maximum_std_difference": 0.0,
+    "strict_tolerance": 1e-12,
+    "float32_tolerance": 1e-06,
+    "strict_passed": true,
+    "passed": true
+  }
+}

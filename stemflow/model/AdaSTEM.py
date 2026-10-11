@@ -741,7 +741,8 @@ class AdaSTEM(BaseEstimator):
             ensemble_df: Instead of runing model.split within the `fit` function, you can pass in a customized ensemble_df to skip the whole splitting process.
             stixel_filter_func: filtering function applied on input data when fitting stixels. For example, you can pass `stixel_filter_func=lambda x:x[x['temp']*x['prec']]>25` to fit only using data where temperature * precipication is over 25, within each stixel. The function must return a dataframe.
             training_data_backend: 'native' retains Pandas/DuckDB window queries. Opt-in
-                'memmap' streams numeric inputs once to temporary read-only shared arrays.
+                'memmap' streams numeric inputs once to temporary read-only memory-mapped
+                arrays. 'shared' remains accepted as an alias for 'memmap'.
                 Estimators still receive ordinary Pandas DataFrames. Currently planar models only.
             inner_max_num_threads: Optional native-library thread limit in loky workers.
                 Also set the base estimator's own n_jobs when it exposes that parameter.
@@ -754,6 +755,8 @@ class AdaSTEM(BaseEstimator):
             TypeError: X_train is not a type of pd.DataFrame
             TypeError: y_train is not a type of np.ndarray or pd.DataFrame
         """
+        if training_data_backend == "shared":
+            training_data_backend = "memmap"
         if training_data_backend not in {"native", "memmap"}:
             raise ValueError("training_data_backend must be 'native' or 'memmap'.")
         if training_data_backend == "memmap" and type(self).SAC_ensemble_training is not AdaSTEM.SAC_ensemble_training:
@@ -1071,6 +1074,8 @@ class AdaSTEM(BaseEstimator):
         base_model_method: Union[None, str] = None,
         temporal_window_prequery: bool = False,
         streaming: bool = True,
+        prediction_backend: str = "native",
+        prediction_output_path: Union[str, None] = None,
         **base_model_prediction_param
     ) -> Union[np.ndarray, Tuple[np.ndarray]]:
         """Predict probability
@@ -1103,6 +1108,16 @@ class AdaSTEM(BaseEstimator):
                 matrix. Standard deviations use ddof=1 (logit scale when requested).
                 Median, separate-ensemble returns and custom SAC_predict overrides retain
                 their original matrix route. Set False for comparison with that route.
+            prediction_backend:
+                'native' preserves the original execution path. 'memmap' shares numeric
+                inputs through temporary read-only maps and uses a fixed number of result
+                buffers and pending ensemble tasks. Supports built-in planar prediction
+                with loky or threading; estimators receive their full stixel DataFrame.
+                'shared' and 'bounded' remain accepted as aliases for 'memmap'.
+            prediction_output_path:
+                Optional new .npy file for separate-ensemble output with the memmap
+                backend. Returns a writable NumPy memmap; the caller owns this file.
+                Existing files are never overwritten. Defaults to an in-memory array.
             base_model_prediction_param:
                 Any other paramters to pass into the prediction method of the base models. e.g., base_model_prediction_param={'n_jobs':1} (set n_jobs=1 for the *base model*). 
         Raises:
@@ -1122,13 +1137,38 @@ class AdaSTEM(BaseEstimator):
             # Setup joblib_tmp_dir
             self.joblib_tmp_dir = initiate_joblib_tmp_dir(self.lazy_loading_dir)
             self.duckdb_config = duckdb_config(self.max_mem, self.joblib_tmp_dir)
-            check_X_test(X_test, self)
-            check_prediction_aggregation(aggregation)
-            return_by_separate_ensembles, return_std = check_prediction_return(return_by_separate_ensembles, return_std)
-            verbosity = check_verbosity(self, verbosity)
-            n_jobs = check_transform_n_jobs(self, n_jobs)
-            self.base_model_method = base_model_method
-            self.base_model_prediction_param = base_model_prediction_param
+            try:
+                check_X_test(X_test, self)
+                check_prediction_aggregation(aggregation)
+                return_by_separate_ensembles, return_std = check_prediction_return(return_by_separate_ensembles, return_std)
+                verbosity = check_verbosity(self, verbosity)
+                n_jobs = check_transform_n_jobs(self, n_jobs)
+                self.base_model_method = base_model_method
+                self.base_model_prediction_param = base_model_prediction_param
+                if prediction_backend in {"shared", "bounded"}:
+                    prediction_backend = "memmap"
+                if prediction_backend not in {"native", "memmap"}:
+                    raise ValueError("prediction_backend must be 'native' or 'memmap'.")
+                if prediction_output_path is not None and prediction_backend != "memmap":
+                    raise ValueError("prediction_output_path requires prediction_backend='memmap'.")
+                if prediction_backend == "memmap" and (
+                        type(self).SAC_ensemble_predict is not AdaSTEM.SAC_ensemble_predict or
+                        type(self).stixel_predict is not AdaSTEM.stixel_predict or
+                        type(self).SAC_predict is not AdaSTEM.SAC_predict):
+                    raise NotImplementedError("Memmap prediction requires built-in planar prediction methods; "
+                                              "use prediction_backend='native' for custom or spherical methods.")
+            except BaseException:
+                shutil.rmtree(self.joblib_tmp_dir, ignore_errors=True)
+                raise
+        if prediction_backend == "memmap":
+            from ..lazyloading.shared_prediction import shared_predict
+            try:
+                return shared_predict(self, X_test, verbosity, n_jobs, aggregation,
+                    return_by_separate_ensembles, return_std,
+                    self.task == "classification" and logit_agg, streaming, prediction_output_path)
+            finally:
+                if os.path.exists(self.joblib_tmp_dir):
+                    shutil.rmtree(self.joblib_tmp_dir)
 
         if (streaming and aggregation == "mean" and not return_by_separate_ensembles
                 and type(self).SAC_predict is AdaSTEM.SAC_predict):

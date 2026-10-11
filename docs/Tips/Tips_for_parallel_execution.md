@@ -50,9 +50,13 @@ model.fit(
 print(model.execution_info_)
 ```
 
+Use `memmap` for both training and prediction backend selection. The earlier local
+`shared` spelling remains accepted as an alias. Backend selection is independent
+for the two phases, and both default to `native`.
+
 The shared backend retains original numeric dtypes, feature order, observation IDs and label alignment. Each estimator receives an ordinary Pandas DataFrame containing its stixel rows. It does not change model complexity, calibration, or the number of ensembles. Estimator preprocessing can still copy these rows. Temporary shared files are removed after training workers finish; they can be larger than the compressed source database. Their location is under the model's temporary working directory, derived from `lazy_loading_dir`.
 
-Shared training currently supports built-in planar AdaSTEM and STEM execution. SphereAdaSTEM and subclasses overriding ensemble training should use `native`; an unsupported shared backend raises an explicit error. Prediction continues to use the original Pandas/DuckDB/Parquet input route for both training backends.
+Shared training currently supports built-in planar AdaSTEM and STEM execution. SphereAdaSTEM and subclasses overriding ensemble training should use `native`; an unsupported shared backend raises an explicit error. Training and prediction backends are selected independently. Prediction defaults to the original Pandas/DuckDB/Parquet route; the shared-input backend below also accepts these input formats.
 
 ## Control cores without changing the model
 
@@ -67,7 +71,7 @@ pred = model.predict_proba(prediction_path, n_jobs=2,
 
 Set a base estimator's own `n_jobs=1` when parallelizing ensembles. For loky training workers, `inner_max_num_threads=1` also limits supported native math libraries. It cannot control every estimator's custom thread pool. Set appropriate environment limits before starting Python when prediction or custom estimators also use native threads. Joblib describes these controls in its [parallel execution guide](https://joblib.readthedocs.io/en/stable/user_guide/parallel.html).
 
-Training and prediction bound queued ensemble tasks to the worker count, consume completed tasks without waiting for submission order, and restore deterministic output order afterward. Built-in planar prediction sends each worker only its assigned ensemble's fitted models. Custom ensemble or stixel prediction methods retain the full model context for compatibility.
+Training and native prediction limit initial task dispatch to the worker count and consume completed tasks without waiting for submission order. Joblib may still accumulate completed results when workers outpace their consumer. The shared prediction backend below also limits outstanding tasks and result buffers to the worker count. Built-in planar prediction sends each worker only its assigned ensemble's fitted models. Custom ensemble or stixel prediction methods retain the full model context for compatibility.
 
 ## Account for the entire job
 
@@ -84,6 +88,54 @@ print(model.prediction_execution_info_)
 The existing sample standard deviation (`ddof=1`), missing-ensemble coverage and logit-space standard deviation convention are retained. Float64 accumulation can differ by rounding from the previous float32 reduction. Parallel completion order can also produce tiny floating-point differences.
 
 Median aggregation and `return_by_separate_ensembles=True` retain the full matrix. Custom `SAC_predict` overrides retain their own route. `streaming=False` explicitly selects the matrix reduction for comparisons.
+
+### Predict with memory-mapped input and result buffers
+
+Select the optional `memmap` backend for large numeric prediction sets:
+
+```python
+mean, std = model.predict_proba(
+    prediction_path,
+    n_jobs=4,
+    temporal_window_prequery=True,
+    prediction_backend="memmap",
+    return_std=True,
+)
+print(model.prediction_execution_info_)
+```
+
+DuckDB remains the source database. The backend streams the required columns once into temporary read-only NumPy maps. Workers select the same temporal windows and spatial stixels from these maps; they do not each materialize a wide temporal-window DataFrame. Every base estimator still receives its complete stixel in one call. This changes data movement and result storage, without batching estimator calls or changing stixel membership, fitted models, calibration, or the requested ensemble count.
+
+Each active task writes into its own reusable result buffer. The parent consumes that buffer before submitting another task into the slot. Only small completion records cross process queues; full ensemble DataFrames do not accumulate in the parent. Means and standard deviations use running moments. For separate output, workers fill columns of one preallocated matrix in deterministic ensemble order. Median and `streaming=False` also use the matrix route.
+
+Separate ensemble predictions retain their existing shape and parameter. For a large matrix, an optional file avoids allocating the entire output as an ordinary in-memory array:
+
+```python
+ensemble_predictions = model.predict_proba(
+    prediction_path,
+    n_jobs=4,
+    temporal_window_prequery=True,
+    prediction_backend="memmap",
+    return_by_separate_ensembles=True,
+    prediction_output_path="data/ensemble_predictions.npy",
+)
+# A writable NumPy memmap; slicing works like an ndarray.
+ensemble_predictions.flush()
+
+# Reopen in a later process without loading the entire matrix.
+import numpy as np
+ensemble_predictions = np.load("data/ensemble_predictions.npy", mmap_mode="r")
+```
+
+The caller owns this output file. Existing files are protected, failed calls remove their partial output, and successful calls remove disposable input caches and result buffers after workers stop. Omit `prediction_output_path` to return an ordinary ndarray. Shared-backend output uses float64; native separate output can be float32 depending on the estimator. Float64 can double the final matrix's byte size while reducing the peak caused by intermediates. Expect tiny rounding differences. A complete `N × E` result still requires `8NE` bytes of file or array storage.
+
+Temporary maps and buffers live under the model's temporary directory, derived from `lazy_loading_dir`. Use sufficient fast scratch space, preferably node-local on HPC. Mapped pages can count toward operating-system or scheduler memory limits; this backend is not a hard RAM cap. Individual estimators still allocate their own model and stixel workspaces. Larger `n_jobs` increases simultaneous workspaces and uses `8N` result-buffer bytes plus `4N` count bytes per worker, excluding coordinates, input pages and outputs. The execution-info dictionary records these buffer sizes and the largest observed outstanding-task count; it does not claim to measure estimator allocations.
+
+Shared prediction currently supports built-in planar AdaSTEM/STEM prediction with numeric inputs and `loky` or `threading`. Custom ensemble/stixel prediction overrides and SphereAdaSTEM must use `prediction_backend="native"`. Lazy loading and `persist_prediction_state` retain their semantics. Generic estimators receive the original numeric dtypes and feature order. Exact scikit-learn Random Forest classes receive a DataFrame gathered directly into float32, matching their own prediction input conversion and avoiding an additional full stixel copy.
+
+Process workers remain the default. Setting `model.joblib_backend="threading"` explicitly can reduce model and interpreter copies when the estimator releases the GIL, but many small stixels or Python-heavy estimators can be slower. Benchmark both with the actual model and input. Thread-based prediction also requires the base estimator to tolerate concurrent use if model objects are shared by the caller. The shared-input backend owns separate input-map handles and result slots for each task. These temporary paths are local to one node; this is not a distributed execution backend.
+
+The `shared_prediction_input` and `prediction_and_aggregation` stages appear in the execution monitor below. The latest structural accounting remains available in `model.prediction_execution_info_` after prediction and model serialization.
 
 For estimators with read-only prediction, `fit(..., persist_prediction_state=False)` lets lazy models be loaded and released without rewriting their files. The default is True, preserving custom estimators whose prediction-time mutations must persist. This choice is independent of streaming aggregation. The standalone `LazyLoadingEstimator` offers the corresponding `dump_on_read` option and also defaults to True. Performance comparisons explicitly disable repeated writes for the tested forests/XGBoost models.
 

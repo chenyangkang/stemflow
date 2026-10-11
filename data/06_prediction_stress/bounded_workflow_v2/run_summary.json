@@ -1,0 +1,193 @@
+[
+  {
+    "case": "result_pressure",
+    "repeat": 1,
+    "strategy": "baseline",
+    "jobs": 4,
+    "end_to_end": true,
+    "measurement": {
+      "exit_code": 0,
+      "guard_reason": null,
+      "wall_seconds": 34.81047620787285,
+      "phase_peaks": {
+        "startup": {
+          "rss_bytes": 246644736,
+          "footprint_bytes": 173066944,
+          "parent_rss_bytes": 246644736,
+          "descendants_rss_bytes": 0
+        },
+        "fixture_preparation": {
+          "rss_bytes": 612499456,
+          "footprint_bytes": 253627712,
+          "parent_rss_bytes": 612499456,
+          "descendants_rss_bytes": 0
+        },
+        "training": {
+          "rss_bytes": 1827291136,
+          "footprint_bytes": 985122304,
+          "parent_rss_bytes": 625573888,
+          "descendants_rss_bytes": 1204011008
+        },
+        "prediction": {
+          "rss_bytes": 6944342016,
+          "footprint_bytes": 4560468928,
+          "parent_rss_bytes": 4002316288,
+          "descendants_rss_bytes": 6634536960
+        },
+        "verification_output": {
+          "rss_bytes": 2288058368,
+          "footprint_bytes": 843345344,
+          "parent_rss_bytes": 2269822976,
+          "descendants_rss_bytes": 18235392
+        },
+        "done": {
+          "rss_bytes": 1799602176,
+          "footprint_bytes": 238954816,
+          "parent_rss_bytes": 1774239744,
+          "descendants_rss_bytes": 25362432
+        }
+      }
+    },
+    "training_seconds": 3.105774417053908,
+    "resident": false,
+    "prediction_seconds": 27.77118150005117,
+    "preparation_seconds": 0.0,
+    "total_seconds": 27.77118150005117,
+    "cache_disk_bytes": 0,
+    "coverage": 0.9999968733333333,
+    "logit": false,
+    "separate": true,
+    "output_bytes": 600000000,
+    "execution_info": {
+      "aggregation_backend": "matrix"
+    },
+    "versions": {
+      "python": "3.13.15",
+      "numpy": "2.5.1",
+      "pandas": "3.0.5",
+      "duckdb": "1.5.5",
+      "sklearn": "1.9.0",
+      "xgboost": "3.3.0"
+    },
+    "source_sha256": {
+      "stemflow/model/AdaSTEM.py": "5d968eae11d8a4556dac2cc28dbc7e945ff8c90da5a2620654ff3692f560dffd",
+      "stemflow/lazyloading/bounded_prediction.py": "661ee066fcbf07d1ac6d8597d0f500583612a85b26565998a349ff3f763fa69a",
+      "scripts/06_prediction_stress/strategies.py": "ee17a02ed2aec4d4feca0826e52e6580fe6496d0659d2b6bcfdffe85efef7f8b"
+    },
+    "equivalence": {
+      "missing_masks_equal": true,
+      "std_missing_masks_equal": true,
+      "maximum_prediction_difference": 0.0,
+      "maximum_std_difference": 0.0,
+      "strict_tolerance": 1e-12,
+      "float32_tolerance": 1e-06,
+      "strict_passed": true,
+      "passed": true
+    }
+  },
+  {
+    "case": "result_pressure",
+    "repeat": 1,
+    "strategy": "bounded",
+    "jobs": 4,
+    "end_to_end": true,
+    "measurement": {
+      "exit_code": 0,
+      "guard_reason": null,
+      "wall_seconds": 14.158016541041434,
+      "phase_peaks": {
+        "startup": {
+          "rss_bytes": 251723776,
+          "footprint_bytes": 178195328,
+          "parent_rss_bytes": 251723776,
+          "descendants_rss_bytes": 0
+        },
+        "fixture_preparation": {
+          "rss_bytes": 634322944,
+          "footprint_bytes": 271387712,
+          "parent_rss_bytes": 634322944,
+          "descendants_rss_bytes": 0
+        },
+        "training": {
+          "rss_bytes": 1830109184,
+          "footprint_bytes": 963839360,
+          "parent_rss_bytes": 645955584,
+          "descendants_rss_bytes": 1187545088
+        },
+        "model_loading": {
+          "rss_bytes": 700743680,
+          "footprint_bytes": 234182144,
+          "parent_rss_bytes": 646135808,
+          "descendants_rss_bytes": 54607872
+        },
+        "prediction": {
+          "rss_bytes": 6185091072,
+          "footprint_bytes": 2318194176,
+          "parent_rss_bytes": 2053718016,
+          "descendants_rss_bytes": 4275339264
+        },
+        "verification_output": {
+          "rss_bytes": 2084274176,
+          "footprint_bytes": 1465016576,
+          "parent_rss_bytes": 2029666304,
+          "descendants_rss_bytes": 54607872
+        },
+        "done": {
+          "rss_bytes": 1614512128,
+          "footprint_bytes": 995024256,
+          "parent_rss_bytes": 1559904256,
+          "descendants_rss_bytes": 54607872
+        }
+      }
+    },
+    "training_seconds": 2.90206754184328,
+    "resident": false,
+    "prediction_seconds": 6.685836208984256,
+    "preparation_seconds": 0.0,
+    "total_seconds": 6.685836208984256,
+    "cache_disk_bytes": 0,
+    "coverage": 0.9999968733333333,
+    "logit": false,
+    "separate": true,
+    "output_bytes": 1200000000,
+    "execution_info": {
+      "aggregation_backend": "bounded_matrix",
+      "prediction_backend": "bounded",
+      "rows": 3000000,
+      "ensembles": 50,
+      "workers": 4,
+      "max_pending_tasks": 4,
+      "shared_input_bytes": 192000640,
+      "shared_preparation_seconds": 0.36264366703107953,
+      "result_buffer_bytes": 96000000,
+      "worker_count_bytes": 12000000,
+      "result_transport": "completion_records",
+      "estimator_calls": 100,
+      "output_storage": "memory",
+      "output_bytes": 1200000000
+    },
+    "versions": {
+      "python": "3.13.15",
+      "numpy": "2.5.1",
+      "pandas": "3.0.5",
+      "duckdb": "1.5.5",
+      "sklearn": "1.9.0",
+      "xgboost": "3.3.0"
+    },
+    "source_sha256": {
+      "stemflow/model/AdaSTEM.py": "5d968eae11d8a4556dac2cc28dbc7e945ff8c90da5a2620654ff3692f560dffd",
+      "stemflow/lazyloading/bounded_prediction.py": "661ee066fcbf07d1ac6d8597d0f500583612a85b26565998a349ff3f763fa69a",
+      "scripts/06_prediction_stress/strategies.py": "ee17a02ed2aec4d4feca0826e52e6580fe6496d0659d2b6bcfdffe85efef7f8b"
+    },
+    "equivalence": {
+      "missing_masks_equal": true,
+      "std_missing_masks_equal": true,
+      "maximum_prediction_difference": 1.4901161193847656e-08,
+      "maximum_std_difference": 0.0,
+      "strict_tolerance": 1e-12,
+      "float32_tolerance": 1e-06,
+      "strict_passed": false,
+      "passed": true
+    }
+  }
+]

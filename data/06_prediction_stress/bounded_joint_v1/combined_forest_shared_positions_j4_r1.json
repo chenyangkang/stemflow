@@ -1,0 +1,83 @@
+{
+  "case": "combined_forest",
+  "repeat": 1,
+  "strategy": "shared_positions",
+  "jobs": 4,
+  "end_to_end": false,
+  "measurement": {
+    "exit_code": 0,
+    "guard_reason": null,
+    "wall_seconds": 56.31673700013198,
+    "phase_peaks": {
+      "startup": {
+        "rss_bytes": 232996864,
+        "footprint_bytes": 159927040,
+        "parent_rss_bytes": 232996864,
+        "descendants_rss_bytes": 0
+      },
+      "model_loading": {
+        "rss_bytes": 249348096,
+        "footprint_bytes": 173214464,
+        "parent_rss_bytes": 249348096,
+        "descendants_rss_bytes": 0
+      },
+      "shared_preparation": {
+        "rss_bytes": 878116864,
+        "footprint_bytes": 474107712,
+        "parent_rss_bytes": 878116864,
+        "descendants_rss_bytes": 0
+      },
+      "prediction": {
+        "rss_bytes": 7027015680,
+        "footprint_bytes": 3138852288,
+        "parent_rss_bytes": 929579008,
+        "descendants_rss_bytes": 6127255552
+      },
+      "verification_output": {
+        "rss_bytes": 888750080,
+        "footprint_bytes": 310778048,
+        "parent_rss_bytes": 834617344,
+        "descendants_rss_bytes": 54132736
+      },
+      "done": {
+        "rss_bytes": 880869376,
+        "footprint_bytes": 294754496,
+        "parent_rss_bytes": 826736640,
+        "descendants_rss_bytes": 54132736
+      }
+    }
+  },
+  "resident": false,
+  "prediction_seconds": 53.99863941594958,
+  "preparation_seconds": 0.5622854998800904,
+  "total_seconds": 54.56092491582967,
+  "cache_disk_bytes": 224000640,
+  "coverage": 1.0,
+  "logit": false,
+  "separate": false,
+  "output_bytes": 8000000,
+  "execution_info": {
+    "aggregation_backend": "streaming",
+    "accumulator_bytes": 20000000,
+    "rows": 1000000,
+    "ensembles": 20
+  },
+  "versions": {
+    "python": "3.13.15",
+    "numpy": "2.5.1",
+    "pandas": "3.0.5",
+    "duckdb": "1.5.5",
+    "sklearn": "1.9.0",
+    "xgboost": "3.3.0"
+  },
+  "equivalence": {
+    "missing_masks_equal": true,
+    "std_missing_masks_equal": true,
+    "maximum_prediction_difference": 0.0,
+    "maximum_std_difference": 0.0,
+    "strict_tolerance": 1e-12,
+    "float32_tolerance": 1e-06,
+    "strict_passed": true,
+    "passed": true
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "case": "huge_forests",
+  "specification": {
+    "train_rows": 25000,
+    "rows": 200000,
+    "features": 16,
+    "dtype": "float32",
+    "ensembles": 4,
+    "trees": 500,
+    "depth": 24,
+    "base": "forest",
+    "upper": 100,
+    "lower": 100,
+    "minimum": 1000,
+    "period": 80,
+    "step": 40,
+    "interval": 60
+  },
+  "training_seconds": 39.48437933297828,
+  "trained_stixels": 8,
+  "partition_stixels": 8,
+  "model_files_bytes": 887701832,
+  "largest_model_file_bytes": 132941449,
+  "prediction_database_bytes": 16789504,
+  "train_detections": 4008,
+  "inventory_version": 2,
+  "inventory_totals": {
+    "fitted_estimators": 8,
+    "retained_trees": 4000,
+    "trial_records": 0
+  },
+  "inventory_maxima": {
+    "fitted_estimators": 1,
+    "retained_trees": 500,
+    "trial_records": 0
+  },
+  "training_dataframe_bytes": 2400000,
+  "largest_temporal_window_rows": 150051,
+  "measurement": {
+    "exit_code": 0,
+    "guard_reason": null,
+    "wall_seconds": 51.99955258402042,
+    "phase_peaks": {
+      "startup": {
+        "rss_bytes": 243269632,
+        "footprint_bytes": 169576704,
+        "parent_rss_bytes": 243269632,
+        "descendants_rss_bytes": 0
+      },
+      "fixture_preparation": {
+        "rss_bytes": 324485120,
+        "footprint_bytes": 202902080,
+        "parent_rss_bytes": 324485120,
+        "descendants_rss_bytes": 0
+      },
+      "training": {
+        "rss_bytes": 2239348736,
+        "footprint_bytes": 1640562880,
+        "parent_rss_bytes": 733396992,
+        "descendants_rss_bytes": 1909669888
+      },
+      "model_loading": {
+        "rss_bytes": 677298176,
+        "footprint_bytes": 230545088,
+        "parent_rss_bytes": 622657536,
+        "descendants_rss_bytes": 54640640
+      },
+      "shared_preparation": {
+        "rss_bytes": 708870144,
+        "footprint_bytes": 244471552,
+        "parent_rss_bytes": 654229504,
+        "descendants_rss_bytes": 54640640
+      },
+      "prediction": {
+        "rss_bytes": 4025942016,
+        "footprint_bytes": 2338818432,
+        "parent_rss_bytes": 665894912,
+        "descendants_rss_bytes": 3384754176
+      },
+      "done": {
+        "rss_bytes": 720568320,
+        "footprint_bytes": 235640576,
+        "parent_rss_bytes": 665927680,
+        "descendants_rss_bytes": 54640640
+      }
+    }
+  }
+}

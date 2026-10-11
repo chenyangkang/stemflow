@@ -1,0 +1,75 @@
+{
+  "case": "result_pressure",
+  "repeat": 1,
+  "strategy": "shared_positions",
+  "jobs": 4,
+  "end_to_end": false,
+  "measurement": {
+    "exit_code": 0,
+    "guard_reason": null,
+    "wall_seconds": 5.9412152080331,
+    "phase_peaks": {
+      "startup": {
+        "rss_bytes": 231456768,
+        "footprint_bytes": 158730880,
+        "parent_rss_bytes": 231456768,
+        "descendants_rss_bytes": 0
+      },
+      "model_loading": {
+        "rss_bytes": 235552768,
+        "footprint_bytes": 162007744,
+        "parent_rss_bytes": 235552768,
+        "descendants_rss_bytes": 0
+      },
+      "shared_preparation": {
+        "rss_bytes": 888864768,
+        "footprint_bytes": 402198336,
+        "parent_rss_bytes": 888864768,
+        "descendants_rss_bytes": 0
+      },
+      "prediction": {
+        "rss_bytes": 7586889728,
+        "footprint_bytes": 3031819200,
+        "parent_rss_bytes": 1355169792,
+        "descendants_rss_bytes": 6270566400
+      },
+      "verification_output": {
+        "rss_bytes": 1362214912,
+        "footprint_bytes": 227237248,
+        "parent_rss_bytes": 1306492928,
+        "descendants_rss_bytes": 55721984
+      },
+      "done": {
+        "rss_bytes": 1322303488,
+        "footprint_bytes": 227302784,
+        "parent_rss_bytes": 1266581504,
+        "descendants_rss_bytes": 55803904
+      }
+    }
+  },
+  "resident": false,
+  "prediction_seconds": 3.7675990839488804,
+  "preparation_seconds": 0.6384044580627233,
+  "total_seconds": 4.406003542011604,
+  "cache_disk_bytes": 320000640,
+  "coverage": 1.0,
+  "logit": false,
+  "versions": {
+    "python": "3.13.15",
+    "numpy": "2.5.1",
+    "pandas": "3.0.5",
+    "duckdb": "1.5.5",
+    "sklearn": "1.9.0",
+    "xgboost": "3.3.0"
+  },
+  "equivalence": {
+    "missing_masks_equal": true,
+    "std_missing_masks_equal": true,
+    "maximum_prediction_difference": 1.4901161193847656e-08,
+    "maximum_std_difference": 0.0,
+    "strict_tolerance": 1e-12,
+    "float32_tolerance": 1e-06,
+    "strict_passed": false,
+    "passed": true
+  }
+}
