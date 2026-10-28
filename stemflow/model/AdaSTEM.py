@@ -89,6 +89,7 @@ from .static_func_AdaSTEM import (  # predict_one_ensemble
 from ..utils.generate_random import generate_random_saving_code
 from ..utils.execution_profile import profile_execution
 from ..utils.execution_monitor import ExecutionMonitor, execution_step, monitor_step
+from ..utils.duckdb_compat import fetch_one
 
 class AdaSTEM(BaseEstimator):
     """An AdaSTEM model class inherited by AdaSTEMClassifier and AdaSTEMRegressor"""
@@ -376,12 +377,12 @@ class AdaSTEM(BaseEstimator):
             con.register("X_train_df", X_train_df)
             
             # spatial & temporal min max
-            spatial1_min = con.sql(f"select MIN({self.Spatio1}) from X_train_df;").fetchone()[0]
-            spatial1_max = con.sql(f"select MAX({self.Spatio1}) from X_train_df;").fetchone()[0]
-            spatial2_min = con.sql(f"select MIN({self.Spatio2}) from X_train_df;").fetchone()[0]
-            spatial2_max = con.sql(f"select MAX({self.Spatio2}) from X_train_df;").fetchone()[0]
-            temporal1_min = con.sql(f"select MIN({self.Temporal1}) from X_train_df;").fetchone()[0]
-            temporal1_max = con.sql(f"select MAX({self.Temporal1}) from X_train_df;").fetchone()[0]
+            spatial1_min = fetch_one(con.sql(f"select MIN({self.Spatio1}) from X_train_df;"))[0]
+            spatial1_max = fetch_one(con.sql(f"select MAX({self.Spatio1}) from X_train_df;"))[0]
+            spatial2_min = fetch_one(con.sql(f"select MIN({self.Spatio2}) from X_train_df;"))[0]
+            spatial2_max = fetch_one(con.sql(f"select MAX({self.Spatio2}) from X_train_df;"))[0]
+            temporal1_min = fetch_one(con.sql(f"select MIN({self.Temporal1}) from X_train_df;"))[0]
+            temporal1_max = fetch_one(con.sql(f"select MAX({self.Temporal1}) from X_train_df;"))[0]
         
         # Call spatial and temporal scale checks
         check_spatial_scale(

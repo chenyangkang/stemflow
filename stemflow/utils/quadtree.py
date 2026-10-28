@@ -24,6 +24,7 @@ from .validation import (
 )
 from ..lazyloading.open_db_connection import open_db_connection
 from .generate_random import generate_random_saving_code
+from .duckdb_compat import fetch_one
 # from tqdm.contrib.concurrent import process_map
 
 
@@ -199,7 +200,7 @@ def get_one_ensemble_quadtree(
             indexes = np.array(data_df.index)
         else:
             indexes = con.sql(f"SELECT __index_level_0__ FROM data_df;").df().values.flatten()
-        total_length = con.sql("SELECT COUNT(*) FROM data_df;").fetchone()[0]
+        total_length = fetch_one(con.sql("SELECT COUNT(*) FROM data_df;"))[0]
         
         # ensemble_bootstrap
         if ensemble_bootstrap:

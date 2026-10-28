@@ -2,6 +2,14 @@
 
 AdaSTEM can keep all ensembles while limiting how many run at once. Start with DuckDB input, temporal-window prequerying, and lazy loading. Measure the peak of the complete job, including prediction, before increasing the worker count. A large base estimator can dominate memory even when input data are shared.
 
+DuckDB 1.x and 2.x are supported (`>=1.1.3,<3`), including native and memmap
+training and prediction. Older releases retain their Arrow batch-reader route;
+newer releases use the current reader API. These adapters preserve source IDs,
+row ordering and read-only database access without loading all batches at once.
+Supporting both APIs does not guarantee that an older DuckDB engine can open
+every database written by a newer engine. It also does not resolve the separate
+ALPRD compressed-column investigation tracked in #99.
+
 ## Prepare databases from Pandas
 
 The preparation helpers create the `tmp` tables and observation ID columns that AdaSTEM expects. The DataFrame index supplies observation IDs. Pandas labels align by ID, while NumPy or list labels align by position. Inputs must have unique, non-null numeric indexes and numeric predictors without missing values. Encode categorical predictors and handle missing values first.

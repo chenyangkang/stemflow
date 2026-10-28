@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from .open_db_connection import open_both_Xy_db_connection
+from ..utils.duckdb_compat import arrow_reader, fetch_one
 
 
 INDEX = "__index_level_0__"
@@ -24,7 +25,7 @@ def _batches(source, con, view, batch_size):
                                 **{c: frame[c].to_numpy() for c in frame}})
     else:
         con.register(view, source)
-        reader = con.sql(f"SELECT * FROM {view}").fetch_record_batch(batch_size)
+        reader = arrow_reader(con.sql(f"SELECT * FROM {view}"), batch_size)
         for batch in reader:
             yield batch.to_pandas()
 
@@ -41,7 +42,7 @@ def _files(paths):
 
 
 def _write_columns(source, con, view, directory, prefix, batch_size, separate):
-    n = len(source) if isinstance(source, pd.DataFrame) else source.count('*').fetchone()[0]
+    n = len(source) if isinstance(source, pd.DataFrame) else fetch_one(source.count('*'))[0]
     arrays, paths, groups, offset = {}, {}, {}, 0
     for frame in _batches(source, con, view, batch_size):
         for column in frame:

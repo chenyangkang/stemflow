@@ -14,6 +14,7 @@ import duckdb
 from joblib import effective_n_jobs
 import re
 from .generate_random import generate_random_saving_code
+from .duckdb_compat import fetch_one
 
 def check_random_state(seed: Union[None, int, np.random._generator.Generator]) -> np.random._generator.Generator:
     """Turn seed into a np.random.RandomState instance.
@@ -182,15 +183,15 @@ def check_X_train(X_train, self, index_col='__index_level_0__'):
                         raise ValueError(f"Index '{index_col}' must be numeric; found {name2type[index_col]}.")
                     # NAs anywhere?
                     cols = [row[0] for row in schema]
-                    na = con.sql(f'SELECT COUNT(*) FROM "{the_only_table_name}" WHERE NOT (' + " AND ".join(f'"{c}" IS NOT NULL' for c in cols) + ")").fetchone()[0]
+                    na = fetch_one(con.sql(f'SELECT COUNT(*) FROM "{the_only_table_name}" WHERE NOT (' + " AND ".join(f'"{c}" IS NOT NULL' for c in cols) + ")"))[0]
                     if na > 0:
                         raise ValueError(f"NAs detected in table '{the_only_table_name}' ({na} row(s)).")
                     # unique + non-null index
-                    indexes_are_unique = con.sql(f'''
+                    indexes_are_unique = fetch_one(con.sql(f'''
                         SELECT 
                             COUNT(*) = COUNT(DISTINCT "{index_col}") 
                         FROM "{the_only_table_name}"
-                    ''').fetchone()[0]
+                    '''))[0]
                     if not indexes_are_unique:
                         raise ValueError(f"Index '{index_col}' is not unique.")
                     
@@ -217,11 +218,11 @@ def check_X_train(X_train, self, index_col='__index_level_0__'):
                 if str(col2type[index_col]).upper() not in _NUMERIC:
                     raise ValueError(f"Index '{index_col}' must be numeric; found {col2type[index_col]}.")
                 # any NAs anywhere?
-                na = con.sql(f"SELECT COUNT(*) FROM rel_db WHERE NOT (" + " AND ".join(f'"{c}" IS NOT NULL' for c in cols) + ")").fetchone()[0]
+                na = fetch_one(con.sql(f"SELECT COUNT(*) FROM rel_db WHERE NOT (" + " AND ".join(f'"{c}" IS NOT NULL' for c in cols) + ")"))[0]
                 if na > 0:
                     raise ValueError(f"NAs detected in parquet ({na} row(s)).")
                 # unique + non-null index
-                ok = con.sql(f'SELECT COUNT(*)=COUNT(DISTINCT "{index_col}") FROM rel_db').fetchone()[0]
+                ok = fetch_one(con.sql(f'SELECT COUNT(*)=COUNT(DISTINCT "{index_col}") FROM rel_db'))[0]
                 if not ok:
                     raise ValueError(f"Index '{index_col}' is not unique.")
             finally:
@@ -272,15 +273,15 @@ def check_y_train(y_train, self, index_col='__index_level_0__'):
                         raise ValueError(f"Index '{index_col}' must be numeric; found {name2type[index_col]}.")
                     # NAs anywhere?
                     cols = [row[0] for row in schema]
-                    na = con.sql(f'SELECT COUNT(*) FROM "{the_only_table_name}" WHERE NOT (' + " AND ".join(f'"{c}" IS NOT NULL' for c in cols) + ")").fetchone()[0]
+                    na = fetch_one(con.sql(f'SELECT COUNT(*) FROM "{the_only_table_name}" WHERE NOT (' + " AND ".join(f'"{c}" IS NOT NULL' for c in cols) + ")"))[0]
                     if na > 0:
                         raise ValueError(f"NAs detected in table '{the_only_table_name}' ({na} row(s)).")
                     # unique + non-null index
-                    indexes_are_unique = con.sql(f'''
+                    indexes_are_unique = fetch_one(con.sql(f'''
                         SELECT 
                             COUNT(*) = COUNT(DISTINCT "{index_col}") 
                         FROM "{the_only_table_name}"
-                    ''').fetchone()[0]
+                    '''))[0]
                     if not indexes_are_unique:
                         raise ValueError(f"Index '{index_col}' is not unique.")
             finally:
@@ -298,11 +299,11 @@ def check_y_train(y_train, self, index_col='__index_level_0__'):
                 if str(col2type[index_col]).upper() not in _NUMERIC:
                     raise ValueError(f"Index '{index_col}' must be numeric; found {col2type[index_col]}.")
                 # any NAs anywhere?
-                na = con.sql(f"SELECT COUNT(*) FROM rel_db WHERE NOT (" + " AND ".join(f'"{c}" IS NOT NULL' for c in cols) + ")").fetchone()[0]
+                na = fetch_one(con.sql(f"SELECT COUNT(*) FROM rel_db WHERE NOT (" + " AND ".join(f'"{c}" IS NOT NULL' for c in cols) + ")"))[0]
                 if na > 0:
                     raise ValueError(f"NAs detected in parquet ({na} row(s)).")
                 # unique + non-null index
-                ok = con.sql(f'SELECT COUNT(*)=COUNT(DISTINCT "{index_col}") FROM rel_db').fetchone()[0]
+                ok = fetch_one(con.sql(f'SELECT COUNT(*)=COUNT(DISTINCT "{index_col}") FROM rel_db'))[0]
                 if not ok:
                     raise ValueError(f"Index '{index_col}' is not unique.")
             finally:

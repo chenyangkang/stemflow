@@ -2,6 +2,7 @@ import duckdb
 import pandas as pd
 import os
 from contextlib import contextmanager
+from ..utils.duckdb_compat import fetch_one
 
 @contextmanager
 def open_db_connection(X_train, duckdb_config):
@@ -58,14 +59,14 @@ def _as_relation(con, obj, view_name, attach_alias):
         # attach the DB file under its own alias, then expose its (first) table as a view
         filename = obj.replace("'", "''")
         con.execute(f"ATTACH '{filename}' AS {attach_alias} (READ_ONLY)")
-        row = con.sql(f"""
+        row = fetch_one(con.sql(f"""
             SELECT table_name
             FROM duckdb_tables()
             WHERE database_name = '{attach_alias}'
               AND schema_name   = 'main'
             ORDER BY table_name
             LIMIT 1
-        """).fetchone()
+        """))
 
         if not row:
             raise RuntimeError(
