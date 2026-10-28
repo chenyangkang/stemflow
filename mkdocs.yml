@@ -90,6 +90,7 @@ nav:
     - 'Parallel execution and memory': Examples/10.Execution_and_memory.ipynb
     - 'Local calibration and profiling': Examples/11.Local_calibration_and_profiling.ipynb
   - Tips:
+    - 'Migrating to 2.0': Tips/Migrating_to_2.0.md
     - 'Tips for spatiotemporal indexing': Tips/Tips_for_spatiotemporal_indexing.md
     - 'Tips for data types': Tips/Tips_for_data_types.md
     - 'Tips for different tasks': Tips/Tips_for_different_tasks.md
@@ -136,6 +137,8 @@ nav:
     - 'Ruby-crowned_Kinglet': Fun_Visualization/Ruby-crowned_Kinglet_2020.md
     - 'Global NDVI': Fun_Visualization/Global_NDVI.md
     - 'Global Mean Temperature': Fun_Visualization/Global_Mean_Temperature_2020.md
+  - Releases:
+    - '2.0.0 comparison': Releases/2.0.0.md
   - Contributing: CONTRIBUTING.md
   - 'Code of conduct': CODE_OF_CONDUCT.md
 

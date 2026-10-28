@@ -57,6 +57,8 @@ python -m pip install --upgrade \
 
 GitHub, PyPI, and conda-forge are updated separately, so the published packages may lag behind this branch. Replace `codex-rewrite` with `main` for the latest merged code, or a full commit SHA for a reproducible installation.
 
+For the 2.0.0 upgrade, read the [version comparison](https://chenyangkang.github.io/stemflow/Releases/2.0.0.html) and [migration guide](https://chenyangkang.github.io/stemflow/Tips/Migrating_to_2.0.html). They explain the new execution/calibration options and numerical changes that can affect refitted models.
+
 The core package is also available from conda-forge:
 
 ```bash

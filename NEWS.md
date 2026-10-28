@@ -13,6 +13,7 @@ Features:
 4. Held-out calibration diagnostics cover overall, spatial, temporal, space-time, and actual stixel partitions, with support/count information, relative-error floor sensitivity, proper losses, and overlay plots.
 5. `model.monitor_execution(...)` retains timing and sampled process-tree memory reports on `model.execution_monitor_`, with optional live logging. Lazy predictions can explicitly skip rewriting unchanged models through `persist_prediction_state=False`; the compatibility default remains `True`.
 6. Community-project features include reuse of a supplied `ensemble_df`, additional quadtree criteria, and per-stixel training filters. DuckDB relation access supports the tested 1.x and 2.x APIs (`duckdb>=1.1.3,<3`).
+7. Release tooling builds isolated source/wheel distributions, excludes compiled caches and the top-level test package, validates metadata, and checks installed core/extras/source workflows across Python 3.9–3.15 before tag-triggered publication. A conda-forge recipe generator uses the exact published PyPI source checksum.
 
 Correctness and migration:
 
@@ -31,6 +32,8 @@ Validation and measured performance:
 The earlier rare-species experiments support a local-beta regularization trade-off, not a universal ridge or demonstrated copula-correlation accuracy. The maintainer reports the DuckDB workflow incident resolved; the access/cache fixes and compatibility checks do not establish a proven upstream ALPRD decoder repair.
 
 See [execution benchmarks](resources/REWRITE.md), [calibration and profiling](resources/PIPELINE_OPTIMIZATION.md), [prediction stress results](resources/PREDICTION_MEMORY_RESULTS.md), and the added executed examples. Completion evidence for issues #97–#109 is recorded in their issue comments; those issues close through the merge PR.
+
+See the [2.0.0 comparison](docs/Releases/2.0.0.md), [migration guide](docs/Tips/Migrating_to_2.0.md), and [release procedure](resources/RELEASING.md). GitHub, PyPI and conda-forge publication are separate steps.
 
 
 -------

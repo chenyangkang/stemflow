@@ -1,0 +1,132 @@
+name: release-packages
+
+on:
+  pull_request:
+    paths:
+      - 'stemflow/**'
+      - 'setup.py'
+      - 'pyproject.toml'
+      - 'requirements.txt'
+      - 'MANIFEST.in'
+      - 'docs/index.md'
+      - 'scripts/07_release/**'
+      - 'resources/configs/conda_forge/**'
+      - 'resources/RELEASE_NOTES_*.md'
+      - 'tests/test_release_distribution.py'
+      - '.github/workflows/publish-pypi.yml'
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.validate.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Check release tags belong to main
+        if: startsWith(github.ref, 'refs/tags/')
+        run: git merge-base --is-ancestor HEAD origin/main
+      - name: Build wheel from the isolated source distribution
+        run: |
+          python -m pip install --upgrade build twine pytest
+          python -m pytest -q tests/test_release_distribution.py
+          python -m build
+          python -m twine check --strict dist/*
+      - name: Validate release contents and version
+        id: validate
+        env:
+          RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+        run: python scripts/07_release/validate_distribution.py dist --tag "$RELEASE_TAG" --github-output "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-distributions
+          path: dist/*
+          if-no-files-found: error
+
+  install:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.9', '3.10', '3.11', '3.12', '3.13', '3.14', '3.15']
+    env:
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      MPLBACKEND: Agg
+      EXPECTED_VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-distributions
+          path: ${{ runner.temp }}/distributions
+      - name: Test core wheel, extras and source installation outside checkout
+        working-directory: ${{ runner.temp }}
+        run: |
+          python -m pip install --upgrade pip
+          wheel=$(find distributions -name '*.whl' -print -quit)
+          source=$(find distributions -name '*.tar.gz' -print -quit)
+          python -m pip install "$wheel"
+          python "$GITHUB_WORKSPACE/scripts/07_release/check_installation.py" --expected-version "$EXPECTED_VERSION" --forbid-source "$GITHUB_WORKSPACE"
+          python -m pip install "${wheel}[monitoring,tuning]"
+          python -m pip check
+          python "$GITHUB_WORKSPACE/scripts/07_release/check_installation.py" --expected-version "$EXPECTED_VERSION" --forbid-source "$GITHUB_WORKSPACE" --with-extras
+          python -m pip install --force-reinstall --no-deps "$source"
+          python "$GITHUB_WORKSPACE/scripts/07_release/check_installation.py" --expected-version "$EXPECTED_VERSION" --forbid-source "$GITHUB_WORKSPACE" --with-extras
+
+  publish:
+    needs: [build, install]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'chenyangkang/stemflow'
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/stemflow
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-distributions
+          path: dist
+      - name: Publish the tested distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    needs: [build, install, publish]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'chenyangkang/stemflow'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-distributions
+          path: dist
+      - name: Create the GitHub release from the same tag and tested files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
+        run: gh release create "$RELEASE_TAG" dist/* --verify-tag --title "stemflow $RELEASE_VERSION" --notes-file "resources/RELEASE_NOTES_${RELEASE_VERSION}.md"

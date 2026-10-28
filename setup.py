@@ -1,11 +1,11 @@
 import codecs
 import os
+from runpy import run_path
 
 from setuptools import find_packages, setup
 
-from stemflow.version import __version__
-
 here = os.path.abspath(os.path.dirname(__file__))
+__version__ = run_path(os.path.join(here, "stemflow", "version.py"))["__version__"]
 
 with codecs.open(os.path.join(here, "README.md"), encoding="utf-8") as fh:
     long_description = "\n" + fh.read()
@@ -23,10 +23,16 @@ setup(
     author="Yangkang Chen",
     author_email="chenyangkang24@outlook.com",
     url="https://github.com/chenyangkang/stemflow",
+    project_urls={
+        "Documentation": "https://chenyangkang.github.io/stemflow/",
+        "Source": "https://github.com/chenyangkang/stemflow",
+        "Issues": "https://github.com/chenyangkang/stemflow/issues",
+        "Changelog": "https://github.com/chenyangkang/stemflow/blob/main/NEWS.md",
+    },
     description=DESCRIPTION,
     long_description_content_type="text/markdown",
     long_description=long_description,
-    packages=find_packages(),
+    packages=find_packages(include=["stemflow", "stemflow.*"]),
     package_dir={"stemflow": "stemflow"},
     python_requires=">=3.9.0",
     install_requires=requirements,
@@ -47,6 +53,9 @@ setup(
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.15",
         "Programming Language :: Python :: 3.14",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
