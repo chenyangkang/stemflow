@@ -196,8 +196,6 @@ DuckDB remains the default training route. See the [parallel execution guide](ht
 
 For optional live wall timings and parent/worker memory, install `stemflow[monitoring]` and wrap fitting and prediction in `with model.monitor_execution(output_path="data/execution_monitor.json") as monitor:`. The monitor reports sampled process-tree peaks, named stages and optional flushed log updates. Its plain report remains available as `model.execution_monitor_` and survives model saving/loading; it retains summaries by default. RSS uses a portable psutil reader, with optional platform-specific USS/PSS/footprint measurements. See the [monitoring guide](docs/Tips/Tips_for_parallel_execution.md#monitor-a-running-workflow) for interpretation and target-machine checks.
 
-Mean predictions now support streaming ensemble aggregation. Optional [calibration and tuning wrappers](Tips/Local_calibration_and_tuning.md) can be used independently or together, inside or outside AdaSTEM. The repository's `resources/PIPELINE_OPTIMIZATION.md` compares timings, peak memory, calibration diagnostics and compatibility limits.
-
 Mean predictions now support streaming ensemble aggregation. Optional [calibration and tuning wrappers](docs/Tips/Local_calibration_and_tuning.md) can be used independently or together, inside or outside AdaSTEM. The [pipeline report](resources/PIPELINE_OPTIMIZATION.md) compares timings, peak memory, calibration diagnostics and compatibility limits.
 
 -----

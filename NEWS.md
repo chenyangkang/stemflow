@@ -1,4 +1,39 @@
 -------
+stemflow version 2.0.0
+-------
+**Prepared Oct 28, 2026 — `codex-rewrite`**
+
+This major release combines the `community_proj` additions with an execution rewrite, local calibration and tuning, diagnostics, and optional execution monitoring. The merge target is `main` version 1.1.9.
+
+Features:
+
+1. Optional `training_data_backend="memmap"` and `prediction_backend="memmap"` share numeric inputs and bound queued ensemble work. Native Pandas/DuckDB/Parquet execution remains the default. Mean/std aggregation streams completed results; separate-ensemble and median output remain available, including optional file-backed ensemble output.
+2. Pandas-friendly `make_duckdb_database`, `make_training_databases`, and `training_databases` helpers preserve numeric dtypes and align targets without manual SQL.
+3. Independent calibration and tuning estimators support fixed, tuned, calibrated, and tuned-and-calibrated base models. The local-beta XGBoost recipe exposes spatial/temporal block counts, fold counts, trial counts, ridge strength, and tuning verbosity. Calibration is optional and no final global map is imposed.
+4. Held-out calibration diagnostics cover overall, spatial, temporal, space-time, and actual stixel partitions, with support/count information, relative-error floor sensitivity, proper losses, and overlay plots.
+5. `model.monitor_execution(...)` retains timing and sampled process-tree memory reports on `model.execution_monitor_`, with optional live logging. Lazy predictions can explicitly skip rewriting unchanged models through `persist_prediction_state=False`; the compatibility default remains `True`.
+6. Community-project features include reuse of a supplied `ensemble_df`, additional quadtree criteria, and per-stixel training filters. DuckDB relation access supports the tested 1.x and 2.x APIs (`duckdb>=1.1.3,<3`).
+
+Correctness and migration:
+
+1. Bootstrap observations retain their actual draw multiplicity; duplicate IDs are not selected repeatedly a second time. Logit aggregation preserves positive probabilities, and named Series targets keep their label alignment.
+2. Planar spatial jitter now shifts grid boundaries relative to the observations instead of canceling at the grid origin. Regenerating geometry can change stixel counts and predictions even with the same seed. Existing exported geometry retains its schema and transform meanings; old-geometry reuse is tested. AdaSTEM and STEM rotation defaults now use fully random angles; pass `completely_random_rotation=False` explicitly for the evenly spaced schedule.
+3. Existing classification, regression, hurdle, lazy-loading, custom-model, and temporal-window prequery workflows remain supported. SphereAdaSTEM and custom overrides retain native execution where the new planar memmap backend is unsupported. Earlier `shared`/`bounded` backend spellings remain aliases.
+4. Floating-point accumulation and corrected bugs can intentionally change numerical output. Memmap ensemble matrices use float64. Revalidate fitted results when regenerating grids or rerunning a previously affected workflow; bitwise agreement with buggy behavior is not promised.
+
+Validation and measured performance:
+
+- At the pre-release implementation head, 212 targeted checks passed in each of six Linux Python/DuckDB combinations. Monitoring and native-allocation checks passed on Ubuntu, macOS, and Windows with Python 3.11/3.13. The release PR runs the full existing test workflow separately.
+- Local Apple Silicon whole-job benchmarks against the merged main/community baseline reduced resident-forest wall time from 43.47 to 25.72 seconds and sampled footprint from 2,476 to 1,465 MiB. Already lazy-loaded small forests showed little whole-job change.
+- Later native-versus-memmap prediction probes used identical fitted models and four workers. Three million rows with 50 separate ensemble columns took 23.71 versus 5.88 seconds, with sampled summed RSS of 7.64 versus 5.64 GiB. These baselines are identified in the reports; they are not direct timings against untouched `main`.
+- These are workload-specific local measurements. Memmap does not cap estimator workspace, eliminate output storage, or guarantee a Slurm allocation. RSS, macOS footprint, and scheduler accounting are different measurements. Monitoring samples can miss brief peaks.
+
+The earlier rare-species experiments support a local-beta regularization trade-off, not a universal ridge or demonstrated copula-correlation accuracy. The maintainer reports the DuckDB workflow incident resolved; the access/cache fixes and compatibility checks do not establish a proven upstream ALPRD decoder repair.
+
+See [execution benchmarks](resources/REWRITE.md), [calibration and profiling](resources/PIPELINE_OPTIMIZATION.md), [prediction stress results](resources/PREDICTION_MEMORY_RESULTS.md), and the added executed examples. Completion evidence for issues #97–#109 is recorded in their issue comments; those issues close through the merge PR.
+
+
+-------
 stemflow version 1.1.6
 -------
 **Oct, 2025**
