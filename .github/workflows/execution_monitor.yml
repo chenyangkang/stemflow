@@ -18,6 +18,10 @@ on:
       - 'setup.py'
       - '.github/workflows/execution_monitor.yml'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   portable-monitor:
     runs-on: ${{ matrix.os }}
@@ -26,7 +30,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python: ['3.11', '3.13']
+        python: ['3.11', '3.13', '3.15']
     env:
       MPLBACKEND: Agg
       OMP_NUM_THREADS: '1'
