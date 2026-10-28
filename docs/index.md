@@ -32,20 +32,41 @@
 
 ## Installation  :wrench:
 
-```py
-pip install stemflow
+Install the published package into your active Python environment:
+
+```bash
+python -m pip install --upgrade stemflow
 ```
 
-To install the latest beta version from github:
+Optional dependencies enable monitoring, Optuna searches, and the XGBoost examples:
 
-```py
-pip install stemflow@git+https://github.com/chenyangkang/stemflow.git
+| Use | Install command | Additional dependencies |
+| --- | --- | --- |
+| Process-memory monitoring | `python -m pip install --upgrade "stemflow[monitoring]"` | psutil |
+| Optuna tuning and XGBoost examples/recipe | `python -m pip install --upgrade "stemflow[tuning]"` | XGBoost and Optuna |
+| Both | `python -m pip install --upgrade "stemflow[monitoring,tuning]"` | All of the above |
+
+Generic calibration with your own scikit-learn-compatible estimator is included in the core package; it does not require the `tuning` extra.
+
+To install the **2.0.0 development branch** from GitHub, including both extras (Git required):
+
+```bash
+python -m pip install --upgrade \
+  "stemflow[monitoring,tuning] @ git+https://github.com/chenyangkang/stemflow.git@codex-rewrite"
 ```
 
-Or using conda:
+GitHub, PyPI, and conda-forge are updated separately, so the published packages may lag behind this branch. Replace `codex-rewrite` with `main` for the latest merged code, or a full commit SHA for a reproducible installation.
 
-```py
+The core package is also available from conda-forge:
+
+```bash
 conda install -c conda-forge stemflow
+```
+
+Check which version and installation your Python environment uses:
+
+```bash
+python -c "import stemflow; print(stemflow.__version__); print(stemflow.__file__)"
 ```
 
 -----
@@ -130,9 +151,10 @@ For more information, please see [an introduction to stemflow](https://chenyangk
 
 ## Usage :star:
 
-Use Hurdle model as the base model of AdaSTEMRegressor:
+Use Hurdle model as the base model of AdaSTEMRegressor. This example uses XGBoost, so install the `tuning` extra shown above:
 
 ```py
+import numpy as np
 from stemflow.model.AdaSTEM import AdaSTEM, AdaSTEMClassifier, AdaSTEMRegressor
 from stemflow.model.Hurdle import Hurdle
 from xgboost import XGBClassifier, XGBRegressor
@@ -172,7 +194,7 @@ model = model.fit(X_train.reset_index(drop=True), y_train)
 ## predict
 pred = model.predict(X_test)
 pred = np.where(pred<0, 0, pred)
-eval_metrics = AdaSTEM.eval_STEM_res('hurdle',y_test, pred_mean)
+eval_metrics = AdaSTEM.eval_STEM_res('hurdle', y_test, pred)
 print(eval_metrics)
 ```
 
@@ -192,11 +214,11 @@ model.fit(X_path, y_path, temporal_window_prequery=True,
           max_concurrent_ensembles=4)
 ```
 
-DuckDB remains the default training route. See the [parallel execution guide](https://chenyangkang.github.io/stemflow/Tips/Tips_for_parallel_execution.html) and [executed example](https://chenyangkang.github.io/stemflow/Examples/10.Execution_and_memory.html) for compatibility, scratch-space requirements and complete-job memory trade-offs. The repository also contains reproducible benchmarks in `scripts/00_benchmarks/` and measured comparisons in `resources/REWRITE.md`.
+Native Pandas, DuckDB or Parquet execution remains the default; memory-mapped execution is optional. See the [parallel execution guide](https://chenyangkang.github.io/stemflow/Tips/Tips_for_parallel_execution.html) and [executed example](https://chenyangkang.github.io/stemflow/Examples/10.Execution_and_memory.html) for compatibility, scratch-space requirements and complete-job memory trade-offs. The repository also contains reproducible benchmarks in `scripts/00_benchmarks/` and measured comparisons in `resources/REWRITE.md`.
 
-For optional live wall timings and parent/worker memory, install `stemflow[monitoring]` and wrap fitting and prediction in `with model.monitor_execution(output_path="data/execution_monitor.json") as monitor:`. The monitor reports sampled process-tree peaks, named stages and optional flushed log updates. Its plain report remains available as `model.execution_monitor_` and survives model saving/loading; it retains summaries by default. RSS uses a portable psutil reader, with optional platform-specific USS/PSS/footprint measurements. See the [monitoring guide](docs/Tips/Tips_for_parallel_execution.md#monitor-a-running-workflow) for interpretation and target-machine checks.
+For optional live wall timings and parent/worker memory, install `stemflow[monitoring]` and wrap fitting and prediction in `with model.monitor_execution(output_path="data/execution_monitor.json") as monitor:`. The monitor reports sampled process-tree peaks, named stages and optional flushed log updates. Its plain report remains available as `model.execution_monitor_` and survives model saving/loading; it retains summaries by default. RSS uses a portable psutil reader, with optional platform-specific USS/PSS/footprint measurements. See the [monitoring guide](https://chenyangkang.github.io/stemflow/Tips/Tips_for_parallel_execution.html#monitor-a-running-workflow) for interpretation and target-machine checks.
 
-Mean predictions now support streaming ensemble aggregation. Optional [calibration and tuning wrappers](docs/Tips/Local_calibration_and_tuning.md) can be used independently or together, inside or outside AdaSTEM. The [pipeline report](resources/PIPELINE_OPTIMIZATION.md) compares timings, peak memory, calibration diagnostics and compatibility limits.
+Mean predictions now support streaming ensemble aggregation. Optional [calibration and tuning wrappers](https://chenyangkang.github.io/stemflow/Tips/Local_calibration_and_tuning.html) can be used independently or together, inside or outside AdaSTEM. The [pipeline report](https://github.com/chenyangkang/stemflow/blob/codex-rewrite/resources/PIPELINE_OPTIMIZATION.md) compares timings, peak memory, calibration diagnostics and compatibility limits.
 
 -----
 
