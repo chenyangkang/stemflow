@@ -150,14 +150,14 @@ class ExecutionMonitor:
     sampler, not a memory limiter, allocation profiler or remote/GPU monitor.
 
     Args:
-        sample_interval: Seconds between background memory samples (default 1).
-        log_interval: Seconds between flushed stdout updates; None disables logs.
+        sample_interval (float): Seconds between background memory samples (default 1).
+        log_interval (float | None): Seconds between flushed stdout updates; None disables logs.
             Stage completions and workflow start/end are also logged when enabled.
-        output_path: Optional compact JSON report. Updated alongside live logs
+        output_path (str | pathlib.Path | None): Optional compact JSON report. Updated alongside live logs
             and on exit, replacing one file rather than accumulating snapshots.
-        detailed_memory: Collect USS/PSS and physical footprint when available.
+        detailed_memory (bool): Collect USS/PSS and physical footprint when available.
             Default False keeps cheap RSS sampling; detailed reads can be slower.
-        max_samples: Retain at most this many recent samples; default 0 stores
+        max_samples (int): Retain at most this many recent samples; default 0 stores
             summaries only. Stage records and peaks survive trace truncation.
 
     A context is single-use. Use stages from its calling thread. AdaSTEM models

@@ -733,14 +733,15 @@ class AdaSTEM(BaseEstimator):
         Args:
             X_train: Training variables. Can be either a pd.DataFrame object or a string that indicate the path to the database (.duckdb or .parquet).
             y_train: Training target. Can be either a pd.DataFrame object, a pd.Series object, a np.ndarray, or a string that indicate the path to the database (.duckdb or .parquet). It has to have indexes that match with the X_train.
-            ax: matplotlib Axes to add to
-            verbosty: whether to show progress bar. 0 for no and 1 for yes.
+            verbosity: Whether to show progress bars. 0 disables them and 1 enables them.
             ax: matplotlib ax for adding grid plot on that.
-            n_jobs: multiprocessing thread count. Default the n_jobs of model object.
+            n_jobs: Ensemble worker count. None uses the model's n_jobs setting.
             overwrite: overwrite files in lazy_loading_dir. If set to False and any file exists in lazy_loading_dir, an error will be raise.
             temporal_window_prequery: Whether to prequery the temporal windows as pd.DataFrame object to speed-up the stixel query. If set to True, query speed will be faster but with a moderate memory usage increase.
             ensemble_df: Instead of runing model.split within the `fit` function, you can pass in a customized ensemble_df to skip the whole splitting process.
-            stixel_filter_func: filtering function applied on input data when fitting stixels. For example, you can pass `stixel_filter_func=lambda x:x[x['temp']*x['prec']]>25` to fit only using data where temperature * precipication is over 25, within each stixel. The function must return a dataframe.
+            stixel_filter_func: Filtering function applied before fitting each stixel.
+                For example, lambda x: x[x['temp'] * x['prec'] > 25] retains rows
+                whose predictor product exceeds 25. The function must return a DataFrame.
             training_data_backend: 'native' retains Pandas/DuckDB window queries. Opt-in
                 'memmap' streams numeric inputs once to temporary read-only memory-mapped
                 arrays. 'shared' remains accepted as an alias for 'memmap'.
@@ -1085,21 +1086,22 @@ class AdaSTEM(BaseEstimator):
             X_test (pd.DataFrame):
                 Testing variables. Can be either a pd.DataFrame object or a string that indicate the path to the database (.duckdb or .parquet).
             verbosity (int, optional):
-                show progress bar or not. Yes for 0, and No for other. Defaults to None, which set it as the verbosity of the main model class.
+                0 disables progress bars and 1 enables them. None uses the model setting.
             return_std (bool, optional):
                 Whether return the standard deviation among ensembles. Defaults to False.
             n_jobs (Union[int, None], optional):
-                Number of processes used in this task. If None, use the self.n_jobs. Default to 1.
-                I do not recommend setting value larger than 1.
-                In practice, multi-processing seems to slow down the process instead of speeding up.
-                Could be more practical with large amount of data.
-                Still in experiment.
+                Ensemble workers for this prediction call. None uses self.n_jobs.
+                Choose independently of training concurrency; the memory/time
+                trade-off depends on the dataset, estimator and execution backend.
             aggregation (str, optional):
                 'mean' or 'median' for aggregation method across ensembles.
             return_by_separate_ensembles (bool, optional):
                 Experimental function. return not by aggregation, but by separate ensembles.
             logit_agg:
-                Whether to use logit aggregation for the classification task. Most likely only used when you are predicting "real" calibrated probability. If True, the model is averaging the probability prediction estimated by all ensembles in logit scale, and then back-tranforms it to probability scale. It's recommended to be jointly used with the CalibratedClassifierCV class in sklearn as a wrapper of the classifier to estimate the calibrated probability. Default is False, but can be set to true for "real" probability averaging.
+                For classification, False averages probabilities arithmetically.
+                True averages clipped logits and transforms the result back to
+                probability; the returned std then remains on the logit scale.
+                Neither aggregation choice guarantees calibration.
             base_model_method:
                 The name of the prediction method for base models. If None, `predict` or `predict_proba` will be used depending on the tasks. This argument is handy if you have a custom base model class that has a special prediction function. Notice that dummy model will still predict 0, so the ensemble-aggregated result is still an average of zeros and your special prediction function output. Therefore, it may only make sense if your special prediction function predicts 0 as the absense/control value. Defaults to None.
             temporal_window_prequery:

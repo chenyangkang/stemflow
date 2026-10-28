@@ -3,7 +3,9 @@
 import argparse
 import os
 from pathlib import Path
+import platform
 import sys
+from datetime import datetime, timezone
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -39,6 +41,13 @@ def execute_in_process(notebook):
             raise RuntimeError(f"Cell {count} failed: {error}") from error
         print(f"Executed cell {count}", flush=True)
     notebook.metadata["execution_engine"] = "IPython in process; all code cells executed"
+    notebook.metadata.setdefault("language_info", {}).update(
+        name="python", version=platform.python_version())
+    import stemflow
+    notebook.metadata["stemflow_execution"] = dict(
+        version=stemflow.__version__, python=platform.python_version(),
+        executed_at_utc=datetime.now(timezone.utc).isoformat(),
+        engine="IPython in process")
 
 
 def main():

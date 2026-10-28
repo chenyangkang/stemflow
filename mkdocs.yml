@@ -77,6 +77,7 @@ nav:
   - Home: index.md
   - 'A Brief Introduction': A_brief_introduction/A_brief_introduction.md
   - Examples:
+    - 'Overview and execution status': Examples/index.md
     - 'AdaSTEM demo': Examples/01.AdaSTEM_demo.ipynb
     - 'SphereAdaSTEM demo': Examples/04.SphereAdaSTEM_demo.ipynb
     - 'Learning curve analysis': Examples/02.AdaSTEM_learning_curve_analysis.ipynb
@@ -125,6 +126,7 @@ nav:
       - 'generate_random': API_Documentation/utils/stemflow.utils.generate_random.md
       - 'validation': API_Documentation/utils/stemflow.utils.validation.md
       - 'wrapper': API_Documentation/utils/stemflow.utils.wrapper.md
+      - 'execution_monitor': API_Documentation/utils/stemflow.utils.execution_monitor.md
     - stemflow.model_selection: API_Documentation/stemflow.model_selection.md
     - stemflow.calibration: API_Documentation/stemflow.calibration.md
     - stemflow.tuning: API_Documentation/stemflow.tuning.md
