@@ -32,43 +32,28 @@
 
 ## Installation  :wrench:
 
-Install the published package into your active Python environment:
-
 ```bash
-python -m pip install --upgrade stemflow
+pip install stemflow
 ```
 
-Optional dependencies enable monitoring, Optuna searches, and the XGBoost examples:
-
-| Use | Install command | Additional dependencies |
-| --- | --- | --- |
-| Process-memory monitoring | `python -m pip install --upgrade "stemflow[monitoring]"` | psutil |
-| Optuna tuning and XGBoost examples/recipe | `python -m pip install --upgrade "stemflow[tuning]"` | XGBoost and Optuna |
-| Both | `python -m pip install --upgrade "stemflow[monitoring,tuning]"` | All of the above |
-
-Generic calibration with your own scikit-learn-compatible estimator is included in the core package; it does not require the `tuning` extra.
-
-To install the **2.0.0 development branch** from GitHub, including both extras (Git required):
+For optional memory monitoring (psutil) and tuning (XGBoost and Optuna):
 
 ```bash
-python -m pip install --upgrade \
-  "stemflow[monitoring,tuning] @ git+https://github.com/chenyangkang/stemflow.git@codex-rewrite"
+pip install "stemflow[monitoring,tuning]"
 ```
 
-GitHub, PyPI, and conda-forge are updated separately, so the published packages may lag behind this branch. Replace `codex-rewrite` with `main` for the latest merged code, or a full commit SHA for a reproducible installation.
+Use `stemflow[monitoring]` or `stemflow[tuning]` to install either separately.
 
-For the 2.0.0 upgrade, read the [version comparison](https://chenyangkang.github.io/stemflow/Releases/2.0.0.html) and [migration guide](https://chenyangkang.github.io/stemflow/Tips/Migrating_to_2.0.html). They explain the new execution/calibration options and numerical changes that can affect refitted models.
+To install the latest version from GitHub:
 
-The core package is also available from conda-forge:
+```bash
+pip install "stemflow @ git+https://github.com/chenyangkang/stemflow.git"
+```
+
+Or using conda:
 
 ```bash
 conda install -c conda-forge stemflow
-```
-
-Check which version and installation your Python environment uses:
-
-```bash
-python -c "import stemflow; print(stemflow.__version__); print(stemflow.__file__)"
 ```
 
 -----
@@ -220,7 +205,7 @@ Native Pandas, DuckDB or Parquet execution remains the default; memory-mapped ex
 
 For optional live wall timings and parent/worker memory, install `stemflow[monitoring]` and wrap fitting and prediction in `with model.monitor_execution(output_path="data/execution_monitor.json") as monitor:`. The monitor reports sampled process-tree peaks, named stages and optional flushed log updates. Its plain report remains available as `model.execution_monitor_` and survives model saving/loading; it retains summaries by default. RSS uses a portable psutil reader, with optional platform-specific USS/PSS/footprint measurements. See the [monitoring guide](https://chenyangkang.github.io/stemflow/Tips/Tips_for_parallel_execution.html#monitor-a-running-workflow) for interpretation and target-machine checks.
 
-Mean predictions now support streaming ensemble aggregation. Optional [calibration and tuning wrappers](https://chenyangkang.github.io/stemflow/Tips/Local_calibration_and_tuning.html) can be used independently or together, inside or outside AdaSTEM. The [pipeline report](https://github.com/chenyangkang/stemflow/blob/codex-rewrite/resources/PIPELINE_OPTIMIZATION.md) compares timings, peak memory, calibration diagnostics and compatibility limits.
+Mean predictions now support streaming ensemble aggregation. Optional [calibration and tuning wrappers](https://chenyangkang.github.io/stemflow/Tips/Local_calibration_and_tuning.html) can be used independently or together, inside or outside AdaSTEM. The [pipeline report](https://github.com/chenyangkang/stemflow/blob/main/resources/PIPELINE_OPTIMIZATION.md) compares timings, peak memory, calibration diagnostics and compatibility limits.
 
 -----
 
