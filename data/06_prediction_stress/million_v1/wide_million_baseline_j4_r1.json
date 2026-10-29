@@ -1,0 +1,25 @@
+{
+  "case": "wide_million",
+  "repeat": 1,
+  "strategy": "baseline",
+  "jobs": 4,
+  "measurement": {
+    "exit_code": -9,
+    "guard_reason": "stopped_at_local_memory_guard",
+    "wall_seconds": 18.102574750082567,
+    "phase_peaks": {
+      "startup": {
+        "rss_bytes": 231358464,
+        "footprint_bytes": 158009984,
+        "parent_rss_bytes": 231358464,
+        "descendants_rss_bytes": 0
+      },
+      "prediction": {
+        "rss_bytes": 10772054016,
+        "footprint_bytes": 8585217664,
+        "parent_rss_bytes": 303955968,
+        "descendants_rss_bytes": 10696441856
+      }
+    }
+  }
+}

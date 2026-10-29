@@ -1,0 +1,75 @@
+{
+  "case": "result_pressure",
+  "repeat": 1,
+  "strategy": "shared",
+  "jobs": 4,
+  "end_to_end": false,
+  "measurement": {
+    "exit_code": 0,
+    "guard_reason": null,
+    "wall_seconds": 5.449614833109081,
+    "phase_peaks": {
+      "startup": {
+        "rss_bytes": 225525760,
+        "footprint_bytes": 152717696,
+        "parent_rss_bytes": 225525760,
+        "descendants_rss_bytes": 0
+      },
+      "model_loading": {
+        "rss_bytes": 230178816,
+        "footprint_bytes": 156895616,
+        "parent_rss_bytes": 230178816,
+        "descendants_rss_bytes": 0
+      },
+      "shared_preparation": {
+        "rss_bytes": 878034944,
+        "footprint_bytes": 436915840,
+        "parent_rss_bytes": 878034944,
+        "descendants_rss_bytes": 0
+      },
+      "prediction": {
+        "rss_bytes": 8062812160,
+        "footprint_bytes": 3304892288,
+        "parent_rss_bytes": 1302593536,
+        "descendants_rss_bytes": 7070220288
+      },
+      "verification_output": {
+        "rss_bytes": 1340129280,
+        "footprint_bytes": 293019136,
+        "parent_rss_bytes": 1285521408,
+        "descendants_rss_bytes": 54607872
+      },
+      "done": {
+        "rss_bytes": 1340325888,
+        "footprint_bytes": 212999680,
+        "parent_rss_bytes": 1285685248,
+        "descendants_rss_bytes": 54657024
+      }
+    }
+  },
+  "resident": false,
+  "prediction_seconds": 3.665964708197862,
+  "preparation_seconds": 0.43711704201996326,
+  "total_seconds": 4.103081750217825,
+  "cache_disk_bytes": 320000640,
+  "coverage": 1.0,
+  "logit": false,
+  "versions": {
+    "python": "3.13.15",
+    "numpy": "2.5.1",
+    "pandas": "3.0.5",
+    "duckdb": "1.5.5",
+    "sklearn": "1.9.0",
+    "xgboost": "3.3.0"
+  },
+  "equivalence": {
+    "missing_masks_equal": true,
+    "std_missing_masks_equal": true,
+    "maximum_prediction_difference": 1.4901161193847656e-08,
+    "maximum_std_difference": 0.0,
+    "strict_tolerance": 1e-12,
+    "float32_tolerance": 1e-06,
+    "strict_passed": false,
+    "passed": true
+  }
+}

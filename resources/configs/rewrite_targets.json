@@ -1,0 +1,39 @@
+{
+  "objective": "Optimize AdaSTEM execution while preserving scientific behavior and public compatibility.",
+  "primary_measure": "Peak job memory across input preparation, partitioning, training, evaluation, and prediction together.",
+  "requirements": [
+    "Preserve Pandas, DuckDB and Parquet inputs and existing model outputs.",
+    "Retain temporal-window prequerying, read-only database queries and parallel ensemble execution.",
+    "Preserve intended constant predictions in single-class stixels and missing coverage behavior.",
+    "Retain community-project custom gridding, stixel filtering and completely random rotations.",
+    "Correct bootstrap row multiplicity and test intentional behavior changes against a direct oracle.",
+    "Support arbitrary compatible base estimators without silently reducing model complexity or changing calibration.",
+    "Offer a simple Pandas-to-DuckDB API with automatic IDs, target alignment and temporary-file cleanup.",
+    "Bound queued work and offer explicit worker and inner-thread controls.",
+    "Measure end-to-end time and peak memory, plus phase times and memory peaks.",
+    "Keep optimization defaults portable across Apple Silicon and Linux HPC; label platform-specific measurements.",
+    "Treat GPU device memory and GPU timing separately from host memory and CPU execution; avoid automatic GPU concurrency assumptions.",
+    "Distinguish measured memory, logical data sizes, serialized models and estimates of estimator workspace.",
+    "Compare old and new implementations on identical fixtures, including real Acadian Flycatcher data.",
+    "Vary dataset size, feature count, ensemble count, input format and base estimator complexity.",
+    "Document local and single-node HPC use and the limitations of shared paths on multiple nodes.",
+    "Keep existing notebooks; add executed examples and update documentation after code and benchmarks.",
+    "Keep intermediate files temporary and avoid duplicating full source databases.",
+    "Stream eligible ensemble mean/std reductions instead of retaining the full prediction matrix.",
+    "Profile expensive functions, package lines and Python allocation sites separately from timing benchmarks.",
+    "Provide composable standalone calibration and sequential tuning, including the supplied stixel-local identity-ridge beta strategy.",
+    "Evaluate held-out final probabilities in actual stixels and spatial, temporal and space-time groups; preserve rare-bin support diagnostics."
+  ],
+  "compatibility_exceptions": [
+    "Bootstrap occurrences must be counted once rather than squared by duplicate-ID selection.",
+    "Logit aggregation must retain positive probabilities instead of incorrectly replacing them with zero.",
+    "Named Series targets must retain their values and validate index alignment."
+  ],
+  "validation_limits": [
+    "Local measurements do not establish a memory bound for full HPC data or arbitrary estimators.",
+    "macOS physical footprint, Linux PSS/RSS, Slurm cgroup memory and GPU VRAM measure different quantities and must not be equated.",
+    "Multi-node execution requires shared accessible paths and is not validated on this machine.",
+    "Native DuckDB remains the default; shared numeric arrays are opt-in and require scratch space.",
+    "Small benchmark classifiers are execution tests, not evidence of improved probability calibration or copula accuracy."
+  ]
+}

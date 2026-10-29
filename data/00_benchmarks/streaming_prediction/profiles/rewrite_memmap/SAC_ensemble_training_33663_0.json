@@ -1,0 +1,1173 @@
+{
+  "function": "AdaSTEM.SAC_ensemble_training",
+  "pid": 33663,
+  "error": null,
+  "wall_seconds": 1.1138848329428583,
+  "functions": [
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/AdaSTEM.py",
+      "line": 552,
+      "function": "SAC_ensemble_training",
+      "calls": 1,
+      "own_seconds": 0.004609668,
+      "cumulative_seconds": 1.062660541
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/scripts/00_benchmarks/compare_execution.py",
+      "line": 163,
+      "function": "stixel_fitting",
+      "calls": 18,
+      "own_seconds": 0.001387468,
+      "cumulative_seconds": 0.840854419
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/AdaSTEM.py",
+      "line": 509,
+      "function": "stixel_fitting",
+      "calls": 18,
+      "own_seconds": 0.0032624990000000003,
+      "cumulative_seconds": 0.6135181660000001
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/static_func_AdaSTEM.py",
+      "line": 28,
+      "function": "train_one_stixel",
+      "calls": 18,
+      "own_seconds": 0.004197501,
+      "cumulative_seconds": 0.605421626
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/lazyloading.py",
+      "line": 63,
+      "function": "fit",
+      "calls": 18,
+      "own_seconds": 0.0006591660000000001,
+      "cumulative_seconds": 0.506104375
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/xgboost/core.py",
+      "line": 534,
+      "function": "inner_f",
+      "calls": 198,
+      "own_seconds": 0.002179804,
+      "cumulative_seconds": 0.43501383400000004
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/xgboost/sklearn.py",
+      "line": 1720,
+      "function": "fit",
+      "calls": 18,
+      "own_seconds": 0.0010583390000000002,
+      "cumulative_seconds": 0.434549997
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/xgboost/sklearn.py",
+      "line": 682,
+      "function": "_wrap_evaluation_matrices",
+      "calls": 18,
+      "own_seconds": 0.00028150200000000004,
+      "cumulative_seconds": 0.286227501
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/xgboost/sklearn.py",
+      "line": 1254,
+      "function": "_create_dmatrix",
+      "calls": 18,
+      "own_seconds": 0.00016262400000000002,
+      "cumulative_seconds": 0.282852625
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/xgboost/core.py",
+      "line": 1477,
+      "function": "__init__",
+      "calls": 18,
+      "own_seconds": 0.000249049,
+      "cumulative_seconds": 0.282483001
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/xgboost/core.py",
+      "line": 1553,
+      "function": "_init",
+      "calls": 18,
+      "own_seconds": 0.009416658000000001,
+      "cumulative_seconds": 0.282015413
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/xgboost/core.py",
+      "line": 409,
+      "function": "_next_wrapper",
+      "calls": 144,
+      "own_seconds": 0.001420798,
+      "cumulative_seconds": 0.27018262800000004
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/xgboost/core.py",
+      "line": 372,
+      "function": "_handle_exception",
+      "calls": 234,
+      "own_seconds": 0.00022925000000000002,
+      "cumulative_seconds": 0.24349183300000002
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/xgboost/core.py",
+      "line": 464,
+      "function": "<lambda>",
+      "calls": 144,
+      "own_seconds": 0.00016575200000000002,
+      "cumulative_seconds": 0.24325041700000002
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/xgboost/core.py",
+      "line": 639,
+      "function": "next",
+      "calls": 144,
+      "own_seconds": 0.00030091600000000003,
+      "cumulative_seconds": 0.243084665
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/xgboost/core.py",
+      "line": 418,
+      "function": "input_data",
+      "calls": 72,
+      "own_seconds": 0.0010172170000000002,
+      "cumulative_seconds": 0.242069626
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/xgboost/data.py",
+      "line": 1646,
+      "function": "_proxy_transform",
+      "calls": 18,
+      "own_seconds": 0.00046258700000000004,
+      "cumulative_seconds": 0.139288709
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/xgboost/data.py",
+      "line": 651,
+      "function": "_transform_pandas_df",
+      "calls": 18,
+      "own_seconds": 0.00033983500000000003,
+      "cumulative_seconds": 0.136064043
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/xgboost/training.py",
+      "line": 52,
+      "function": "train",
+      "calls": 18,
+      "own_seconds": 0.001231322,
+      "cumulative_seconds": 0.11919679000000001
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/pandas/core/frame.py",
+      "line": 4337,
+      "function": "__getitem__",
+      "calls": 706,
+      "own_seconds": 0.004848155000000001,
+      "cumulative_seconds": 0.117923842
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/training_data.py",
+      "line": 123,
+      "function": "frame",
+      "calls": 20,
+      "own_seconds": 0.016623952,
+      "cumulative_seconds": 0.113044879
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/training_data.py",
+      "line": 197,
+      "function": "select_positions",
+      "calls": 18,
+      "own_seconds": 0.000268788,
+      "cumulative_seconds": 0.108427542
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/AdaSTEM.py",
+      "line": 586,
+      "function": "<lambda>",
+      "calls": 18,
+      "own_seconds": 0.000278922,
+      "cumulative_seconds": 0.10815875400000001
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/training_data.py",
+      "line": 145,
+      "function": "training_rows",
+      "calls": 18,
+      "own_seconds": 0.000792617,
+      "cumulative_seconds": 0.10787983200000001
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/pandas/core/frame.py",
+      "line": 4292,
+      "function": "_ixs",
+      "calls": 1370,
+      "own_seconds": 0.0034713630000000003,
+      "cumulative_seconds": 0.10195470300000001
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/pandas/core/frame.py",
+      "line": 3975,
+      "function": "memory_usage",
+      "calls": 18,
+      "own_seconds": 0.002001756,
+      "cumulative_seconds": 0.098083
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/scripts/00_benchmarks/compare_execution.py",
+      "line": 26,
+      "function": "process_memory",
+      "calls": 36,
+      "own_seconds": 0.0006436640000000001,
+      "cumulative_seconds": 0.095711
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/scripts/00_benchmarks/compare_execution.py",
+      "line": 30,
+      "function": "children",
+      "calls": 36,
+      "own_seconds": 0.09190603900000001,
+      "cumulative_seconds": 0.092250333
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/xgboost/data.py",
+      "line": 534,
+      "function": "pandas_transform_data",
+      "calls": 18,
+      "own_seconds": 0.007399977,
+      "cumulative_seconds": 0.09171333300000001
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/xgboost/core.py",
+      "line": 2174,
+      "function": "update",
+      "calls": 90,
+      "own_seconds": 0.017646038000000003,
+      "cumulative_seconds": 0.088872589
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/xgboost/core.py",
+      "line": 3217,
+      "function": "_assign_dmatrix_features",
+      "calls": 108,
+      "own_seconds": 0.001049613,
+      "cumulative_seconds": 0.08428816900000001
+    },
+    {
+      "file": "~",
+      "line": 0,
+      "function": "<built-in method builtins.next>",
+      "calls": 96,
+      "own_seconds": 0.000281086,
+      "cumulative_seconds": 0.07288274800000001
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/xgboost/_c_api.py",
+      "line": 39,
+      "function": "from_cstr_to_pystr",
+      "calls": 666,
+      "own_seconds": 0.043444999000000005,
+      "cumulative_seconds": 0.07275313
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/contextlib.py",
+      "line": 145,
+      "function": "__exit__",
+      "calls": 36,
+      "own_seconds": 9.246300000000001e-05,
+      "cumulative_seconds": 0.07058958600000001
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/lazyloading.py",
+      "line": 203,
+      "function": "_loaded_estimator",
+      "calls": 36,
+      "own_seconds": 0.001146539,
+      "cumulative_seconds": 0.070082038
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/lazyloading.py",
+      "line": 121,
+      "function": "dump",
+      "calls": 18,
+      "own_seconds": 0.0018032120000000002,
+      "cumulative_seconds": 0.068930292
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/pandas/core/frame.py",
+      "line": 4956,
+      "function": "_box_col_values",
+      "calls": 1352,
+      "own_seconds": 0.005355157,
+      "cumulative_seconds": 0.061893766
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/pandas/core/indexes/base.py",
+      "line": 6288,
+      "function": "_get_indexer_strict",
+      "calls": 56,
+      "own_seconds": 0.000912418,
+      "cumulative_seconds": 0.05990108
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/xgboost/core.py",
+      "line": 857,
+      "function": "set_info",
+      "calls": 72,
+      "own_seconds": 0.001199882,
+      "cumulative_seconds": 0.059657463
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/pandas/core/frame.py",
+      "line": 4559,
+      "function": "__setitem__",
+      "calls": 58,
+      "own_seconds": 0.00054633,
+      "cumulative_seconds": 0.058522500000000005
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/pandas/core/indexes/base.py",
+      "line": 486,
+      "function": "__new__",
+      "calls": 322,
+      "own_seconds": 0.00735999,
+      "cumulative_seconds": 0.058208961000000004
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/pandas/core/frame.py",
+      "line": 4864,
+      "function": "_set_item",
+      "calls": 58,
+      "own_seconds": 0.000274577,
+      "cumulative_seconds": 0.057398375
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/pandas/core/construction.py",
+      "line": 531,
+      "function": "sanitize_array",
+      "calls": 616,
+      "own_seconds": 0.014560145000000002,
+      "cumulative_seconds": 0.056558801000000006
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/joblib/numpy_pickle.py",
+      "line": 474,
+      "function": "dump",
+      "calls": 18,
+      "own_seconds": 0.0006868820000000001,
+      "cumulative_seconds": 0.054893624
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/pandas/core/frame.py",
+      "line": 4968,
+      "function": "_get_item",
+      "calls": 668,
+      "own_seconds": 0.001204961,
+      "cumulative_seconds": 0.05395922
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/xgboost/core.py",
+      "line": 2057,
+      "function": "_get_feature_info",
+      "calls": 432,
+      "own_seconds": 0.003768117,
+      "cumulative_seconds": 0.051675297
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/pandas/core/indexes/base.py",
+      "line": 7919,
+      "function": "ensure_index",
+      "calls": 778,
+      "own_seconds": 0.001539788,
+      "cumulative_seconds": 0.050188927
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/pickle.py",
+      "line": 473,
+      "function": "dump",
+      "calls": 18,
+      "own_seconds": 0.000183086,
+      "cumulative_seconds": 0.049521583
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/pandas/core/frame.py",
+      "line": 1484,
+      "function": "items",
+      "calls": 702,
+      "own_seconds": 0.001221911,
+      "cumulative_seconds": 0.049424065
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/joblib/numpy_pickle.py",
+      "line": 360,
+      "function": "save",
+      "calls": 1836,
+      "own_seconds": 0.003569178,
+      "cumulative_seconds": 0.048016959000000005
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/pickle.py",
+      "line": 532,
+      "function": "save",
+      "calls": 1836,
+      "own_seconds": 0.012121538000000001,
+      "cumulative_seconds": 0.047932126000000005
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/pickle.py",
+      "line": 619,
+      "function": "save_reduce",
+      "calls": 54,
+      "own_seconds": 0.000581819,
+      "cumulative_seconds": 0.047221873000000004
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/pickle.py",
+      "line": 977,
+      "function": "save_dict",
+      "calls": 36,
+      "own_seconds": 0.00015833900000000002,
+      "cumulative_seconds": 0.044368543
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/pickle.py",
+      "line": 988,
+      "function": "_batch_setitems",
+      "calls": 36,
+      "own_seconds": 0.002237878,
+      "cumulative_seconds": 0.044155333000000005
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/pandas/core/frame.py",
+      "line": 4848,
+      "function": "_set_item_mgr",
+      "calls": 58,
+      "own_seconds": 0.0008057470000000001,
+      "cumulative_seconds": 0.042250462
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/pandas/core/indexing.py",
+      "line": 1192,
+      "function": "__getitem__",
+      "calls": 101,
+      "own_seconds": 0.000829147,
+      "cumulative_seconds": 0.041653287000000004
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/xgboost/data.py",
+      "line": 1713,
+      "function": "dispatch_proxy_set_data",
+      "calls": 72,
+      "own_seconds": 0.0007147970000000001,
+      "cumulative_seconds": 0.041145336000000005
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/xgboost/core.py",
+      "line": 2107,
+      "function": "feature_names",
+      "calls": 324,
+      "own_seconds": 0.000338409,
+      "cumulative_seconds": 0.040366372000000005
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/pandas/core/internals/managers.py",
+      "line": 1544,
+      "function": "insert",
+      "calls": 58,
+      "own_seconds": 0.001090348,
+      "cumulative_seconds": 0.039889916000000004
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/xgboost/core.py",
+      "line": 1392,
+      "function": "_ref_data_from_columnar",
+      "calls": 72,
+      "own_seconds": 0.007666755000000001,
+      "cumulative_seconds": 0.038418754
+    }
+  ],
+  "line_timings": [
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/AdaSTEM.py",
+      "line": 605,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.8473285008221865
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/AdaSTEM.py",
+      "line": 533,
+      "visits": 36,
+      "elapsed_seconds_including_calls": 0.6062126692850143
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/static_func_AdaSTEM.py",
+      "line": 108,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.5302731273695827
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/lazyloading.py",
+      "line": 65,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.43519128975458443
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/AdaSTEM.py",
+      "line": 601,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.10860704188235104
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/training_data.py",
+      "line": 202,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.10829362482763827
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/AdaSTEM.py",
+      "line": 586,
+      "visits": 38,
+      "elapsed_seconds_including_calls": 0.1081524989567697
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/training_data.py",
+      "line": 146,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.08747291285544634
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/lazyloading.py",
+      "line": 64,
+      "visits": 36,
+      "elapsed_seconds_including_calls": 0.07077191839925945
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/lazyloading.py",
+      "line": 228,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.06916595855727792
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/lazyloading.py",
+      "line": 135,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.05506254197098315
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/training_data.py",
+      "line": 143,
+      "visits": 20,
+      "elapsed_seconds_including_calls": 0.04579849913716316
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/static_func_AdaSTEM.py",
+      "line": 61,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.029443623730912805
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/training_data.py",
+      "line": 140,
+      "visits": 78,
+      "elapsed_seconds_including_calls": 0.029377209721133113
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/AdaSTEM.py",
+      "line": 584,
+      "visits": 2,
+      "elapsed_seconds_including_calls": 0.026034456910565495
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/AdaSTEM.py",
+      "line": 604,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.02098241774365306
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/training_data.py",
+      "line": 147,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.020244874991476536
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/AdaSTEM.py",
+      "line": 603,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.01794245559722185
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/training_data.py",
+      "line": 134,
+      "visits": 4,
+      "elapsed_seconds_including_calls": 0.017768958117812872
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/static_func_AdaSTEM.py",
+      "line": 95,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.01222104299813509
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/static_func_AdaSTEM.py",
+      "line": 69,
+      "visits": 54,
+      "elapsed_seconds_including_calls": 0.00984199927188456
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/AdaSTEM.py",
+      "line": 591,
+      "visits": 4,
+      "elapsed_seconds_including_calls": 0.009443541057407856
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/AdaSTEM.py",
+      "line": 598,
+      "visits": 20,
+      "elapsed_seconds_including_calls": 0.008931665681302547
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/static_func_AdaSTEM.py",
+      "line": 65,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.008207250852137804
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/static_func_AdaSTEM.py",
+      "line": 62,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.006150875240564346
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/training_data.py",
+      "line": 110,
+      "visits": 2,
+      "elapsed_seconds_including_calls": 0.006129916058853269
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/training_data.py",
+      "line": 35,
+      "visits": 2,
+      "elapsed_seconds_including_calls": 0.0060681249015033245
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/static_func_AdaSTEM.py",
+      "line": 111,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.005972376558929682
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/AdaSTEM.py",
+      "line": 599,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.005861580837517977
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/AdaSTEM.py",
+      "line": 582,
+      "visits": 2,
+      "elapsed_seconds_including_calls": 0.0057413759641349316
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/training_data.py",
+      "line": 116,
+      "visits": 1,
+      "elapsed_seconds_including_calls": 0.004196374909952283
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/training_data.py",
+      "line": 129,
+      "visits": 636,
+      "elapsed_seconds_including_calls": 0.0035813061986118555
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/AdaSTEM.py",
+      "line": 520,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.0035593323409557343
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/lazyloading.py",
+      "line": 131,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.003555417526513338
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/AdaSTEM.py",
+      "line": 595,
+      "visits": 2,
+      "elapsed_seconds_including_calls": 0.0033152499236166477
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/training_data.py",
+      "line": 130,
+      "visits": 20,
+      "elapsed_seconds_including_calls": 0.0032304157502949238
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/lazyloading.py",
+      "line": 132,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.002985498635098338
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/static_func_AdaSTEM.py",
+      "line": 313,
+      "visits": 4,
+      "elapsed_seconds_including_calls": 0.0026725430507212877
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/lazyloading.py",
+      "line": 137,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.002645961008965969
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/AdaSTEM.py",
+      "line": 600,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.0025841682218015194
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/training_data.py",
+      "line": 128,
+      "visits": 636,
+      "elapsed_seconds_including_calls": 0.002546683419495821
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/lazyloading.py",
+      "line": 110,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.002538624918088317
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/static_func_AdaSTEM.py",
+      "line": 316,
+      "visits": 2,
+      "elapsed_seconds_including_calls": 0.0024851239286363125
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/training_data.py",
+      "line": 124,
+      "visits": 668,
+      "elapsed_seconds_including_calls": 0.0024152076803147793
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/training_data.py",
+      "line": 126,
+      "visits": 656,
+      "elapsed_seconds_including_calls": 0.002405077451840043
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/training_data.py",
+      "line": 127,
+      "visits": 636,
+      "elapsed_seconds_including_calls": 0.00222497689537704
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/lazyloading.py",
+      "line": 148,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.0021410416811704636
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/static_func_AdaSTEM.py",
+      "line": 317,
+      "visits": 2,
+      "elapsed_seconds_including_calls": 0.0020399168133735657
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/utils/generate_random.py",
+      "line": 30,
+      "visits": 35,
+      "elapsed_seconds_including_calls": 0.0018420417327433825
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/static_func_AdaSTEM.py",
+      "line": 60,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.0018165428191423416
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/training_data.py",
+      "line": 136,
+      "visits": 78,
+      "elapsed_seconds_including_calls": 0.0014940015971660614
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/lazyloading.py",
+      "line": 133,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.0014666260685771704
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/AdaSTEM.py",
+      "line": 607,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.0014112938661128283
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/AdaSTEM.py",
+      "line": 524,
+      "visits": 36,
+      "elapsed_seconds_including_calls": 0.0013320830184966326
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/AdaSTEM.py",
+      "line": 556,
+      "visits": 1,
+      "elapsed_seconds_including_calls": 0.0011669578962028027
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/utils/jitterrotation/jitterrotator.py",
+      "line": 40,
+      "visits": 2,
+      "elapsed_seconds_including_calls": 0.0011356251779943705
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/utils/jitterrotation/jitterrotator.py",
+      "line": 39,
+      "visits": 2,
+      "elapsed_seconds_including_calls": 0.0010458326432853937
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/AdaSTEM.py",
+      "line": 559,
+      "visits": 1,
+      "elapsed_seconds_including_calls": 0.0009991249535232782
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/prediction.py",
+      "line": 72,
+      "visits": 54,
+      "elapsed_seconds_including_calls": 0.000913082854822278
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/training_data.py",
+      "line": 121,
+      "visits": 20,
+      "elapsed_seconds_including_calls": 0.0008200411684811115
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/training_data.py",
+      "line": 137,
+      "visits": 78,
+      "elapsed_seconds_including_calls": 0.0007779540028423071
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/static_func_AdaSTEM.py",
+      "line": 307,
+      "visits": 2,
+      "elapsed_seconds_including_calls": 0.000692624831572175
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/AdaSTEM.py",
+      "line": 593,
+      "visits": 2,
+      "elapsed_seconds_including_calls": 0.0006535842549055815
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/lazyloading.py",
+      "line": 119,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.00045425049029290676
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/training_data.py",
+      "line": 132,
+      "visits": 98,
+      "elapsed_seconds_including_calls": 0.0004335809499025345
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/AdaSTEM.py",
+      "line": 517,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.0004280849825590849
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/prediction.py",
+      "line": 67,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.00040016695857048035
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/static_func_AdaSTEM.py",
+      "line": 110,
+      "visits": 36,
+      "elapsed_seconds_including_calls": 0.00037024635821580887
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/training_data.py",
+      "line": 138,
+      "visits": 78,
+      "elapsed_seconds_including_calls": 0.00036041694693267345
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/lazyloading.py",
+      "line": 144,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.00033233407884836197
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/AdaSTEM.py",
+      "line": 525,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.0003311659675091505
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/static_func_AdaSTEM.py",
+      "line": 314,
+      "visits": 2,
+      "elapsed_seconds_including_calls": 0.00032575009390711784
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/utils/jitterrotation/jitterrotator.py",
+      "line": 33,
+      "visits": 2,
+      "elapsed_seconds_including_calls": 0.00031779101118445396
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/lazyloading.py",
+      "line": 51,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.000316747697070241
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/static_func_AdaSTEM.py",
+      "line": 309,
+      "visits": 2,
+      "elapsed_seconds_including_calls": 0.00031229108572006226
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/static_func_AdaSTEM.py",
+      "line": 311,
+      "visits": 2,
+      "elapsed_seconds_including_calls": 0.0002835828345268965
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/static_func_AdaSTEM.py",
+      "line": 70,
+      "visits": 54,
+      "elapsed_seconds_including_calls": 0.00027812481857836246
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/training_data.py",
+      "line": 133,
+      "visits": 78,
+      "elapsed_seconds_including_calls": 0.00026354333385825157
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/lazyloading/prediction.py",
+      "line": 68,
+      "visits": 18,
+      "elapsed_seconds_including_calls": 0.0002559996210038662
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/static_func_AdaSTEM.py",
+      "line": 310,
+      "visits": 2,
+      "elapsed_seconds_including_calls": 0.0002542082220315933
+    }
+  ],
+  "python_peak_traced_bytes": 3072238,
+  "python_line_net_allocations": [
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/utils/execution_profile.py:73",
+      "bytes": 353952,
+      "count": 2521
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/cProfile.py:91",
+      "bytes": 144088,
+      "count": 2000
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/cProfile.py:130",
+      "bytes": 140704,
+      "count": 2589
+    },
+    {
+      "file": "<frozen importlib._bootstrap_external>:781",
+      "bytes": 101246,
+      "count": 611
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/cProfile.py:71",
+      "bytes": 100720,
+      "count": 1259
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/cProfile.py:59",
+      "bytes": 75232,
+      "count": 2945
+    },
+    {
+      "file": "<frozen abc>:123",
+      "bytes": 35129,
+      "count": 418
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/utils/execution_profile.py:51",
+      "bytes": 24416,
+      "count": 432
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/re/_parser.py:511",
+      "bytes": 18754,
+      "count": 6
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/utils/execution_profile.py:79",
+      "bytes": 16880,
+      "count": 174
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/pickle.py:1002",
+      "bytes": 14224,
+      "count": 254
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/cProfile.py:128",
+      "bytes": 11136,
+      "count": 174
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/utils/execution_profile.py:59",
+      "bytes": 9578,
+      "count": 29
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/utils/execution_profile.py:50",
+      "bytes": 9576,
+      "count": 171
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/utils/execution_profile.py:61",
+      "bytes": 9105,
+      "count": 28
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/ctypes/__init__.py:419",
+      "bytes": 8296,
+      "count": 100
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/ctypes/__init__.py:421",
+      "bytes": 7912,
+      "count": 46
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/re/_compiler.py:37",
+      "bytes": 7885,
+      "count": 7
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/pandas/core/dtypes/cast.py:1654",
+      "bytes": 7869,
+      "count": 6
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/pandas/core/arrays/arrow/array.py:431",
+      "bytes": 7741,
+      "count": 6
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/pandas/core/dtypes/cast.py:516",
+      "bytes": 6397,
+      "count": 6
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/pandas/core/internals/construction.py:193",
+      "bytes": 6289,
+      "count": 6
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/pandas/core/groupby/ops.py:776",
+      "bytes": 6021,
+      "count": 6
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/pandas/core/base.py:696",
+      "bytes": 5929,
+      "count": 121
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/pandas/core/series.py:369",
+      "bytes": 5913,
+      "count": 9
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/model/static_func_AdaSTEM.py:80",
+      "bytes": 5824,
+      "count": 37
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/ctypes/__init__.py:104",
+      "bytes": 5705,
+      "count": 33
+    },
+    {
+      "file": "/Users/chenyangkang/Desktop/optimize_adastem/stemflow/stemflow/utils/execution_profile.py:52",
+      "bytes": 5464,
+      "count": 226
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/pandas/core/frame.py:702",
+      "bytes": 5413,
+      "count": 6
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/inspect.py:2505",
+      "bytes": 5237,
+      "count": 6
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/pandas/core/groupby/grouper.py:721",
+      "bytes": 5233,
+      "count": 6
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/pandas/core/construction.py:531",
+      "bytes": 5161,
+      "count": 8
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/cProfile.py:69",
+      "bytes": 5056,
+      "count": 79
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/pandas/core/internals/managers.py:871",
+      "bytes": 4976,
+      "count": 27
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/collections/__init__.py:358",
+      "bytes": 4729,
+      "count": 6
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/xgboost/_data_utils.py:428",
+      "bytes": 4656,
+      "count": 97
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/xgboost/core.py:534",
+      "bytes": 4609,
+      "count": 48
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/re/_parser.py:371",
+      "bytes": 4469,
+      "count": 6
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/site-packages/pandas/core/reshape/concat.py:157",
+      "bytes": 4448,
+      "count": 7
+    },
+    {
+      "file": "/Users/chenyangkang/micromamba/envs/stemflow_new/lib/python3.13/ctypes/__init__.py:349",
+      "bytes": 4369,
+      "count": 42
+    }
+  ]
+}

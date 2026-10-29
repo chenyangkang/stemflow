@@ -1,0 +1,75 @@
+{
+  "case": "wide_million",
+  "repeat": 3,
+  "strategy": "shared",
+  "jobs": 2,
+  "end_to_end": false,
+  "measurement": {
+    "exit_code": 0,
+    "guard_reason": null,
+    "wall_seconds": 9.676898375153542,
+    "phase_peaks": {
+      "startup": {
+        "rss_bytes": 228098048,
+        "footprint_bytes": 154241344,
+        "parent_rss_bytes": 228098048,
+        "descendants_rss_bytes": 0
+      },
+      "model_loading": {
+        "rss_bytes": 232538112,
+        "footprint_bytes": 158206272,
+        "parent_rss_bytes": 232538112,
+        "descendants_rss_bytes": 0
+      },
+      "shared_preparation": {
+        "rss_bytes": 2087403520,
+        "footprint_bytes": 707760768,
+        "parent_rss_bytes": 2087403520,
+        "descendants_rss_bytes": 0
+      },
+      "prediction": {
+        "rss_bytes": 6043582464,
+        "footprint_bytes": 1248544192,
+        "parent_rss_bytes": 1360461824,
+        "descendants_rss_bytes": 4690903040
+      },
+      "verification_output": {
+        "rss_bytes": 1413939200,
+        "footprint_bytes": 259251072,
+        "parent_rss_bytes": 1360478208,
+        "descendants_rss_bytes": 53460992
+      },
+      "done": {
+        "rss_bytes": 1413988352,
+        "footprint_bytes": 241949568,
+        "parent_rss_bytes": 1360527360,
+        "descendants_rss_bytes": 53460992
+      }
+    }
+  },
+  "resident": false,
+  "prediction_seconds": 6.956719958921894,
+  "preparation_seconds": 1.1844392910134047,
+  "total_seconds": 8.1411592499353,
+  "cache_disk_bytes": 976000640,
+  "coverage": 1.0,
+  "logit": false,
+  "versions": {
+    "python": "3.13.15",
+    "numpy": "2.5.1",
+    "pandas": "3.0.5",
+    "duckdb": "1.5.5",
+    "sklearn": "1.9.0",
+    "xgboost": "3.3.0"
+  },
+  "equivalence": {
+    "missing_masks_equal": true,
+    "std_missing_masks_equal": true,
+    "maximum_prediction_difference": 0.0,
+    "maximum_std_difference": 0.0,
+    "strict_tolerance": 1e-12,
+    "float32_tolerance": 1e-06,
+    "strict_passed": true,
+    "passed": true
+  }
+}

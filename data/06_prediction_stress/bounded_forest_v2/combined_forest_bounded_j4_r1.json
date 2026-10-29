@@ -1,0 +1,92 @@
+{
+  "case": "combined_forest",
+  "repeat": 1,
+  "strategy": "bounded",
+  "jobs": 4,
+  "end_to_end": false,
+  "measurement": {
+    "exit_code": 0,
+    "guard_reason": null,
+    "wall_seconds": 50.567145250039175,
+    "phase_peaks": {
+      "startup": {
+        "rss_bytes": 232341504,
+        "footprint_bytes": 159206016,
+        "parent_rss_bytes": 232341504,
+        "descendants_rss_bytes": 0
+      },
+      "model_loading": {
+        "rss_bytes": 248659968,
+        "footprint_bytes": 172034688,
+        "parent_rss_bytes": 248659968,
+        "descendants_rss_bytes": 0
+      },
+      "prediction": {
+        "rss_bytes": 5568069632,
+        "footprint_bytes": 2074414848,
+        "parent_rss_bytes": 874201088,
+        "descendants_rss_bytes": 4895784960
+      },
+      "verification_output": {
+        "rss_bytes": 756432896,
+        "footprint_bytes": 255579904,
+        "parent_rss_bytes": 701677568,
+        "descendants_rss_bytes": 54755328
+      },
+      "done": {
+        "rss_bytes": 756432896,
+        "footprint_bytes": 249517824,
+        "parent_rss_bytes": 701677568,
+        "descendants_rss_bytes": 54755328
+      }
+    }
+  },
+  "resident": false,
+  "prediction_seconds": 49.01022929116152,
+  "preparation_seconds": 0.0,
+  "total_seconds": 49.01022929116152,
+  "cache_disk_bytes": 0,
+  "coverage": 1.0,
+  "logit": false,
+  "separate": false,
+  "output_bytes": 8000000,
+  "execution_info": {
+    "aggregation_backend": "bounded_streaming",
+    "prediction_backend": "bounded",
+    "rows": 1000000,
+    "ensembles": 20,
+    "workers": 4,
+    "max_pending_tasks": 4,
+    "shared_input_bytes": 224000640,
+    "shared_preparation_seconds": 0.6226046669762582,
+    "result_buffer_bytes": 32000000,
+    "worker_count_bytes": 4000000,
+    "result_transport": "completion_records",
+    "estimator_calls": 40,
+    "output_storage": "memory",
+    "output_bytes": 24000000
+  },
+  "versions": {
+    "python": "3.13.15",
+    "numpy": "2.5.1",
+    "pandas": "3.0.5",
+    "duckdb": "1.5.5",
+    "sklearn": "1.9.0",
+    "xgboost": "3.3.0"
+  },
+  "source_sha256": {
+    "stemflow/model/AdaSTEM.py": "5d968eae11d8a4556dac2cc28dbc7e945ff8c90da5a2620654ff3692f560dffd",
+    "stemflow/lazyloading/bounded_prediction.py": "d13aad87840743ca9dba03e06987d0fa23e708740228cca5e800f13e4ca9743f",
+    "scripts/06_prediction_stress/strategies.py": "ee17a02ed2aec4d4feca0826e52e6580fe6496d0659d2b6bcfdffe85efef7f8b"
+  },
+  "equivalence": {
+    "missing_masks_equal": true,
+    "std_missing_masks_equal": true,
+    "maximum_prediction_difference": 0.0,
+    "maximum_std_difference": 0.0,
+    "strict_tolerance": 1e-12,
+    "float32_tolerance": 1e-06,
+    "strict_passed": true,
+    "passed": true
+  }
+}

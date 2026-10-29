@@ -16,11 +16,7 @@ from ..utils.jitterrotation.jitterrotator import JitterRotator
 from ..utils.validation import check_random_state
 from .Q_blocks import QGrid, QNode, QPoint
 
-os.environ["MKL_NUM_THREADS"] = "1"
-os.environ["NUMEXPR_NUM_THREADS"] = "1"
-os.environ["OMP_NUM_THREADS"] = "1"
 
-warnings.filterwarnings("ignore")
 
 
 class QuadGrid:
@@ -34,7 +30,7 @@ class QuadGrid:
         rotation_angle: Union[float, int] = 0,
         calibration_point_x_jitter: Union[float, int] = 0,
         calibration_point_y_jitter: Union[float, int] = 0,
-        plot_empty: bool = False,
+        plot_empty: bool = False
     ):
         """Create a QuadTree object
 
@@ -122,12 +118,18 @@ class QuadGrid:
         ymin = np.min(y_list)
         ymax = np.max(y_list)
 
-        self.x_start = xmin - self.grid_len
+        phase_x, phase_y = self._grid_phase(self.grid_len, self.grid_len)
+        self.x_start = xmin - self.grid_len - phase_x
         self.x_end = xmax + self.grid_len
-        self.y_start = ymin - self.grid_len
+        self.y_start = ymin - self.grid_len - phase_y
         self.y_end = ymax + self.grid_len
         x_grids = np.arange(self.x_start, self.x_end, self.grid_len)
         y_grids = np.arange(self.y_start, self.y_end, self.grid_len)
+        # The outer maximum must have a cell even for an exact grid multiple.
+        if x_grids[-1] <= xmax:
+            x_grids = np.append(x_grids, x_grids[-1] + self.grid_len)
+        if y_grids[-1] <= ymax:
+            y_grids = np.append(y_grids, y_grids[-1] + self.grid_len)
 
         # Save the grid nodes
         self.node_list = []
@@ -147,6 +149,11 @@ class QuadGrid:
         for grid in self.grids:
             indices = np.where((x_bins == grid.x_index) & (y_bins == grid.y_index))[0]
             grid.points = [self.points[i] for i in indices]
+
+    def _grid_phase(self, width, height):
+        """Move boundaries relative to points, bounded by one cell period."""
+        return (self.calibration_point_x_jitter % width,
+                self.calibration_point_y_jitter % height)
 
     def graph(self, scatter: bool = True, ax=None):
         """plot gridding

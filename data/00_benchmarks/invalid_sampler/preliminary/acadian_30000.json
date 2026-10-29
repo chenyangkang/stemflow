@@ -1,0 +1,90 @@
+{
+  "fixture": {
+    "rows": 30000,
+    "features": 116,
+    "detections": 271
+  },
+  "baseline": "368acf6",
+  "results": [
+    {
+      "variant": "baseline",
+      "backend": "native",
+      "jobs": 2,
+      "threads": 1,
+      "fit_seconds": 2.861848749918863,
+      "predict_seconds": 1.513157333014533,
+      "coverage": 0.9711651299245599,
+      "auc": 0.9359897335150037,
+      "brier": 0.008817264995998952,
+      "log_loss": 0.03896923743156956,
+      "versions": {
+        "numpy": "2.5.1",
+        "pandas": "3.0.5",
+        "duckdb": "1.5.5",
+        "sklearn": "1.9.0",
+        "xgboost": "3.3.0"
+      },
+      "execution_info": null,
+      "process_tree_peak_rss_mb": 770.734375,
+      "process_tree_peak_accounted_mb": 429.5211181640625
+    },
+    {
+      "variant": "rewrite_native",
+      "backend": "native",
+      "jobs": 2,
+      "threads": 1,
+      "fit_seconds": 2.99929279088974,
+      "predict_seconds": 1.577622750075534,
+      "coverage": 0.9711651299245599,
+      "auc": 0.9359897335150037,
+      "brier": 0.008817264995998952,
+      "log_loss": 0.03896923743156956,
+      "versions": {
+        "numpy": "2.5.1",
+        "pandas": "3.0.5",
+        "duckdb": "1.5.5",
+        "sklearn": "1.9.0",
+        "xgboost": "3.3.0"
+      },
+      "execution_info": {
+        "training_data_backend": "native",
+        "workers": 2,
+        "shared_input_bytes": 0
+      },
+      "process_tree_peak_rss_mb": 778.21875,
+      "process_tree_peak_accounted_mb": 439.2716064453125,
+      "same_nan_mask": true,
+      "max_prediction_difference": 0.0
+    },
+    {
+      "variant": "rewrite_memmap",
+      "backend": "memmap",
+      "jobs": 2,
+      "threads": 1,
+      "fit_seconds": 4.233320666011423,
+      "predict_seconds": 1.615208667004481,
+      "coverage": 0.9711651299245599,
+      "auc": 0.9359897335150037,
+      "brier": 0.008817264995998952,
+      "log_loss": 0.03896923743156956,
+      "versions": {
+        "numpy": "2.5.1",
+        "pandas": "3.0.5",
+        "duckdb": "1.5.5",
+        "sklearn": "1.9.0",
+        "xgboost": "3.3.0"
+      },
+      "execution_info": {
+        "training_data_backend": "memmap",
+        "workers": 2,
+        "shared_input_bytes": 11455764
+      },
+      "process_tree_peak_rss_mb": 772.921875,
+      "process_tree_peak_accounted_mb": 430.72454833984375,
+      "same_nan_mask": true,
+      "max_prediction_difference": 0.0
+    }
+  ],
+  "memory_metric": "macOS physical footprint",
+  "limitations": "Sampled every 100 ms; RSS sums double-count shared pages. Footprint/PSS excludes some job-wide memory. Validate Slurm cgroup peak on HPC."
+}

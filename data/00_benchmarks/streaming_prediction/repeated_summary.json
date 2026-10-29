@@ -1,0 +1,464 @@
+[
+  {
+    "case": "acadian_100000_e8",
+    "variant": "baseline",
+    "n_repeats": 3,
+    "statistics": {
+      "wall_seconds": {
+        "median": 13.126434667035937,
+        "minimum": 12.909122958080843,
+        "maximum": 13.249852042179555
+      },
+      "fit_seconds": {
+        "median": 5.300525499973446,
+        "minimum": 5.296046958072111,
+        "maximum": 5.327387124998495
+      },
+      "prediction_seconds": {
+        "median": 2.262519208015874,
+        "minimum": 2.2422364158555865,
+        "maximum": 2.2796157910488546
+      },
+      "heldout_prediction_seconds": {
+        "median": 1.9139432499650866,
+        "minimum": 1.8856002090033144,
+        "maximum": 1.9213769170455635
+      },
+      "partition_seconds": {
+        "median": 1.3285408748779446,
+        "minimum": 1.2613691249862313,
+        "maximum": 1.338353666011244
+      },
+      "peak_accounted_mb": {
+        "median": 836.215087890625,
+        "minimum": 833.54296875,
+        "maximum": 846.3873901367188
+      },
+      "peak_rss_mb": {
+        "median": 2164.21875,
+        "minimum": 2133.078125,
+        "maximum": 2195.578125
+      },
+      "train_peak_accounted_mb": {
+        "median": 836.215087890625,
+        "minimum": 833.54296875,
+        "maximum": 846.3873901367188
+      },
+      "prediction_peak_accounted_mb": {
+        "median": 704.87158203125,
+        "minimum": 702.2620239257812,
+        "maximum": 742.9644165039062
+      },
+      "saved_models_mb": {
+        "median": 3.8743410110473633,
+        "minimum": 3.8743410110473633,
+        "maximum": 3.8743410110473633
+      },
+      "largest_saved_model_mb": {
+        "median": 0.04427051544189453,
+        "minimum": 0.04427051544189453,
+        "maximum": 0.04427051544189453
+      },
+      "shared_input_mb": {
+        "median": 0.0,
+        "minimum": 0.0,
+        "maximum": 0.0
+      },
+      "max_prediction_difference": {
+        "median": 0.0,
+        "minimum": 0.0,
+        "maximum": 0.0
+      },
+      "max_full_prediction_difference": {
+        "median": 0.0,
+        "minimum": 0.0,
+        "maximum": 0.0
+      }
+    }
+  },
+  {
+    "case": "acadian_100000_e8",
+    "variant": "rewrite_native",
+    "n_repeats": 3,
+    "statistics": {
+      "wall_seconds": {
+        "median": 12.714324417058378,
+        "minimum": 12.71409016707912,
+        "maximum": 13.233964666957036
+      },
+      "fit_seconds": {
+        "median": 5.36660624993965,
+        "minimum": 5.362383041065186,
+        "maximum": 5.444988708011806
+      },
+      "prediction_seconds": {
+        "median": 2.1800427918788046,
+        "minimum": 2.173947666073218,
+        "maximum": 2.433471957920119
+      },
+      "heldout_prediction_seconds": {
+        "median": 1.8387169591151178,
+        "minimum": 1.8334138749632984,
+        "maximum": 1.958558666985482
+      },
+      "partition_seconds": {
+        "median": 1.2788640831131488,
+        "minimum": 1.2771653751842678,
+        "maximum": 1.2894035838544369
+      },
+      "peak_accounted_mb": {
+        "median": 847.3403930664062,
+        "minimum": 844.6058959960938,
+        "maximum": 864.4650268554688
+      },
+      "peak_rss_mb": {
+        "median": 2044.71875,
+        "minimum": 1956.40625,
+        "maximum": 2107.390625
+      },
+      "train_peak_accounted_mb": {
+        "median": 847.3403930664062,
+        "minimum": 844.6058959960938,
+        "maximum": 864.4650268554688
+      },
+      "prediction_peak_accounted_mb": {
+        "median": 715.4797973632812,
+        "minimum": 698.7297973632812,
+        "maximum": 754.0106811523438
+      },
+      "saved_models_mb": {
+        "median": 3.8743410110473633,
+        "minimum": 3.8743410110473633,
+        "maximum": 3.8743410110473633
+      },
+      "largest_saved_model_mb": {
+        "median": 0.04427051544189453,
+        "minimum": 0.04427051544189453,
+        "maximum": 0.04427051544189453
+      },
+      "shared_input_mb": {
+        "median": 0.0,
+        "minimum": 0.0,
+        "maximum": 0.0
+      },
+      "max_prediction_difference": {
+        "median": 1.1102230246251565e-16,
+        "minimum": 1.1102230246251565e-16,
+        "maximum": 1.1102230246251565e-16
+      },
+      "max_full_prediction_difference": {
+        "median": 1.1102230246251565e-16,
+        "minimum": 1.1102230246251565e-16,
+        "maximum": 1.1102230246251565e-16
+      }
+    }
+  },
+  {
+    "case": "acadian_100000_e8",
+    "variant": "rewrite_memmap",
+    "n_repeats": 3,
+    "statistics": {
+      "wall_seconds": {
+        "median": 13.04339791694656,
+        "minimum": 12.396016417071223,
+        "maximum": 13.498632959090173
+      },
+      "fit_seconds": {
+        "median": 5.50337616703473,
+        "minimum": 5.332222416996956,
+        "maximum": 5.722077750135213
+      },
+      "prediction_seconds": {
+        "median": 2.274050416890532,
+        "minimum": 2.08782370807603,
+        "maximum": 2.3107969160191715
+      },
+      "heldout_prediction_seconds": {
+        "median": 1.854840333107859,
+        "minimum": 1.7156872919294983,
+        "maximum": 1.886426166864112
+      },
+      "partition_seconds": {
+        "median": 1.2790245828218758,
+        "minimum": 1.2778867909219116,
+        "maximum": 1.3227285828907043
+      },
+      "peak_accounted_mb": {
+        "median": 737.2928466796875,
+        "minimum": 714.2298583984375,
+        "maximum": 739.8860473632812
+      },
+      "peak_rss_mb": {
+        "median": 1928.34375,
+        "minimum": 1663.625,
+        "maximum": 2120.203125
+      },
+      "train_peak_accounted_mb": {
+        "median": 705.9173583984375,
+        "minimum": 704.2926025390625,
+        "maximum": 718.9490356445312
+      },
+      "prediction_peak_accounted_mb": {
+        "median": 737.2928466796875,
+        "minimum": 714.2298583984375,
+        "maximum": 739.8860473632812
+      },
+      "saved_models_mb": {
+        "median": 3.8743410110473633,
+        "minimum": 3.8743410110473633,
+        "maximum": 3.8743410110473633
+      },
+      "largest_saved_model_mb": {
+        "median": 0.04427051544189453,
+        "minimum": 0.04427051544189453,
+        "maximum": 0.04427051544189453
+      },
+      "shared_input_mb": {
+        "median": 36.35251235961914,
+        "minimum": 36.35251235961914,
+        "maximum": 36.35251235961914
+      },
+      "max_prediction_difference": {
+        "median": 1.1102230246251565e-16,
+        "minimum": 1.1102230246251565e-16,
+        "maximum": 1.1102230246251565e-16
+      },
+      "max_full_prediction_difference": {
+        "median": 1.1102230246251565e-16,
+        "minimum": 1.1102230246251565e-16,
+        "maximum": 1.1102230246251565e-16
+      }
+    }
+  },
+  {
+    "case": "forest_50000_e8_lazy",
+    "variant": "baseline",
+    "n_repeats": 3,
+    "statistics": {
+      "wall_seconds": {
+        "median": 27.195276000071317,
+        "minimum": 27.123585083987564,
+        "maximum": 28.48561141686514
+      },
+      "fit_seconds": {
+        "median": 15.774629584047943,
+        "minimum": 15.677001042058691,
+        "maximum": 16.347955458099023
+      },
+      "prediction_seconds": {
+        "median": 4.572437416063622,
+        "minimum": 4.5448827089276165,
+        "maximum": 4.802201791899279
+      },
+      "heldout_prediction_seconds": {
+        "median": 4.389390083029866,
+        "minimum": 4.38920870795846,
+        "maximum": 4.610043041873723
+      },
+      "partition_seconds": {
+        "median": 0.9192388749215752,
+        "minimum": 0.9022766249254346,
+        "maximum": 0.9859217919874936
+      },
+      "peak_accounted_mb": {
+        "median": 680.5884399414062,
+        "minimum": 678.0885620117188,
+        "maximum": 682.1047973632812
+      },
+      "peak_rss_mb": {
+        "median": 1290.0625,
+        "minimum": 1282.28125,
+        "maximum": 1309.890625
+      },
+      "train_peak_accounted_mb": {
+        "median": 680.5884399414062,
+        "minimum": 678.0885620117188,
+        "maximum": 682.1047973632812
+      },
+      "prediction_peak_accounted_mb": {
+        "median": 672.6826171875,
+        "minimum": 668.7606201171875,
+        "maximum": 677.9329223632812
+      },
+      "saved_models_mb": {
+        "median": 120.24421310424805,
+        "minimum": 120.24421310424805,
+        "maximum": 120.24421310424805
+      },
+      "largest_saved_model_mb": {
+        "median": 0.44684696197509766,
+        "minimum": 0.44684696197509766,
+        "maximum": 0.44684696197509766
+      },
+      "shared_input_mb": {
+        "median": 0.0,
+        "minimum": 0.0,
+        "maximum": 0.0
+      },
+      "max_prediction_difference": {
+        "median": 0.0,
+        "minimum": 0.0,
+        "maximum": 0.0
+      },
+      "max_full_prediction_difference": {
+        "median": 0.0,
+        "minimum": 0.0,
+        "maximum": 0.0
+      }
+    }
+  },
+  {
+    "case": "forest_50000_e8_lazy",
+    "variant": "rewrite_native",
+    "n_repeats": 3,
+    "statistics": {
+      "wall_seconds": {
+        "median": 24.58734737499617,
+        "minimum": 24.461734917014837,
+        "maximum": 26.080502249998972
+      },
+      "fit_seconds": {
+        "median": 15.866639208048582,
+        "minimum": 15.77897824998945,
+        "maximum": 16.59145350009203
+      },
+      "prediction_seconds": {
+        "median": 3.175020874943584,
+        "minimum": 3.160090582910925,
+        "maximum": 3.197540167020634
+      },
+      "heldout_prediction_seconds": {
+        "median": 3.0191755830310285,
+        "minimum": 3.005710666999221,
+        "maximum": 3.6458785419818014
+      },
+      "partition_seconds": {
+        "median": 0.9192856668960303,
+        "minimum": 0.9110375829041004,
+        "maximum": 0.944816832896322
+      },
+      "peak_accounted_mb": {
+        "median": 684.5574951171875,
+        "minimum": 683.7605590820312,
+        "maximum": 693.5260620117188
+      },
+      "peak_rss_mb": {
+        "median": 1238.984375,
+        "minimum": 1230.546875,
+        "maximum": 1241.359375
+      },
+      "train_peak_accounted_mb": {
+        "median": 684.5574951171875,
+        "minimum": 683.7605590820312,
+        "maximum": 693.5260620117188
+      },
+      "prediction_peak_accounted_mb": {
+        "median": 673.9640502929688,
+        "minimum": 640.24462890625,
+        "maximum": 676.7138061523438
+      },
+      "saved_models_mb": {
+        "median": 120.24421310424805,
+        "minimum": 120.24421310424805,
+        "maximum": 120.24421310424805
+      },
+      "largest_saved_model_mb": {
+        "median": 0.44684696197509766,
+        "minimum": 0.44684696197509766,
+        "maximum": 0.44684696197509766
+      },
+      "shared_input_mb": {
+        "median": 0.0,
+        "minimum": 0.0,
+        "maximum": 0.0
+      },
+      "max_prediction_difference": {
+        "median": 1.1102230246251565e-16,
+        "minimum": 1.1102230246251565e-16,
+        "maximum": 1.1102230246251565e-16
+      },
+      "max_full_prediction_difference": {
+        "median": 2.220446049250313e-16,
+        "minimum": 2.220446049250313e-16,
+        "maximum": 2.220446049250313e-16
+      }
+    }
+  },
+  {
+    "case": "forest_50000_e8_lazy",
+    "variant": "rewrite_memmap",
+    "n_repeats": 3,
+    "statistics": {
+      "wall_seconds": {
+        "median": 24.364868541946635,
+        "minimum": 24.353287667036057,
+        "maximum": 24.664726332994178
+      },
+      "fit_seconds": {
+        "median": 15.854469999903813,
+        "minimum": 15.741221999982372,
+        "maximum": 15.857719416031614
+      },
+      "prediction_seconds": {
+        "median": 3.1724253338761628,
+        "minimum": 3.103993667056784,
+        "maximum": 3.1979969169478863
+      },
+      "heldout_prediction_seconds": {
+        "median": 3.0116679999046028,
+        "minimum": 2.924707875121385,
+        "maximum": 3.1479994589462876
+      },
+      "partition_seconds": {
+        "median": 0.8908418340142816,
+        "minimum": 0.8843277499545366,
+        "maximum": 0.9082645829766989
+      },
+      "peak_accounted_mb": {
+        "median": 659.05712890625,
+        "minimum": 640.2755737304688,
+        "maximum": 668.2603759765625
+      },
+      "peak_rss_mb": {
+        "median": 1255.203125,
+        "minimum": 1176.734375,
+        "maximum": 1278.375
+      },
+      "train_peak_accounted_mb": {
+        "median": 613.0100708007812,
+        "minimum": 607.9320068359375,
+        "maximum": 618.2604370117188
+      },
+      "prediction_peak_accounted_mb": {
+        "median": 659.05712890625,
+        "minimum": 640.2755737304688,
+        "maximum": 668.2603759765625
+      },
+      "saved_models_mb": {
+        "median": 120.24421310424805,
+        "minimum": 120.24421310424805,
+        "maximum": 120.24421310424805
+      },
+      "largest_saved_model_mb": {
+        "median": 0.44684696197509766,
+        "minimum": 0.44684696197509766,
+        "maximum": 0.44684696197509766
+      },
+      "shared_input_mb": {
+        "median": 11.297599792480469,
+        "minimum": 11.297599792480469,
+        "maximum": 11.297599792480469
+      },
+      "max_prediction_difference": {
+        "median": 1.1102230246251565e-16,
+        "minimum": 1.1102230246251565e-16,
+        "maximum": 1.1102230246251565e-16
+      },
+      "max_full_prediction_difference": {
+        "median": 2.220446049250313e-16,
+        "minimum": 2.220446049250313e-16,
+        "maximum": 2.220446049250313e-16
+      }
+    }
+  }
+]

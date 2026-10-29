@@ -1,0 +1,64 @@
+{
+  "case": "huge_forests",
+  "specification": {
+    "train_rows": 25000,
+    "rows": 200000,
+    "features": 16,
+    "dtype": "float32",
+    "ensembles": 4,
+    "trees": 500,
+    "depth": 24,
+    "base": "forest",
+    "upper": 100,
+    "lower": 100,
+    "minimum": 1000,
+    "period": 80,
+    "step": 40,
+    "interval": 60
+  },
+  "training_seconds": 76.21082741720602,
+  "trained_stixels": 8,
+  "partition_stixels": 8,
+  "model_files_bytes": 887702536,
+  "largest_model_file_bytes": 132941625,
+  "prediction_database_bytes": 16789504,
+  "train_detections": 4008,
+  "inventory_totals": {
+    "fitted_estimators": 0,
+    "retained_trees": 0,
+    "trial_records": 0
+  },
+  "inventory_maxima": {
+    "fitted_estimators": 0,
+    "retained_trees": 0,
+    "trial_records": 0
+  },
+  "training_dataframe_bytes": 2400000,
+  "largest_temporal_window_rows": 150051,
+  "measurement": {
+    "exit_code": 0,
+    "guard_reason": null,
+    "wall_seconds": 78.71129741705954,
+    "phase_peaks": {
+      "startup": {
+        "rss_bytes": 248020992,
+        "footprint_bytes": 174410304,
+        "parent_rss_bytes": 248020992,
+        "descendants_rss_bytes": 0
+      },
+      "fixture_preparation": {
+        "rss_bytes": 363003904,
+        "footprint_bytes": 204147456,
+        "parent_rss_bytes": 363003904,
+        "descendants_rss_bytes": 0
+      },
+      "training": {
+        "rss_bytes": 1444364288,
+        "footprint_bytes": 950725120,
+        "parent_rss_bytes": 893091840,
+        "descendants_rss_bytes": 1072218112
+      }
+    }
+  },
+  "inventory_counter_note": "Original inventory_totals and inventory_maxima are invalid: the early counter inspected the unfitted random-forest estimator_ template. The corrected counter was validated in tests and in the separate same-spec workflow_v1/huge_forests_fixture.json rerun. Raw original counts are preserved; serialized models from this trial have been deleted."
+}

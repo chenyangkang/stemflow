@@ -1,0 +1,168 @@
+{
+  "source": "sampled checklist coordinates from X_train.duckdb",
+  "rows": 2400,
+  "jitters": [
+    [
+      -0.5149010029555594,
+      -13.74916547032263
+    ],
+    [
+      -16.18247484055059,
+      33.92372658929366
+    ],
+    [
+      -19.586092397390324,
+      -32.723460684048064
+    ],
+    [
+      24.80154700894793,
+      -23.016988170990444
+    ],
+    [
+      24.009024085779238,
+      15.6095322692019
+    ],
+    [
+      -29.423258407957366,
+      -27.714344724395133
+    ]
+  ],
+  "comparisons": [
+    {
+      "kind": "adaptive",
+      "scenario": "Jitter only: all angles 27.5\u00b0",
+      "corrected": false,
+      "mean_pair_ari": 1.0,
+      "min_assigned_fraction": 0.9995833333333334,
+      "mean_occupied_cells": 29.0,
+      "mean_build_seconds": 0.0043911180303742485
+    },
+    {
+      "kind": "adaptive",
+      "scenario": "Jitter only: all angles 27.5\u00b0",
+      "corrected": true,
+      "mean_pair_ari": 0.4447937781849913,
+      "min_assigned_fraction": 1.0,
+      "mean_occupied_cells": 26.5,
+      "mean_build_seconds": 0.00543153480005761
+    },
+    {
+      "kind": "adaptive",
+      "scenario": "Neighboring angles: 0\u00b0, 1.8\u00b0, \u2026, 9\u00b0",
+      "corrected": false,
+      "mean_pair_ari": 0.8111983063820056,
+      "min_assigned_fraction": 0.9995833333333334,
+      "mean_occupied_cells": 25.666666666666668,
+      "mean_build_seconds": 0.004223520983941853
+    },
+    {
+      "kind": "adaptive",
+      "scenario": "Neighboring angles: 0\u00b0, 1.8\u00b0, \u2026, 9\u00b0",
+      "corrected": true,
+      "mean_pair_ari": 0.38363644556149257,
+      "min_assigned_fraction": 1.0,
+      "mean_occupied_cells": 36.0,
+      "mean_build_seconds": 0.005548500106669962
+    },
+    {
+      "kind": "adaptive",
+      "scenario": "Spread angles: 0\u00b0, 18\u00b0, 36\u00b0, 54\u00b0, 72\u00b0, 88.2\u00b0",
+      "corrected": false,
+      "mean_pair_ari": 0.43622050247514466,
+      "min_assigned_fraction": 0.9995833333333334,
+      "mean_occupied_cells": 28.5,
+      "mean_build_seconds": 0.0041863400644312305
+    },
+    {
+      "kind": "adaptive",
+      "scenario": "Spread angles: 0\u00b0, 18\u00b0, 36\u00b0, 54\u00b0, 72\u00b0, 88.2\u00b0",
+      "corrected": true,
+      "mean_pair_ari": 0.3815605085253103,
+      "min_assigned_fraction": 1.0,
+      "mean_occupied_cells": 33.5,
+      "mean_build_seconds": 0.005489354021847248
+    },
+    {
+      "kind": "fixed",
+      "scenario": "Jitter only: all angles 27.5\u00b0",
+      "corrected": false,
+      "mean_pair_ari": 1.0,
+      "min_assigned_fraction": 1.0,
+      "mean_occupied_cells": 39.0,
+      "mean_build_seconds": 0.007225680514238775
+    },
+    {
+      "kind": "fixed",
+      "scenario": "Jitter only: all angles 27.5\u00b0",
+      "corrected": true,
+      "mean_pair_ari": 0.5417838828381899,
+      "min_assigned_fraction": 1.0,
+      "mean_occupied_cells": 39.666666666666664,
+      "mean_build_seconds": 0.0018658893726145227
+    },
+    {
+      "kind": "fixed",
+      "scenario": "Neighboring angles: 0\u00b0, 1.8\u00b0, \u2026, 9\u00b0",
+      "corrected": false,
+      "mean_pair_ari": 0.8026873293196254,
+      "min_assigned_fraction": 1.0,
+      "mean_occupied_cells": 37.833333333333336,
+      "mean_build_seconds": 0.0016292636670793097
+    },
+    {
+      "kind": "fixed",
+      "scenario": "Neighboring angles: 0\u00b0, 1.8\u00b0, \u2026, 9\u00b0",
+      "corrected": true,
+      "mean_pair_ari": 0.524604966921217,
+      "min_assigned_fraction": 1.0,
+      "mean_occupied_cells": 38.833333333333336,
+      "mean_build_seconds": 0.001679187291301787
+    },
+    {
+      "kind": "fixed",
+      "scenario": "Spread angles: 0\u00b0, 18\u00b0, 36\u00b0, 54\u00b0, 72\u00b0, 88.2\u00b0",
+      "corrected": false,
+      "mean_pair_ari": 0.5141481586424783,
+      "min_assigned_fraction": 1.0,
+      "mean_occupied_cells": 37.333333333333336,
+      "mean_build_seconds": 0.0016709929332137108
+    },
+    {
+      "kind": "fixed",
+      "scenario": "Spread angles: 0\u00b0, 18\u00b0, 36\u00b0, 54\u00b0, 72\u00b0, 88.2\u00b0",
+      "corrected": true,
+      "mean_pair_ari": 0.4902340054556601,
+      "min_assigned_fraction": 1.0,
+      "mean_occupied_cells": 39.166666666666664,
+      "mean_build_seconds": 0.001770541537553072
+    }
+  ],
+  "legacy_ablations": [
+    {
+      "kind": "adaptive",
+      "jitter_only_identical_memberships": false,
+      "jitter_only_ari": 1.0,
+      "nearby_angle_ari": 0.4824760994288169,
+      "distant_angle_ari": 0.4275083192708758,
+      "subset_same_angle_ari": 0.5573037314087336,
+      "bootstrap_same_angle_ari": 0.6829334993434226
+    },
+    {
+      "kind": "fixed",
+      "jitter_only_identical_memberships": true,
+      "jitter_only_ari": 1.0,
+      "nearby_angle_ari": 0.8551125276939306,
+      "distant_angle_ari": 0.4640991139337393,
+      "subset_same_angle_ari": 1.0,
+      "bootstrap_same_angle_ari": 1.0
+    }
+  ],
+  "pipeline_metadata": {
+    "columns_unchanged": true,
+    "dtypes_unchanged": true,
+    "transform_metadata_unchanged": true,
+    "stixels_before": 154,
+    "stixels_after": 129
+  },
+  "note": "Angles and observations are held identical between before/after panels. ARI measures membership agreement, not area overlap or model accuracy. Build time includes polygon extraction and is an exploratory single run."
+}

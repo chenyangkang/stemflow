@@ -18,11 +18,7 @@ from .quadtree import generate_temporal_bins
 from .sphere.coordinate_transform import lonlat_cartesian_3D_transformer
 from .validation import check_random_state
 
-os.environ["MKL_NUM_THREADS"] = "1"
-os.environ["NUMEXPR_NUM_THREADS"] = "1"
-os.environ["OMP_NUM_THREADS"] = "1"
 
-warnings.filterwarnings("ignore")
 
 
 def get_one_ensemble_sphere_quadtree(

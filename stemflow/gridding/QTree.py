@@ -13,14 +13,10 @@ import pandas as pd
 
 from ..utils.generate_random import generate_soft_color
 from ..utils.jitterrotation.jitterrotator import JitterRotator
-from ..utils.validation import check_random_state
+from ..utils.validation import check_random_state, normalize_quadtree_args
 from .Q_blocks import QNode, QPoint
 
-os.environ["MKL_NUM_THREADS"] = "1"
-os.environ["NUMEXPR_NUM_THREADS"] = "1"
-os.environ["OMP_NUM_THREADS"] = "1"
 
-warnings.filterwarnings("ignore")
 
 
 def recursive_subdivide(
@@ -30,6 +26,7 @@ def recursive_subdivide(
     grid_len_lat_upper_threshold: Union[float, int],
     grid_len_lat_lower_threshold: Union[float, int],
     points_lower_threshold: Union[float, int],
+    quadtree_arg_dict: None
 ):
     """recursively subdivide the grids
 
@@ -62,6 +59,7 @@ def recursive_subdivide(
         grid_len_lat_upper_threshold,
         grid_len_lat_lower_threshold,
         points_lower_threshold,
+        quadtree_arg_dict
     )
 
     p = contains(node.x0, node.y0 + h_, w_, h_, node.points)
@@ -73,6 +71,7 @@ def recursive_subdivide(
         grid_len_lat_upper_threshold,
         grid_len_lat_lower_threshold,
         points_lower_threshold,
+        quadtree_arg_dict
     )
 
     p = contains(node.x0 + w_, node.y0, w_, h_, node.points)
@@ -84,6 +83,7 @@ def recursive_subdivide(
         grid_len_lat_upper_threshold,
         grid_len_lat_lower_threshold,
         points_lower_threshold,
+        quadtree_arg_dict
     )
 
     p = contains(node.x0 + w_, node.y0 + h_, w_, h_, node.points)
@@ -95,12 +95,18 @@ def recursive_subdivide(
         grid_len_lat_upper_threshold,
         grid_len_lat_lower_threshold,
         points_lower_threshold,
+        quadtree_arg_dict
     )
 
     for ch_node in [x1, x2, x3, x4]:
-        if len(ch_node.points) <= points_lower_threshold:
-            if not ((node.width > grid_len_lon_upper_threshold) or (node.height > grid_len_lat_upper_threshold)):
-                return
+        if quadtree_arg_dict['addiitonal_quadtree_criteria'] is not None:
+            if ((len(ch_node.points) <= points_lower_threshold) or not (quadtree_arg_dict['addiitonal_quadtree_criteria'](pd.DataFrame([i.additional_features for i in ch_node.points])))):
+                if not ((node.width > grid_len_lon_upper_threshold) or (node.height > grid_len_lat_upper_threshold)):
+                    return
+        else:
+            if len(ch_node.points) <= points_lower_threshold:
+                if not ((node.width > grid_len_lon_upper_threshold) or (node.height > grid_len_lat_upper_threshold)):
+                    return
 
     node.children = [x1, x2, x3, x4]
 
@@ -140,6 +146,7 @@ class QTree:
         calibration_point_x_jitter: Union[float, int] = 0,
         calibration_point_y_jitter: Union[float, int] = 0,
         plot_empty: bool = False,
+        quadtree_arg_dict = None
     ):
         """Create a QuadTree object
 
@@ -164,6 +171,8 @@ class QTree:
                 jittering the gridding on latitude.
             plot_empty:
                 Whether to plot the empty grid
+            quadtree_arg_dict: 
+                a dictionary to pass into quadtree splitting algorithm for additional conditional gridding. Must be None or a dictionary that have keys "additional_features" and "addiitonal_quadtree_criteria". For example, this can be {'additional_features': ['co_occurrence'], 'addiitonal_quadtree_criteria': lamba x:np.sum(x['co_occurrence']==1)>10} to take the 'co_occurrence' column into consideration during quadtree gridding, with the criteria that the number of 'co_occurrence' record must be more than 10, and if further splitting will fail that criterion, the splitting is stopped. The function for 'addiitonal_quadtree_criteria' must return a True or False boolean for that stixel. The additional column must exist in the X_train dataframe or database.
 
         Example:
             ```py
@@ -196,8 +205,10 @@ class QTree:
         self.calibration_point_x_jitter = calibration_point_x_jitter
         self.calibration_point_y_jitter = calibration_point_y_jitter
         self.plot_empty = plot_empty
+        self.quadtree_arg_dict = normalize_quadtree_args(quadtree_arg_dict)
 
-    def add_lon_lat_data(self, indexes: Sequence, x_array: Sequence, y_array: Sequence):
+    def add_lon_lat_data(self, indexes: Sequence, x_array: Sequence, y_array: Sequence,
+                         additiona_features=None, *, additional_features=None):
         """Store input lng lat data and transform to **Point** object
 
         Parameters:
@@ -206,16 +217,27 @@ class QTree:
             y_array: latitudinal values.
 
         """
+        if additional_features is not None:
+            if additiona_features is not None:
+                raise ValueError("Provide only one additional_features argument.")
+            additiona_features = additional_features
         if not len(x_array) == len(y_array) or not len(x_array) == len(indexes):
             raise ValueError("input longitude and latitude and indexes not in same length!")
+        if additiona_features is not None:
+            assert isinstance(additiona_features, pd.DataFrame)
+            assert len(indexes) == additiona_features.shape[0]
 
         lon_new, lat_new = JitterRotator.rotate_jitter(
             x_array, y_array, self.rotation_angle, self.calibration_point_x_jitter, self.calibration_point_y_jitter
         )
 
-        for index, lon, lat in zip(indexes, lon_new, lat_new):
-            self.points.append(QPoint(index, lon, lat))
-
+        if additiona_features is None:
+            for index, lon, lat in zip(indexes, lon_new, lat_new):
+                self.points.append(QPoint(index, lon, lat))
+        else:
+            for index, lon, lat, feat_dict in zip(indexes, lon_new, lat_new, additiona_features.to_dict(orient="records")):
+                self.points.append(QPoint(index, lon, lat, feat_dict))
+        
     def generate_gridding_params(self):
         """generate the gridding params after data are added
 
@@ -228,24 +250,26 @@ class QTree:
         self.grid_length_x = np.max(x_list) - np.min(x_list)
         self.grid_length_y = np.max(y_list) - np.min(y_list)
 
-        left_bottom_point_x = np.min(x_list)
-        left_bottom_point_y = np.min(y_list)
-
-        self.left_bottom_point = (left_bottom_point_x, left_bottom_point_y)
         if self.lon_lat_equal_grid is True:
-            self.root = QNode(
-                left_bottom_point_x,
-                left_bottom_point_y,
-                max(self.grid_length_x, self.grid_length_y),
-                max(self.grid_length_x, self.grid_length_y),
-                self.points,
-            )
+            width = height = max(self.grid_length_x, self.grid_length_y)
         elif self.lon_lat_equal_grid is False:
-            self.root = QNode(
-                left_bottom_point_x, left_bottom_point_y, self.grid_length_x, self.grid_length_y, self.points
-            )
+            width, height = self.grid_length_x, self.grid_length_y
         else:
             raise ValueError("The input lon_lat_equal_grid not a boolean value!")
+
+        phase_x, phase_y = self._grid_phase(width, height)
+        left_bottom_point_x = np.min(x_list) - phase_x
+        left_bottom_point_y = np.min(y_list) - phase_y
+        # Padding retains every point and the existing dyadic cell scales.
+        if phase_x != 0 or phase_y != 0:
+            width, height = 2 * width, 2 * height
+        self.left_bottom_point = (left_bottom_point_x, left_bottom_point_y)
+        self.root = QNode(left_bottom_point_x, left_bottom_point_y, width, height, self.points)
+
+    def _grid_phase(self, width, height):
+        """Move boundaries relative to points, bounded by one root period."""
+        return (self.calibration_point_x_jitter % width if width > 0 else 0.,
+                self.calibration_point_y_jitter % height if height > 0 else 0.)
 
     def get_points(self):
         """return points"""
@@ -260,6 +284,7 @@ class QTree:
             self.grid_len_lat_upper_threshold,
             self.grid_len_lat_lower_threshold,
             self.points_lower_threshold,
+            self.quadtree_arg_dict
         )
 
     def graph(self, scatter: bool = True, ax=None):

@@ -1,0 +1,20 @@
+{
+  "rows": 2400,
+  "ensembles": 50,
+  "max_angle_error": 1.4210854715202004e-14,
+  "all_jitter_memberships_identical": true,
+  "max_vertex_difference": 1.4210854715202004e-14,
+  "similarity": {
+    "evenly_spaced": {
+      "mean_all_pairs": 0.4550636738295003,
+      "mean_adjacent_ensembles": 0.8389840817596601,
+      "max_unassigned_rows": 1
+    },
+    "random": {
+      "mean_all_pairs": 0.4617998860661276,
+      "mean_adjacent_ensembles": 0.4621352339425961,
+      "max_unassigned_rows": 1
+    }
+  },
+  "interpretation": "Synthetic planar spatial partitions, not prediction accuracy. ARI 1 means identical partitions. Jitter cancels because the origin follows the shifted data. Random orientation does not guarantee less all-pair overlap."
+}

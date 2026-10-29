@@ -32,6 +32,7 @@ from ..utils.validation import (
     check_verbosity,
 )
 from ..utils.wrapper import model_wrapper
+from ..utils.execution_monitor import monitor_step
 from .AdaSTEM import AdaSTEM, AdaSTEMClassifier, AdaSTEMRegressor
 from .static_func_AdaSTEM import (  # predict_one_ensemble
     assign_points_to_one_ensemble_sphere,
@@ -229,6 +230,7 @@ class SphereAdaSTEM(AdaSTEM):
             
         self.radius = radius
 
+    @monitor_step("partitioning")
     def split(
         self, X_train: pd.DataFrame, verbosity: Union[None, int] = None, ax=None, n_jobs: int = 1
     ) -> dict:
@@ -334,7 +336,7 @@ class SphereAdaSTEM(AdaSTEM):
             self.ensemble_df, self.gridding_plot = ensemble_df, None
 
     def SAC_ensemble_training(self, single_ensemble_df: pd.DataFrame, X_train: Union[pd.DataFrame, str], y_train: Union[pd.DataFrame, str],
-                              temporal_window_prequery: bool = False):
+                              temporal_window_prequery: bool = False, stixel_filter_func=None):
         """A sub-module of SAC training function.
         Train only one ensemble.
 
@@ -345,6 +347,8 @@ class SphereAdaSTEM(AdaSTEM):
         
         if not (isinstance(X_train, pd.DataFrame) or isinstance(y_train, pd.DataFrame)):
             raise NotImplementedError('Currently, SphereAdaSTEM does not support lazyloading of data. Make sure the input X and y are pd.DataFrame.')
+        if stixel_filter_func is not None:
+            raise AttributeError('stixel_filter_func must be None fro SphereAdaSTEM')
 
         # Calculate the start indices for the sliding window
         unique_start_indices = np.sort(single_ensemble_df[f"{self.Temporal1}_start"].unique())

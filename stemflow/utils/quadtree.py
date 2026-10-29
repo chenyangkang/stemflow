@@ -24,14 +24,11 @@ from .validation import (
 )
 from ..lazyloading.open_db_connection import open_db_connection
 from .generate_random import generate_random_saving_code
+from .duckdb_compat import fetch_one
 # from tqdm.contrib.concurrent import process_map
 
 
-os.environ["MKL_NUM_THREADS"] = "1"
-os.environ["NUMEXPR_NUM_THREADS"] = "1"
-os.environ["OMP_NUM_THREADS"] = "1"
 
-warnings.filterwarnings("ignore")
 
 
 def generate_temporal_bins(
@@ -85,6 +82,7 @@ def generate_temporal_bins(
 
 def get_one_ensemble_quadtree(
     ensemble_count,
+    quadtree_arg_dict,
     data: Union[pd.DataFrame, str],
     duckdb_config: dict,
     Spatio1: str = "longitude",
@@ -163,6 +161,8 @@ def get_one_ensemble_quadtree(
             random number generator.
         ensemble_bootstrap:
             Whether to bootstrap the data at each ensemble level to account for uncertainty.
+        quadtree_arg_dict: 
+            a dictionary to pass into quadtree splitting algorithm for additional conditional gridding. Must be None or a dictionary that have keys "additional_features" and "addiitonal_quadtree_criteria". For example, this can be {'additional_features': ['co_occurrence'], 'addiitonal_quadtree_criteria': lamba x:np.sum(x['co_occurrence']==1)>10} to take the 'co_occurrence' column into consideration during quadtree gridding, with the criteria that the number of 'co_occurrence' record must be more than 10, and if further splitting will fail that criterion, the splitting is stopped. The function for 'addiitonal_quadtree_criteria' must return a True or False boolean for that stixel. The additional column must exist in the X_train dataframe or database.
 
     Returns:
         A tuple of <br>
@@ -172,9 +172,9 @@ def get_one_ensemble_quadtree(
     """
     rng = check_random_state(rng)
     if isinstance(data, pd.DataFrame):
-        if len(set(data.columns) - set([Temporal1, Spatio1, Spatio2])) > 0:
+        if len(set(data.columns) - set([Temporal1, Spatio1, Spatio2] + quadtree_arg_dict['additional_features'])) > 0:
             raise AttributeError('Information redundant. To reduce memory use, only pass in columns Temporal1, Spatio1, Spatio2.')
-
+        
     if completely_random_rotation:
         rotation_angle = rng.uniform(0, 90)
     else:
@@ -200,7 +200,7 @@ def get_one_ensemble_quadtree(
             indexes = np.array(data_df.index)
         else:
             indexes = con.sql(f"SELECT __index_level_0__ FROM data_df;").df().values.flatten()
-        total_length = con.sql("SELECT COUNT(*) FROM data_df;").fetchone()[0]
+        total_length = fetch_one(con.sql("SELECT COUNT(*) FROM data_df;"))[0]
         
         # ensemble_bootstrap
         if ensemble_bootstrap:
@@ -225,8 +225,12 @@ def get_one_ensemble_quadtree(
                 sub_data_index = bootstrap_indices[np.isin(bootstrap_indices, sub_data_index)] if ensemble_bootstrap else sub_data_index
                 sub_data_index = pd.DataFrame(sub_data_index, columns=['__index_level_0__'])
                 con.register("sub_data_index", sub_data_index)
+                query_columns = f"data_df.{Temporal1}, data_df.{Spatio1}, data_df.{Spatio2}, data_df.__index_level_0__"
+                if len(quadtree_arg_dict['additional_features'])>0:
+                    for add_fea in quadtree_arg_dict['additional_features']:
+                        query_columns += f', data_df.{add_fea}'
                 sub_data = con.sql(f"""
-                                SELECT data_df.{Temporal1}, data_df.{Spatio1}, data_df.{Spatio2}, data_df.__index_level_0__ FROM data_df
+                                SELECT {query_columns} FROM data_df
                                 JOIN sub_data_index
                                 ON data_df.__index_level_0__ = sub_data_index.__index_level_0__
                                 """).df().set_index('__index_level_0__')
@@ -246,6 +250,7 @@ def get_one_ensemble_quadtree(
                     calibration_point_x_jitter=calibration_point_x_jitter,
                     calibration_point_y_jitter=calibration_point_y_jitter,
                     plot_empty=plot_empty,
+                    quadtree_arg_dict=quadtree_arg_dict
                 )
             elif isinstance(grid_len, float) or isinstance(grid_len, int):
                 QT_obj = QuadGrid(
@@ -255,15 +260,18 @@ def get_one_ensemble_quadtree(
                     rotation_angle=rotation_angle,
                     calibration_point_x_jitter=calibration_point_x_jitter,
                     calibration_point_y_jitter=calibration_point_y_jitter,
-                    plot_empty=plot_empty,
+                    plot_empty=plot_empty
                 )
             else:
                 raise TypeError("grid_len passed is not int or float.")
 
             # Give the data and indexes. The indexes should be used to assign points data so that base model can run on those points,
             # You need to generate the splitting parameters once giving the data. Like the calibration point and min,max.
-
-            QT_obj.add_lon_lat_data(sub_data.index, sub_data[Spatio1].values, sub_data[Spatio2].values)
+            if len(quadtree_arg_dict['additional_features'])>0:
+                QT_obj.add_lon_lat_data(np.array(sub_data.index).flatten(), sub_data[Spatio1].values.flatten(), sub_data[Spatio2].values.flatten(), sub_data[quadtree_arg_dict['additional_features']])
+            else:
+                QT_obj.add_lon_lat_data(np.array(sub_data.index).flatten(), sub_data[Spatio1].values.flatten(), sub_data[Spatio2].values.flatten())
+            
             QT_obj.generate_gridding_params()
 
             # Call subdivide to precess

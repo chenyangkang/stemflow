@@ -1,0 +1,53 @@
+name: execution-monitor
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [codex-rewrite]
+    paths:
+      - 'stemflow/**'
+      - 'tests/test_execution_monitor.py'
+      - 'tests/test_execution_rewrite.py'
+      - 'setup.py'
+      - '.github/workflows/execution_monitor.yml'
+  pull_request:
+    paths:
+      - 'stemflow/**'
+      - 'tests/test_execution_monitor.py'
+      - 'tests/test_execution_rewrite.py'
+      - 'setup.py'
+      - '.github/workflows/execution_monitor.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  portable-monitor:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ['3.11', '3.13', '3.15']
+    env:
+      MPLBACKEND: Agg
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install package and monitoring dependency
+        run: python -m pip install -e ".[monitoring]" pytest
+      - name: Check sampler and parallel AdaSTEM equivalence
+        run: python -m pytest tests/test_execution_monitor.py -q
+      - name: Measure sampler with known native allocations
+        run: python scripts/00_benchmarks/check_execution_monitor.py --output monitor_validation.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: monitor-${{ matrix.os }}-python${{ matrix.python }}
+          path: monitor_validation.json

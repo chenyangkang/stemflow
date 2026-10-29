@@ -1,0 +1,1062 @@
+[
+  {
+    "case": "wide",
+    "repeat": 1,
+    "strategy": "baseline",
+    "jobs": 2,
+    "end_to_end": false,
+    "measurement": {
+      "exit_code": 0,
+      "guard_reason": null,
+      "wall_seconds": 7.471040708012879,
+      "phase_peaks": {
+        "startup": {
+          "rss_bytes": 228507648,
+          "footprint_bytes": 155404544,
+          "parent_rss_bytes": 228507648,
+          "descendants_rss_bytes": 0
+        },
+        "prediction": {
+          "rss_bytes": 4779737088,
+          "footprint_bytes": 1976496128,
+          "parent_rss_bytes": 419364864,
+          "descendants_rss_bytes": 4404035584
+        },
+        "done": {
+          "rss_bytes": 473186304,
+          "footprint_bytes": 201691456,
+          "parent_rss_bytes": 420610048,
+          "descendants_rss_bytes": 52576256
+        }
+      }
+    },
+    "resident": false,
+    "prediction_seconds": 6.267670708009973,
+    "preparation_seconds": 0.0,
+    "total_seconds": 6.267670708009973,
+    "cache_disk_bytes": 0,
+    "coverage": 1.0,
+    "logit": false,
+    "versions": {
+      "python": "3.13.15",
+      "numpy": "2.5.1",
+      "pandas": "3.0.5",
+      "duckdb": "1.5.5",
+      "sklearn": "1.9.0",
+      "xgboost": "3.3.0"
+    },
+    "equivalence": {
+      "missing_masks_equal": true,
+      "std_missing_masks_equal": true,
+      "maximum_prediction_difference": 0.0,
+      "maximum_std_difference": 0.0,
+      "strict_tolerance": 1e-12,
+      "float32_tolerance": 1e-06,
+      "strict_passed": true,
+      "passed": true
+    },
+    "worker_details": []
+  },
+  {
+    "case": "wide",
+    "repeat": 1,
+    "strategy": "shared_positions",
+    "jobs": 2,
+    "end_to_end": false,
+    "measurement": {
+      "exit_code": 0,
+      "guard_reason": null,
+      "wall_seconds": 6.096654332941398,
+      "phase_peaks": {
+        "startup": {
+          "rss_bytes": 224542720,
+          "footprint_bytes": 151718336,
+          "parent_rss_bytes": 224542720,
+          "descendants_rss_bytes": 0
+        },
+        "model_loading": {
+          "rss_bytes": 231505920,
+          "footprint_bytes": 158206400,
+          "parent_rss_bytes": 231505920,
+          "descendants_rss_bytes": 0
+        },
+        "shared_preparation": {
+          "rss_bytes": 1148960768,
+          "footprint_bytes": 603852800,
+          "parent_rss_bytes": 1148960768,
+          "descendants_rss_bytes": 0
+        },
+        "prediction": {
+          "rss_bytes": 2755149824,
+          "footprint_bytes": 834107136,
+          "parent_rss_bytes": 952696832,
+          "descendants_rss_bytes": 1838252032
+        },
+        "verification_output": {
+          "rss_bytes": 1007222784,
+          "footprint_bytes": 208001344,
+          "parent_rss_bytes": 953991168,
+          "descendants_rss_bytes": 53231616
+        },
+        "done": {
+          "rss_bytes": 1004879872,
+          "footprint_bytes": 208001344,
+          "parent_rss_bytes": 951648256,
+          "descendants_rss_bytes": 53231616
+        }
+      }
+    },
+    "resident": false,
+    "prediction_seconds": 4.43745445786044,
+    "preparation_seconds": 0.44707166589796543,
+    "total_seconds": 4.8845261237584054,
+    "cache_disk_bytes": 292800640,
+    "coverage": 1.0,
+    "logit": false,
+    "versions": {
+      "python": "3.13.15",
+      "numpy": "2.5.1",
+      "pandas": "3.0.5",
+      "duckdb": "1.5.5",
+      "sklearn": "1.9.0",
+      "xgboost": "3.3.0"
+    },
+    "equivalence": {
+      "missing_masks_equal": true,
+      "std_missing_masks_equal": true,
+      "maximum_prediction_difference": 0.0,
+      "maximum_std_difference": 0.0,
+      "strict_tolerance": 1e-12,
+      "float32_tolerance": 1e-06,
+      "strict_passed": true,
+      "passed": true
+    },
+    "worker_details": [
+      {
+        "pid": 65235,
+        "ensemble": 5,
+        "timings": {
+          "query": 0.0055232488084584475,
+          "rotation": 0.020385875133797526,
+          "selection": 0.017673129914328456,
+          "gather": 0.21198854479007423,
+          "estimator": 0.8924638361204416,
+          "reduction": 0.005122915375977755
+        },
+        "estimator_calls": 30,
+        "largest_stixel_bytes": 49734032
+      },
+      {
+        "pid": 65234,
+        "ensemble": 0,
+        "timings": {
+          "query": 0.028840999817475677,
+          "rotation": 0.002799500012770295,
+          "selection": 0.008296582382172346,
+          "gather": 0.1597584194969386,
+          "estimator": 0.6628608361352235,
+          "reduction": 0.0034843306057155132
+        },
+        "estimator_calls": 17,
+        "largest_stixel_bytes": 53695616
+      },
+      {
+        "pid": 65235,
+        "ensemble": 3,
+        "timings": {
+          "query": 0.005476831924170256,
+          "rotation": 0.002786500146612525,
+          "selection": 0.009498003637418151,
+          "gather": 0.17158291907981038,
+          "estimator": 0.7283300398848951,
+          "reduction": 0.004083417588844895
+        },
+        "estimator_calls": 21,
+        "largest_stixel_bytes": 44312352
+      },
+      {
+        "pid": 65235,
+        "ensemble": 1,
+        "timings": {
+          "query": 0.028852666961029172,
+          "rotation": 0.0029285831842571497,
+          "selection": 0.00893499911762774,
+          "gather": 0.16740691917948425,
+          "estimator": 0.7137623759917915,
+          "reduction": 0.004014209844172001
+        },
+        "estimator_calls": 20,
+        "largest_stixel_bytes": 33139104
+      },
+      {
+        "pid": 65234,
+        "ensemble": 4,
+        "timings": {
+          "query": 0.0056380408350378275,
+          "rotation": 0.0028329158667474985,
+          "selection": 0.009972459636628628,
+          "gather": 0.17945258598774672,
+          "estimator": 0.7536662912461907,
+          "reduction": 0.003803208004683256
+        },
+        "estimator_calls": 23,
+        "largest_stixel_bytes": 24020336
+      },
+      {
+        "pid": 65234,
+        "ensemble": 2,
+        "timings": {
+          "query": 0.010243292199447751,
+          "rotation": 0.002722916891798377,
+          "selection": 0.008649749681353569,
+          "gather": 0.15738629177212715,
+          "estimator": 0.6695502488873899,
+          "reduction": 0.0035072944592684507
+        },
+        "estimator_calls": 18,
+        "largest_stixel_bytes": 50543136
+      }
+    ]
+  },
+  {
+    "case": "result_pressure",
+    "repeat": 1,
+    "strategy": "baseline",
+    "jobs": 2,
+    "end_to_end": false,
+    "measurement": {
+      "exit_code": 0,
+      "guard_reason": null,
+      "wall_seconds": 14.926579124992713,
+      "phase_peaks": {
+        "startup": {
+          "rss_bytes": 231571456,
+          "footprint_bytes": 160483776,
+          "parent_rss_bytes": 231571456,
+          "descendants_rss_bytes": 0
+        },
+        "prediction": {
+          "rss_bytes": 4821286912,
+          "footprint_bytes": 1168223424,
+          "parent_rss_bytes": 1065009152,
+          "descendants_rss_bytes": 3757965312
+        },
+        "verification_output": {
+          "rss_bytes": 1135820800,
+          "footprint_bytes": 245766336,
+          "parent_rss_bytes": 1082294272,
+          "descendants_rss_bytes": 53526528
+        },
+        "done": {
+          "rss_bytes": 1135902720,
+          "footprint_bytes": 229759168,
+          "parent_rss_bytes": 1082376192,
+          "descendants_rss_bytes": 53526528
+        }
+      }
+    },
+    "resident": false,
+    "prediction_seconds": 13.677045667078346,
+    "preparation_seconds": 0.0,
+    "total_seconds": 13.677045667078346,
+    "cache_disk_bytes": 0,
+    "coverage": 1.0,
+    "logit": false,
+    "versions": {
+      "python": "3.13.15",
+      "numpy": "2.5.1",
+      "pandas": "3.0.5",
+      "duckdb": "1.5.5",
+      "sklearn": "1.9.0",
+      "xgboost": "3.3.0"
+    },
+    "equivalence": {
+      "missing_masks_equal": true,
+      "std_missing_masks_equal": true,
+      "maximum_prediction_difference": 0.0,
+      "maximum_std_difference": 0.0,
+      "strict_tolerance": 1e-12,
+      "float32_tolerance": 1e-06,
+      "strict_passed": true,
+      "passed": true
+    },
+    "worker_details": []
+  },
+  {
+    "case": "result_pressure",
+    "repeat": 1,
+    "strategy": "shared_positions",
+    "jobs": 2,
+    "end_to_end": false,
+    "measurement": {
+      "exit_code": 0,
+      "guard_reason": null,
+      "wall_seconds": 6.887364916037768,
+      "phase_peaks": {
+        "startup": {
+          "rss_bytes": 228786176,
+          "footprint_bytes": 157731264,
+          "parent_rss_bytes": 228786176,
+          "descendants_rss_bytes": 0
+        },
+        "model_loading": {
+          "rss_bytes": 234897408,
+          "footprint_bytes": 163367360,
+          "parent_rss_bytes": 234897408,
+          "descendants_rss_bytes": 0
+        },
+        "shared_preparation": {
+          "rss_bytes": 390463488,
+          "footprint_bytes": 232164096,
+          "parent_rss_bytes": 390463488,
+          "descendants_rss_bytes": 0
+        },
+        "prediction": {
+          "rss_bytes": 3992076288,
+          "footprint_bytes": 857548864,
+          "parent_rss_bytes": 1061666816,
+          "descendants_rss_bytes": 2930409472
+        },
+        "verification_output": {
+          "rss_bytes": 1117093888,
+          "footprint_bytes": 262477824,
+          "parent_rss_bytes": 1062879232,
+          "descendants_rss_bytes": 54214656
+        },
+        "done": {
+          "rss_bytes": 1109131264,
+          "footprint_bytes": 253237248,
+          "parent_rss_bytes": 1054916608,
+          "descendants_rss_bytes": 54214656
+        }
+      }
+    },
+    "resident": false,
+    "prediction_seconds": 5.472432750044391,
+    "preparation_seconds": 0.1834242499899119,
+    "total_seconds": 5.6558570000343025,
+    "cache_disk_bytes": 64000640,
+    "coverage": 1.0,
+    "logit": false,
+    "versions": {
+      "python": "3.13.15",
+      "numpy": "2.5.1",
+      "pandas": "3.0.5",
+      "duckdb": "1.5.5",
+      "sklearn": "1.9.0",
+      "xgboost": "3.3.0"
+    },
+    "equivalence": {
+      "missing_masks_equal": true,
+      "std_missing_masks_equal": true,
+      "maximum_prediction_difference": 1.4901161193847656e-08,
+      "maximum_std_difference": 2.1073424450769596e-09,
+      "strict_tolerance": 1e-12,
+      "float32_tolerance": 1e-06,
+      "strict_passed": false,
+      "passed": true
+    },
+    "worker_details": [
+      {
+        "pid": 65295,
+        "ensemble": 3,
+        "timings": {
+          "query": 0.013764999806880951,
+          "rotation": 0.006867250893265009,
+          "selection": 0.003456957871094346,
+          "gather": 0.02350795897655189,
+          "estimator": 0.04076091689057648,
+          "reduction": 0.008228874765336514
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65296,
+        "ensemble": 28,
+        "timings": {
+          "query": 0.013994958950206637,
+          "rotation": 0.006173082860186696,
+          "selection": 0.00287070800550282,
+          "gather": 0.023179042153060436,
+          "estimator": 0.040016917046159506,
+          "reduction": 0.007728999946266413
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65296,
+        "ensemble": 12,
+        "timings": {
+          "query": 0.014360915869474411,
+          "rotation": 0.006438583834096789,
+          "selection": 0.0031769578345119953,
+          "gather": 0.029509292216971517,
+          "estimator": 0.04024695884436369,
+          "reduction": 0.00923545891419053
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65296,
+        "ensemble": 6,
+        "timings": {
+          "query": 0.01454495801590383,
+          "rotation": 0.006364626111462712,
+          "selection": 0.0034304179716855288,
+          "gather": 0.02384108304977417,
+          "estimator": 0.041068832855671644,
+          "reduction": 0.008147499756887555
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65295,
+        "ensemble": 43,
+        "timings": {
+          "query": 0.014211834175512195,
+          "rotation": 0.0062041261699050665,
+          "selection": 0.0028122500516474247,
+          "gather": 0.03093379200436175,
+          "estimator": 0.038974250899627805,
+          "reduction": 0.007929625920951366
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65296,
+        "ensemble": 24,
+        "timings": {
+          "query": 0.012837292160838842,
+          "rotation": 0.00650937482714653,
+          "selection": 0.0034715409856289625,
+          "gather": 0.025666540954262018,
+          "estimator": 0.040527040837332606,
+          "reduction": 0.00829287595115602
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65296,
+        "ensemble": 32,
+        "timings": {
+          "query": 0.015608583111315966,
+          "rotation": 0.005659916205331683,
+          "selection": 0.0029365411028265953,
+          "gather": 0.02528733410872519,
+          "estimator": 0.0412771247792989,
+          "reduction": 0.007530793081969023
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65295,
+        "ensemble": 19,
+        "timings": {
+          "query": 0.014743583044037223,
+          "rotation": 0.007052375003695488,
+          "selection": 0.0035925840493291616,
+          "gather": 0.02481049974448979,
+          "estimator": 0.041158791864290833,
+          "reduction": 0.009262832812964916
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65296,
+        "ensemble": 48,
+        "timings": {
+          "query": 0.024120958289131522,
+          "rotation": 0.006341458996757865,
+          "selection": 0.004241582937538624,
+          "gather": 0.0298464170191437,
+          "estimator": 0.04234916600398719,
+          "reduction": 0.009639875264838338
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65295,
+        "ensemble": 23,
+        "timings": {
+          "query": 0.015307290945202112,
+          "rotation": 0.006661334307864308,
+          "selection": 0.0030058338306844234,
+          "gather": 0.023910125019028783,
+          "estimator": 0.03976812516339123,
+          "reduction": 0.008608292089775205
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65295,
+        "ensemble": 35,
+        "timings": {
+          "query": 0.014234875096008182,
+          "rotation": 0.0064550419338047504,
+          "selection": 0.0031275011133402586,
+          "gather": 0.023054459132254124,
+          "estimator": 0.04044183390215039,
+          "reduction": 0.010352500015869737
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65295,
+        "ensemble": 15,
+        "timings": {
+          "query": 0.014084166148677468,
+          "rotation": 0.005987540818750858,
+          "selection": 0.002820958150550723,
+          "gather": 0.023575373692438006,
+          "estimator": 0.04027979215607047,
+          "reduction": 0.008189416956156492
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65296,
+        "ensemble": 44,
+        "timings": {
+          "query": 0.01653787586838007,
+          "rotation": 0.006650291150435805,
+          "selection": 0.0042166258208453655,
+          "gather": 0.028727541910484433,
+          "estimator": 0.04306875099427998,
+          "reduction": 0.012367415940389037
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65295,
+        "ensemble": 39,
+        "timings": {
+          "query": 0.013487040996551514,
+          "rotation": 0.006351165939122438,
+          "selection": 0.00279300007969141,
+          "gather": 0.022869792068377137,
+          "estimator": 0.04002550104632974,
+          "reduction": 0.00771904201246798
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65295,
+        "ensemble": 9,
+        "timings": {
+          "query": 0.013998874928802252,
+          "rotation": 0.005917208036407828,
+          "selection": 0.0031748339533805847,
+          "gather": 0.02425770810805261,
+          "estimator": 0.040222333976998925,
+          "reduction": 0.011540916981175542
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65296,
+        "ensemble": 22,
+        "timings": {
+          "query": 0.015010625123977661,
+          "rotation": 0.006290458841249347,
+          "selection": 0.005226208129897714,
+          "gather": 0.02476466610096395,
+          "estimator": 0.044662293046712875,
+          "reduction": 0.009666584199294448
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65296,
+        "ensemble": 34,
+        "timings": {
+          "query": 0.015650917077437043,
+          "rotation": 0.006355375284329057,
+          "selection": 0.0034500828478485346,
+          "gather": 0.0241496239323169,
+          "estimator": 0.04137304215691984,
+          "reduction": 0.0103197090793401
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65296,
+        "ensemble": 18,
+        "timings": {
+          "query": 0.01448545791208744,
+          "rotation": 0.007297417148947716,
+          "selection": 0.0035947489086538553,
+          "gather": 0.02496112510561943,
+          "estimator": 0.0407363751437515,
+          "reduction": 0.008265499956905842
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65295,
+        "ensemble": 49,
+        "timings": {
+          "query": 0.018396290950477123,
+          "rotation": 0.006119458004832268,
+          "selection": 0.0031765843741595745,
+          "gather": 0.031138333724811673,
+          "estimator": 0.03997641708701849,
+          "reduction": 0.007994583807885647
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65295,
+        "ensemble": 5,
+        "timings": {
+          "query": 0.015613833209499717,
+          "rotation": 0.006237749941647053,
+          "selection": 0.0029651669319719076,
+          "gather": 0.023576374864205718,
+          "estimator": 0.039173625176772475,
+          "reduction": 0.008422416169196367
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65296,
+        "ensemble": 38,
+        "timings": {
+          "query": 0.013558584032580256,
+          "rotation": 0.00695262523368001,
+          "selection": 0.0029912511818110943,
+          "gather": 0.023503166157752275,
+          "estimator": 0.039017084054648876,
+          "reduction": 0.007426124997437
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65296,
+        "ensemble": 14,
+        "timings": {
+          "query": 0.014957750216126442,
+          "rotation": 0.006223376141861081,
+          "selection": 0.003006915794685483,
+          "gather": 0.025643709115684032,
+          "estimator": 0.04021629109047353,
+          "reduction": 0.008062207838520408
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65295,
+        "ensemble": 45,
+        "timings": {
+          "query": 0.01664120820350945,
+          "rotation": 0.006474749883636832,
+          "selection": 0.004141084151342511,
+          "gather": 0.025294873863458633,
+          "estimator": 0.042181915836408734,
+          "reduction": 0.010161374928429723
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65295,
+        "ensemble": 13,
+        "timings": {
+          "query": 0.0134893748909235,
+          "rotation": 0.006315750069916248,
+          "selection": 0.003096667118370533,
+          "gather": 0.0244956249371171,
+          "estimator": 0.04001762601546943,
+          "reduction": 0.009357459144666791
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65296,
+        "ensemble": 1,
+        "timings": {
+          "query": 0.029950542142614722,
+          "rotation": 0.008141708094626665,
+          "selection": 0.0029872499871999025,
+          "gather": 0.0277105828281492,
+          "estimator": 0.04218225087970495,
+          "reduction": 0.008223916171118617
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65296,
+        "ensemble": 42,
+        "timings": {
+          "query": 0.015749334124848247,
+          "rotation": 0.006723332917317748,
+          "selection": 0.0031638750806450844,
+          "gather": 0.026069333078339696,
+          "estimator": 0.0407925839535892,
+          "reduction": 0.009665999794378877
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65295,
+        "ensemble": 29,
+        "timings": {
+          "query": 0.015746709192171693,
+          "rotation": 0.0061545418575406075,
+          "selection": 0.0037569168489426374,
+          "gather": 0.025845292024314404,
+          "estimator": 0.040076042991131544,
+          "reduction": 0.008318249834701419
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65295,
+        "ensemble": 25,
+        "timings": {
+          "query": 0.015347707783803344,
+          "rotation": 0.00672075105831027,
+          "selection": 0.002912375144660473,
+          "gather": 0.02415712526999414,
+          "estimator": 0.03926854208111763,
+          "reduction": 0.008418541867285967
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65295,
+        "ensemble": 33,
+        "timings": {
+          "query": 0.01454554102383554,
+          "rotation": 0.006344374036416411,
+          "selection": 0.0028912501875311136,
+          "gather": 0.026050916872918606,
+          "estimator": 0.03951929113827646,
+          "reduction": 0.007610291941091418
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65296,
+        "ensemble": 36,
+        "timings": {
+          "query": 0.01461120811291039,
+          "rotation": 0.006170458858832717,
+          "selection": 0.003272667061537504,
+          "gather": 0.025422625010833144,
+          "estimator": 0.040607084054499865,
+          "reduction": 0.009237750200554729
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65296,
+        "ensemble": 20,
+        "timings": {
+          "query": 0.015557459089905024,
+          "rotation": 0.006422582780942321,
+          "selection": 0.0032756670843809843,
+          "gather": 0.025068124989047647,
+          "estimator": 0.040773124899715185,
+          "reduction": 0.00809341692365706
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65295,
+        "ensemble": 47,
+        "timings": {
+          "query": 0.024732124991714954,
+          "rotation": 0.006483707809820771,
+          "selection": 0.0033187088556587696,
+          "gather": 0.02844120911322534,
+          "estimator": 0.04026624979451299,
+          "reduction": 0.009535582037642598
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65296,
+        "ensemble": 2,
+        "timings": {
+          "query": 0.017680375138297677,
+          "rotation": 0.007676041917875409,
+          "selection": 0.003381000831723213,
+          "gather": 0.02393233380280435,
+          "estimator": 0.04121508402749896,
+          "reduction": 0.008183292113244534
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65296,
+        "ensemble": 16,
+        "timings": {
+          "query": 0.013516417006030679,
+          "rotation": 0.006356042111292481,
+          "selection": 0.003246250795200467,
+          "gather": 0.023914000252261758,
+          "estimator": 0.04237383301369846,
+          "reduction": 0.008837708737701178
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65295,
+        "ensemble": 7,
+        "timings": {
+          "query": 0.014554915949702263,
+          "rotation": 0.006407083012163639,
+          "selection": 0.0033645429648458958,
+          "gather": 0.023073457879945636,
+          "estimator": 0.039967416087165475,
+          "reduction": 0.009500333806499839
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65296,
+        "ensemble": 40,
+        "timings": {
+          "query": 0.015622791135683656,
+          "rotation": 0.006296667270362377,
+          "selection": 0.0025596250779926777,
+          "gather": 0.022768374998122454,
+          "estimator": 0.041823916835710406,
+          "reduction": 0.0095059999730438
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65295,
+        "ensemble": 11,
+        "timings": {
+          "query": 0.016065543051809072,
+          "rotation": 0.006158748874440789,
+          "selection": 0.0027893339283764362,
+          "gather": 0.02576741692610085,
+          "estimator": 0.04026891617104411,
+          "reduction": 0.00823720800690353
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65295,
+        "ensemble": 31,
+        "timings": {
+          "query": 0.013078749878332019,
+          "rotation": 0.0061784591525793076,
+          "selection": 0.002873167162761092,
+          "gather": 0.02323137503117323,
+          "estimator": 0.03951312508434057,
+          "reduction": 0.008209498832002282
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65295,
+        "ensemble": 27,
+        "timings": {
+          "query": 0.018523833015933633,
+          "rotation": 0.005729333031922579,
+          "selection": 0.002742999931797385,
+          "gather": 0.022273542126640677,
+          "estimator": 0.040082375053316355,
+          "reduction": 0.008364083943888545
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65295,
+        "ensemble": 41,
+        "timings": {
+          "query": 0.013518417021259665,
+          "rotation": 0.005998292006552219,
+          "selection": 0.0037592498119920492,
+          "gather": 0.02342829224653542,
+          "estimator": 0.040009791031479836,
+          "reduction": 0.008378415834158659
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65296,
+        "ensemble": 4,
+        "timings": {
+          "query": 0.014674041885882616,
+          "rotation": 0.0068954178132116795,
+          "selection": 0.0029668330680578947,
+          "gather": 0.024311166955158114,
+          "estimator": 0.03996908315457404,
+          "reduction": 0.007302999962121248
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65296,
+        "ensemble": 10,
+        "timings": {
+          "query": 0.013846874004229903,
+          "rotation": 0.0063680000603199005,
+          "selection": 0.0028432507533580065,
+          "gather": 0.024472582852467895,
+          "estimator": 0.04089854098856449,
+          "reduction": 0.008339542197063565
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65296,
+        "ensemble": 8,
+        "timings": {
+          "query": 0.014039540896192193,
+          "rotation": 0.006199833936989307,
+          "selection": 0.003094166051596403,
+          "gather": 0.029793165856972337,
+          "estimator": 0.039922290947288275,
+          "reduction": 0.008566374890506268
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47986176
+      },
+      {
+        "pid": 65296,
+        "ensemble": 30,
+        "timings": {
+          "query": 0.023894540732726455,
+          "rotation": 0.006329792086035013,
+          "selection": 0.003052667248994112,
+          "gather": 0.024602959165349603,
+          "estimator": 0.03967929212376475,
+          "reduction": 0.00815266789868474
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65296,
+        "ensemble": 26,
+        "timings": {
+          "query": 0.024334001122042537,
+          "rotation": 0.006249875063076615,
+          "selection": 0.0030646249651908875,
+          "gather": 0.02356950007379055,
+          "estimator": 0.03891241713427007,
+          "reduction": 0.008030666969716549
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65295,
+        "ensemble": 37,
+        "timings": {
+          "query": 0.01579670887440443,
+          "rotation": 0.006771166110411286,
+          "selection": 0.0033673751167953014,
+          "gather": 0.02336929179728031,
+          "estimator": 0.04047925001941621,
+          "reduction": 0.00834966590628028
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65295,
+        "ensemble": 21,
+        "timings": {
+          "query": 0.015266207046806812,
+          "rotation": 0.006956499768421054,
+          "selection": 0.004265292081981897,
+          "gather": 0.025847957702353597,
+          "estimator": 0.04056799993850291,
+          "reduction": 0.010254458989948034
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65295,
+        "ensemble": 0,
+        "timings": {
+          "query": 0.03122570924460888,
+          "rotation": 0.008048791904002428,
+          "selection": 0.0028628327418118715,
+          "gather": 0.026591666974127293,
+          "estimator": 0.04250316694378853,
+          "reduction": 0.008840125054121017
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65296,
+        "ensemble": 46,
+        "timings": {
+          "query": 0.016890750033780932,
+          "rotation": 0.006397458259016275,
+          "selection": 0.003403250128030777,
+          "gather": 0.02738791680894792,
+          "estimator": 0.04212658293545246,
+          "reduction": 0.011364916106685996
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      },
+      {
+        "pid": 65295,
+        "ensemble": 17,
+        "timings": {
+          "query": 0.01395545806735754,
+          "rotation": 0.006059749750420451,
+          "selection": 0.003954166313633323,
+          "gather": 0.024720791028812528,
+          "estimator": 0.04108520783483982,
+          "reduction": 0.009910541819408536
+        },
+        "estimator_calls": 2,
+        "largest_stixel_bytes": 47990272
+      }
+    ]
+  }
+]

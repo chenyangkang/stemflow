@@ -1,0 +1,81 @@
+{
+  "case": "result_pressure",
+  "repeat": 1,
+  "strategy": "bounded",
+  "jobs": 4,
+  "end_to_end": false,
+  "measurement": {
+    "exit_code": 0,
+    "guard_reason": null,
+    "wall_seconds": 5.140634417068213,
+    "phase_peaks": {
+      "startup": {
+        "rss_bytes": 236666880,
+        "footprint_bytes": 162941376,
+        "parent_rss_bytes": 236666880,
+        "descendants_rss_bytes": 0
+      },
+      "prediction": {
+        "rss_bytes": 4185079808,
+        "footprint_bytes": 1377471680,
+        "parent_rss_bytes": 705970176,
+        "descendants_rss_bytes": 3487105024
+      },
+      "verification_output": {
+        "rss_bytes": 697761792,
+        "footprint_bytes": 631297152,
+        "parent_rss_bytes": 667926528,
+        "descendants_rss_bytes": 29835264
+      },
+      "done": {
+        "rss_bytes": 718585856,
+        "footprint_bytes": 231347328,
+        "parent_rss_bytes": 687816704,
+        "descendants_rss_bytes": 30769152
+      }
+    }
+  },
+  "resident": false,
+  "prediction_seconds": 3.633852042024955,
+  "preparation_seconds": 0.0,
+  "total_seconds": 3.633852042024955,
+  "cache_disk_bytes": 0,
+  "coverage": 0.99999702,
+  "logit": false,
+  "separate": true,
+  "output_bytes": 400000000,
+  "execution_info": {
+    "aggregation_backend": "bounded_matrix",
+    "prediction_backend": "bounded",
+    "rows": 1000000,
+    "ensembles": 50,
+    "workers": 4,
+    "max_pending_tasks": 4,
+    "shared_input_bytes": 64000640,
+    "shared_preparation_seconds": 0.20283045899122953,
+    "result_buffer_bytes": 32000000,
+    "worker_count_bytes": 4000000,
+    "result_transport": "completion_records",
+    "estimator_calls": 100,
+    "output_storage": "memory",
+    "output_bytes": 400000000
+  },
+  "versions": {
+    "python": "3.13.15",
+    "numpy": "2.5.1",
+    "pandas": "3.0.5",
+    "duckdb": "1.5.5",
+    "sklearn": "1.9.0",
+    "xgboost": "3.3.0"
+  },
+  "equivalence": {
+    "missing_masks_equal": true,
+    "std_missing_masks_equal": true,
+    "maximum_prediction_difference": 1.4901161193847656e-08,
+    "maximum_std_difference": 0.0,
+    "strict_tolerance": 1e-12,
+    "float32_tolerance": 1e-06,
+    "strict_passed": false,
+    "passed": true
+  }
+}

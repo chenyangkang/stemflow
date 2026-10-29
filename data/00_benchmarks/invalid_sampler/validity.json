@@ -1,0 +1,5 @@
+{
+  "memory_results_valid": false,
+  "reason": "The original macOS sampler divided a PID count by sizeof(int), omitting descendants. All memory figures in this directory are invalid and excluded from final comparisons.",
+  "timing_and_prediction_checks": "These are archived for audit; use sampler_version 2 reports in the parent directory for conclusions."
+}

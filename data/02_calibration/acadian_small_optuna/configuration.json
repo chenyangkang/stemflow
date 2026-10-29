@@ -1,0 +1,16 @@
+{
+  "fixture": {
+    "rows": 12000,
+    "features": 116,
+    "detections": 92
+  },
+  "training_rows": 8622,
+  "heldout_rows": 3378,
+  "training_events": 56,
+  "heldout_events": 36,
+  "ensembles": 2,
+  "jobs": 2,
+  "bootstrap": true,
+  "search": "optuna",
+  "note": "Small blocked held-out execution/calibration audit, not a full-species model ranking. Final probabilities evaluated in overlapping actual fitted stixels; ridge=100 uses summed loss."
+}

@@ -5,13 +5,22 @@ on:
   push:
     branches: [ main ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   pytesting:
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12", "3.13", "3.14"]
+        python-version: ["3.11", "3.12", "3.13", "3.14", "3.15"]
+    env:
+      MPLBACKEND: Agg
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
     steps:
     - name: Set Swap Space
       uses: pierotofy/set-swap-space@master
@@ -26,15 +35,19 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest pytest-cov pytest-xdist
-        pip install .
-        pip install xgboost>=1.7.6
-        pip install watermark>=2.3.1
+        python -m pip install pytest pytest-cov pytest-xdist ".[monitoring,tuning]" "watermark>=2.3.1"
 
     - name: Run pytest
       run: |
-        COVERAGE_CORE=ctrace pytest -n auto --cov --no-cov-on-fail --cov-report=term-missing:skip-covered --cov-report xml:coverage.xml -v
+        COVERAGE_CORE=ctrace python -m pytest -n 2 --cov --no-cov-on-fail --cov-report=term-missing:skip-covered --cov-report xml:coverage.xml --junitxml=pytest_results.xml -v
       timeout-minutes: 1000  # Set the timeout to 1.5 hours for this step
+
+    - name: Retain test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: pytest-python${{ matrix.python-version }}
+        path: pytest_results.xml
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v4

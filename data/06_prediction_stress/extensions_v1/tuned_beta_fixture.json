@@ -1,0 +1,63 @@
+{
+  "case": "tuned_beta",
+  "specification": {
+    "train_rows": 10000,
+    "rows": 300000,
+    "features": 116,
+    "dtype": "float64",
+    "ensembles": 6,
+    "trees": 60,
+    "depth": 6,
+    "base": "beta_tuned",
+    "upper": 100,
+    "lower": 100,
+    "minimum": 1000,
+    "period": 80,
+    "step": 40,
+    "interval": 60
+  },
+  "training_seconds": 17.245490375207737,
+  "trained_stixels": 12,
+  "partition_stixels": 12,
+  "model_files_bytes": 3802184,
+  "largest_model_file_bytes": 324398,
+  "prediction_database_bytes": 332935168,
+  "train_detections": 1683,
+  "inventory_totals": {
+    "fitted_estimators": 36,
+    "retained_trees": 2160,
+    "trial_records": 108
+  },
+  "inventory_maxima": {
+    "fitted_estimators": 3,
+    "retained_trees": 180,
+    "trial_records": 9
+  },
+  "training_dataframe_bytes": 9760000,
+  "largest_temporal_window_rows": 224870,
+  "measurement": {
+    "exit_code": 0,
+    "guard_reason": null,
+    "wall_seconds": 21.154994999989867,
+    "phase_peaks": {
+      "startup": {
+        "rss_bytes": 239337472,
+        "footprint_bytes": 163531072,
+        "parent_rss_bytes": 239337472,
+        "descendants_rss_bytes": 0
+      },
+      "fixture_preparation": {
+        "rss_bytes": 1221279744,
+        "footprint_bytes": 468750144,
+        "parent_rss_bytes": 1221279744,
+        "descendants_rss_bytes": 0
+      },
+      "training": {
+        "rss_bytes": 3005775872,
+        "footprint_bytes": 901248064,
+        "parent_rss_bytes": 1230143488,
+        "descendants_rss_bytes": 1777532928
+      }
+    }
+  }
+}

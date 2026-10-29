@@ -1,0 +1,62 @@
+{
+  "case": "huge_forests",
+  "repeat": 1,
+  "strategy": "baseline",
+  "jobs": 4,
+  "measurement": {
+    "exit_code": 0,
+    "guard_reason": null,
+    "wall_seconds": 11.734767082845792,
+    "phase_peaks": {
+      "startup": {
+        "rss_bytes": 231227392,
+        "footprint_bytes": 157518272,
+        "parent_rss_bytes": 231227392,
+        "descendants_rss_bytes": 0
+      },
+      "model_loading": {
+        "rss_bytes": 247349248,
+        "footprint_bytes": 170576320,
+        "parent_rss_bytes": 247349248,
+        "descendants_rss_bytes": 0
+      },
+      "prediction": {
+        "rss_bytes": 3470639104,
+        "footprint_bytes": 2293483264,
+        "parent_rss_bytes": 330498048,
+        "descendants_rss_bytes": 3144105984
+      },
+      "done": {
+        "rss_bytes": 391380992,
+        "footprint_bytes": 210867072,
+        "parent_rss_bytes": 336396288,
+        "descendants_rss_bytes": 54984704
+      }
+    }
+  },
+  "resident": false,
+  "prediction_seconds": 10.336342334048823,
+  "preparation_seconds": 0.0,
+  "total_seconds": 10.336342334048823,
+  "cache_disk_bytes": 0,
+  "coverage": 1.0,
+  "logit": false,
+  "versions": {
+    "python": "3.13.15",
+    "numpy": "2.5.1",
+    "pandas": "3.0.5",
+    "duckdb": "1.5.5",
+    "sklearn": "1.9.0",
+    "xgboost": "3.3.0"
+  },
+  "equivalence": {
+    "missing_masks_equal": true,
+    "std_missing_masks_equal": true,
+    "maximum_prediction_difference": 0.0,
+    "maximum_std_difference": 0.0,
+    "strict_tolerance": 1e-12,
+    "float32_tolerance": 1e-06,
+    "strict_passed": true,
+    "passed": true
+  }
+}

@@ -1,8 +1,10 @@
 import multiprocessing as mp
+import copy
 import os
 import pickle
 import time
 import warnings
+from contextlib import nullcontext
 from functools import partial
 from itertools import repeat
 import tarfile 
@@ -67,9 +69,12 @@ from ..utils.validation import (
     initiate_lazy_loading_dir,
     initiate_joblib_tmp_dir
 )
+from ..utils.validation import normalize_quadtree_args
 from ..utils.wrapper import model_wrapper
 from ..lazyloading.open_db_connection import open_db_connection, duckdb_config, open_both_Xy_db_connection
 from ..lazyloading.lazyloading import LazyLoadingEstimator
+from ..lazyloading.training_data import SharedTrainingData, TrainingWindow, native_window, prediction_window, quote_identifier
+from ..lazyloading.prediction import PredictionMoments, SpatialWindowIndex
     
 from .dummy_model import dummy_model1
 from .Hurdle import Hurdle
@@ -82,6 +87,9 @@ from .static_func_AdaSTEM import (  # predict_one_ensemble
 )
 
 from ..utils.generate_random import generate_random_saving_code
+from ..utils.execution_profile import profile_execution
+from ..utils.execution_monitor import ExecutionMonitor, execution_step, monitor_step
+from ..utils.duckdb_compat import fetch_one
 
 class AdaSTEM(BaseEstimator):
     """An AdaSTEM model class inherited by AdaSTEMClassifier and AdaSTEMRegressor"""
@@ -115,7 +123,7 @@ class AdaSTEM(BaseEstimator):
         plot_ylims: Tuple[Union[float, int], Union[float, int]] = None,
         verbosity: int = 1,
         plot_empty: bool = False,
-        completely_random_rotation: bool = False,
+        completely_random_rotation: bool = True,
         lazy_loading: bool = False,
         lazy_loading_dir: Union[str, None] = None,
         min_class_sample: int = 1,
@@ -188,7 +196,7 @@ class AdaSTEM(BaseEstimator):
             plot_empty:
                 Whether to plot the empty grid
             completely_random_rotation:
-                If True, the rotation angle will be generated completely randomly, as in paper https://doi.org/10.1002/eap.2056. If False, the ensembles will split the 90 degree with equal angle intervals. e.g., if ensemble_fold=9, then each ensemble will rotate 10 degree futher than the previous ensemble. Defalt to False, because if ensemble fold is small, it will be more robust to equally devide the data; and if ensemble fold is large, they are effectively similar than complete random.
+                If True, the rotation angle will be generated completely randomly, as in paper https://doi.org/10.1002/eap.2056. If False, the ensembles will split the 90 degree with equal angle intervals. e.g., if ensemble_fold=9, then each ensemble will rotate 10 degree futher than the previous ensemble. Defalt to True.
             lazy_loading:
                 If True, ensembles of models will be saved in disk, and only loaded when being used (e.g., prediction phase), and the ensembles of models are dump to disk once it is used.
             lazy_loading_dir:
@@ -297,7 +305,32 @@ class AdaSTEM(BaseEstimator):
         else:
             self.verbosity = 0
 
-    def split(self, X_train: Union[pd.DataFrame, str], verbosity: Union[None, int] = None, ax=None, n_jobs: Union[None, int] = None):
+    def monitor_execution(self, sample_interval=1.0, log_interval=30.0,
+                          output_path=None, max_samples=0, detailed_memory=False):
+        """Return an opt-in context for wall timings and local process-tree memory.
+
+        Wrap fit and prediction in the same context to measure their combined
+        peak. Stages are recorded for all AdaSTEM calls in the calling thread;
+        use monitor.phase('evaluation') for additional workflow stages.
+        Requires the optional monitoring extra: pip install 'stemflow[monitoring]'.
+        A plain report is stored as execution_monitor_ after each outer model
+        call and finalized on context exit; a later context replaces it. Save
+        the model after exiting to include the complete report. Set
+        log_interval=None for silent monitoring. The live sampler is never
+        attached to or serialized with the model.
+        """
+        monitor = ExecutionMonitor(sample_interval=sample_interval, log_interval=log_interval,
+                                   output_path=output_path, max_samples=max_samples,
+                                   detailed_memory=detailed_memory)
+        monitor._track_model(self)
+        return monitor
+
+    @monitor_step("partitioning")
+    def split(self, X_train: Union[pd.DataFrame, str], 
+              verbosity: Union[None, int] = None, 
+              ax=None, 
+              n_jobs: Union[None, int] = None,
+              quadtree_arg_dict = None):
         """QuadTree indexing the input data
 
         Args:
@@ -305,6 +338,7 @@ class AdaSTEM(BaseEstimator):
             verbosity: 0 to output nothing, everything other wise. Default None set it to the verbosity of AdaSTEM model class.
             ax: matplotlit Axes to add to.
             n_jobs: number of processors for parallel computing
+            quadtree_arg_dict: a dictionary to pass into quadtree splitting algorithm for additional conditional gridding. Must be None or a dictionary that have keys "additional_features" and "addiitonal_quadtree_criteria". For example, this can be {'additional_features': ['co_occurrence'], 'addiitonal_quadtree_criteria': lamba x:np.sum(x['co_occurrence']==1)>10} to take the 'co_occurrence' column into consideration during quadtree gridding, with the criteria that the number of 'co_occurrence' record must be more than 10, and if further splitting will fail that criterion, the splitting is stopped. The function for 'addiitonal_quadtree_criteria' must return a True or False boolean for that stixel. The additional column must exist in the X_train dataframe or database.
 
         Returns:
             self.grid_dict, a dictionary of one DataFrame for each grid, containing the gridding information
@@ -324,6 +358,8 @@ class AdaSTEM(BaseEstimator):
             
         if verbosity is None:
             verbosity = self.verbosity
+
+        quadtree_arg_dict = normalize_quadtree_args(quadtree_arg_dict)
             
         # Determine grid_len based on conditions
         if self.grid_len is None:
@@ -341,12 +377,12 @@ class AdaSTEM(BaseEstimator):
             con.register("X_train_df", X_train_df)
             
             # spatial & temporal min max
-            spatial1_min = con.sql(f"select MIN({self.Spatio1}) from X_train_df;").fetchone()[0]
-            spatial1_max = con.sql(f"select MAX({self.Spatio1}) from X_train_df;").fetchone()[0]
-            spatial2_min = con.sql(f"select MIN({self.Spatio2}) from X_train_df;").fetchone()[0]
-            spatial2_max = con.sql(f"select MAX({self.Spatio2}) from X_train_df;").fetchone()[0]
-            temporal1_min = con.sql(f"select MIN({self.Temporal1}) from X_train_df;").fetchone()[0]
-            temporal1_max = con.sql(f"select MAX({self.Temporal1}) from X_train_df;").fetchone()[0]
+            spatial1_min = fetch_one(con.sql(f"select MIN({self.Spatio1}) from X_train_df;"))[0]
+            spatial1_max = fetch_one(con.sql(f"select MAX({self.Spatio1}) from X_train_df;"))[0]
+            spatial2_min = fetch_one(con.sql(f"select MIN({self.Spatio2}) from X_train_df;"))[0]
+            spatial2_max = fetch_one(con.sql(f"select MAX({self.Spatio2}) from X_train_df;"))[0]
+            temporal1_min = fetch_one(con.sql(f"select MIN({self.Temporal1}) from X_train_df;"))[0]
+            temporal1_max = fetch_one(con.sql(f"select MAX({self.Temporal1}) from X_train_df;"))[0]
         
         # Call spatial and temporal scale checks
         check_spatial_scale(
@@ -379,7 +415,7 @@ class AdaSTEM(BaseEstimator):
                 pass
         
         if isinstance(X_train, pd.DataFrame):
-            X_train_indexes = X_train[[self.Temporal1, self.Spatio1, self.Spatio2]]
+            X_train_indexes = X_train[[self.Temporal1, self.Spatio1, self.Spatio2] + quadtree_arg_dict['additional_features']]
         else:
             X_train_indexes = X_train
         
@@ -407,7 +443,8 @@ class AdaSTEM(BaseEstimator):
             save_gridding_plot=self.save_gridding_plot,
             ax=ax,
             completely_random_rotation=self.completely_random_rotation,
-            ensemble_bootstrap=self.ensemble_bootstrap
+            ensemble_bootstrap=self.ensemble_bootstrap,
+            quadtree_arg_dict=quadtree_arg_dict
         )
 
         if n_jobs > 1 and isinstance(n_jobs, int):
@@ -486,14 +523,18 @@ class AdaSTEM(BaseEstimator):
         for i in [self.Spatio1, self.Spatio2]:
             if i in self.x_names:
                 del self.x_names[self.x_names.index(i)]
+        # Estimator-declared metadata supports local CV without manual coordinate copies.
+        for name in getattr(self.base_model, "required_metadata_columns", ()):
+            if name not in self.x_names:
+                self.x_names.append(name)
         
 
-    def stixel_fitting(self, stixel):
+    def stixel_fitting(self, stixel, stixel_filter_func = None):
         """A sub module of SAC training. Fit one stixel
 
         Args:
-            stixel (pd.DataFrame): data sjoined with ensemble_df.
-            For a single stixel.
+            stixel (pd.DataFrame): data sjoined with ensemble_df. For a single stixel.
+            stixel_filter_func: filtering function applied on data.
         """
         
         if '__index_level_0__' in stixel.columns:
@@ -506,7 +547,9 @@ class AdaSTEM(BaseEstimator):
             base_model = LazyLoadingEstimator(estimator=self.base_model, 
                                                dump_dir=os.path.join(self.lazy_loading_dir, 'models', 'ensemble_' + ensemble_index), 
                                                filename=f"model_{unique_stixel_id}.pkl", 
-                                               auto_dump=True, auto_load=True, keep_loaded=False)
+                                               auto_dump=True, auto_load=True, keep_loaded=False,
+                                               dump_on_read=getattr(self, "persist_prediction_state_", True))
+            base_model.required_metadata_columns = getattr(self.base_model, "required_metadata_columns", ())
         else:
             base_model = self.base_model
             
@@ -518,7 +561,8 @@ class AdaSTEM(BaseEstimator):
             sample_weights_for_classifier=self.sample_weights_for_classifier,
             subset_x_names=self.subset_x_names,
             stixel_X_train=stixel,
-            min_class_sample=self.min_class_sample
+            min_class_sample=self.min_class_sample,
+            stixel_filter_func=stixel_filter_func
         )
 
         if not status == "Success":
@@ -528,160 +572,76 @@ class AdaSTEM(BaseEstimator):
             return [unique_stixel_id, model, stixel_specific_x_names]
 
 
-    def SAC_ensemble_training(self, single_ensemble_df: pd.DataFrame, X_train: Union[pd.DataFrame, str], y_train: Union[pd.DataFrame, str],
-                              temporal_window_prequery: bool = False):
-        """A sub-module of SAC training function.
-        Train only one ensemble.
-
-        Args:
-            single_ensemble_df (pd.DataFrame): ensemble data (from model.ensemble_df)
-            X_train (pd.DataFrame, str): input covariates to train
-            y_train (pd.DataFrame, str): input ground truth labels
-            temporal_window_prequery (bool): Whether to prequery the temporal windows as pd.DataFrame object to speed-up the stixel query. If set to True, query speed will be faster but with a moderate memory usage increase.
-        """
-
-        # Calculate the start indices for the sliding window
-        unique_start_indices = np.sort(single_ensemble_df[f"{self.Temporal1}_start"].unique())
-        
-        # Initiate duckdb connection
-        duckdb_config = self.duckdb_config.copy()
-        duckdb_config['temp_directory'] = os.path.join(duckdb_config['temp_directory'], generate_random_saving_code())
-        with open_both_Xy_db_connection(X_train, y_train, duckdb_config) as (X_train_df, y_train_df, con):
-            con.register("X_train_df", X_train_df)
-            con.register("y_train_df", y_train_df)
-
-            # Get indexes and total_length
-            if isinstance(X_train_df, pd.DataFrame):
-                indexes = np.array(X_train_df.index)
-            else:
-                indexes = con.sql(f"SELECT __index_level_0__ FROM X_train_df;").df().values.flatten()
-            total_length = con.sql("SELECT COUNT(*) FROM X_train_df;").fetchone()[0]
-        
-            # training, window by window
-            if self.ensemble_bootstrap:
-                bootstrap_random_state = single_ensemble_df['bootstrap_random_state'].iloc[0]
-                rng = np.random.default_rng(bootstrap_random_state)  # NumPy's random generator
-                bootstrap_indices = rng.choice(indexes, size=total_length, replace=True)  # Full bootstrap sample
-            else:
-                bootstrap_indices = None # Place holder
-                
-            res_list = []
-            for start in unique_start_indices:
-                # Select the temporal window
-                if isinstance(X_train_df, pd.DataFrame):
-                    temporal_window_indexes = np.array(X_train_df.index[
-                        (X_train_df[self.Temporal1] >= start) & 
-                        (X_train_df[self.Temporal1] < start + self.temporal_bin_interval)
-                        ])
-                    # Apply bootstrap
-                    temporal_window_indexes = bootstrap_indices[np.isin(bootstrap_indices, temporal_window_indexes)] if self.ensemble_bootstrap else temporal_window_indexes
-                    window_X_df_indexes_only = X_train_df.loc[temporal_window_indexes][[self.Temporal1, self.Spatio1, self.Spatio2]]
-                    window_X_df = X_train_df.loc[temporal_window_indexes] if temporal_window_prequery else X_train_df
-                    window_y_df = y_train_df.loc[temporal_window_indexes] if temporal_window_prequery else y_train_df
-                else:
-                    temporal_window_indexes = con.sql(f"SELECT __index_level_0__ FROM X_train_df WHERE {self.Temporal1} >= {start} AND {self.Temporal1} < {start + self.temporal_bin_interval};").df().values.flatten()
-                    # Apply bootstrap
-                    temporal_window_indexes = bootstrap_indices[np.isin(bootstrap_indices, temporal_window_indexes)] if self.ensemble_bootstrap else temporal_window_indexes                
-                    temporal_window_indexes_df = pd.DataFrame(temporal_window_indexes, columns=['__index_level_0__'])
-                    con.register("temporal_window_indexes_df", temporal_window_indexes_df)
-                    
-                    window_X_df = con.sql(f"""
-                        SELECT temporal_window_indexes_df.__index_level_0__,
-                            X_train_df.* EXCLUDE(__index_level_0__)
-                        FROM temporal_window_indexes_df
-                        LEFT JOIN X_train_df
-                        ON X_train_df.__index_level_0__ = temporal_window_indexes_df.__index_level_0__
-                    """).df().set_index('__index_level_0__') if temporal_window_prequery else X_train_df
-                    window_y_df = con.sql(f"""
-                        SELECT temporal_window_indexes_df.__index_level_0__,
-                            y_train_df.* EXCLUDE(__index_level_0__)
-                        FROM temporal_window_indexes_df
-                        LEFT JOIN y_train_df
-                        ON y_train_df.__index_level_0__ = temporal_window_indexes_df.__index_level_0__
-                    """).df().set_index('__index_level_0__') if temporal_window_prequery else y_train_df
-                    window_X_df_indexes_only = con.sql(f"""
-                                                        SELECT X_train_df.{self.Temporal1}, X_train_df.{self.Spatio1}, X_train_df.{self.Spatio2}, X_train_df.__index_level_0__ FROM X_train_df 
-                                                        JOIN temporal_window_indexes_df
-                                                        ON X_train_df.__index_level_0__ = temporal_window_indexes_df.__index_level_0__;
-                                                       """).df().set_index('__index_level_0__')
-
-                # Transform to STEM gridding coordinates
-                window_X_df_indexes_only = transform_pred_set_to_STEM_quad(self.Spatio1, self.Spatio2, window_X_df_indexes_only, single_ensemble_df)
-                window_single_ensemble_df = single_ensemble_df[single_ensemble_df[f"{self.Temporal1}_start"] == start]
-                
-                # Merge
-                def find_belonged_points(df, st_indexes_df, X_df, y_df):
-                    this_stixel_point_indexes = st_indexes_df.index[
-                        (st_indexes_df[f"{self.Spatio1}_new"] >= df["stixel_calibration_point_transformed_left_bound"].iloc[0])
-                        & (st_indexes_df[f"{self.Spatio1}_new"] < df["stixel_calibration_point_transformed_right_bound"].iloc[0])
-                        & (st_indexes_df[f"{self.Spatio2}_new"] >= df["stixel_calibration_point_transformed_lower_bound"].iloc[0])
-                        & (st_indexes_df[f"{self.Spatio2}_new"] < df["stixel_calibration_point_transformed_upper_bound"].iloc[0])
-                    ]
-                    
-                    if isinstance(X_df, pd.DataFrame):
-                        X_y = pd.concat([X_df.loc[this_stixel_point_indexes], y_df.loc[this_stixel_point_indexes].set_axis(['true_y'], axis=1)], axis=1)
-                    elif isinstance(X_df, duckdb.DuckDBPyRelation):  
-                        this_stixel_point_indexes_df = pd.DataFrame(this_stixel_point_indexes, columns=['__index_level_0__'])
-                        con.register("this_stixel_point_indexes_df", this_stixel_point_indexes_df)
-                        con.register('X_df', X_df)
-                        con.register('y_df', y_df)
-
-                        y_column = [i for i in y_df.columns if not i=='__index_level_0__'][0]
-                        
-                        X_y = con.sql(f"""
-                        SELECT this_stixel_point_indexes_df.__index_level_0__, 
-                            X_df.* EXCLUDE(__index_level_0__), 
-                            y_df.{y_column} as true_y
-                        FROM this_stixel_point_indexes_df
-                        LEFT JOIN X_df
-                            ON X_df.__index_level_0__ = this_stixel_point_indexes_df.__index_level_0__
-                        LEFT JOIN y_df
-                            ON y_df.__index_level_0__ = this_stixel_point_indexes_df.__index_level_0__;
-                        """).df().set_index('__index_level_0__')
-
-                        con.unregister("this_stixel_point_indexes_df")
-                        con.unregister("X_df")
-                        con.unregister("y_df")
-                        
+    @profile_execution
+    def SAC_ensemble_training(self, single_ensemble_df: pd.DataFrame, X_train, y_train,
+                              temporal_window_prequery=False, stixel_filter_func=None):
+        """Fit one ensemble, holding one window and one stixel workspace at a time."""
+        starts = np.sort(single_ensemble_df[f"{self.Temporal1}_start"].unique())
+        shared = getattr(self, "_shared_training_data", None)
+        config = self.duckdb_config.copy()
+        config['temp_directory'] = os.path.join(config['temp_directory'], generate_random_saving_code())
+        context = (nullcontext((None, None, None)) if shared is not None else
+                   open_both_Xy_db_connection(X_train, y_train, config))
+        columns = [self.Temporal1, self.Spatio1, self.Spatio2]
+        ensemble_id = single_ensemble_df['ensemble_index'].iloc[0]
+        start, stixel_id = None, None
+        try:
+            with context as (x_source, y_source, con):
+                bootstrap_ids = None
+                if self.ensemble_bootstrap:
+                    if shared is not None:
+                        ids = shared.index
+                    elif isinstance(x_source, pd.DataFrame):
+                        ids = x_source.index.to_numpy()
                     else:
-                        raise
-                    
-                    return X_y
-                
-                def find_belonged_points_and_fit(df, st_indexes_df, X_df, y_df):
-                    X_y = find_belonged_points(df, st_indexes_df, X_df, y_df)
-                    if len(X_y)==0:
-                        return None
-                    X_y['ensemble_index'] = df['ensemble_index'].iloc[0]
-                    X_y['unique_stixel_id'] = df['unique_stixel_id'].iloc[0]
-                    X_y = X_y.sort_index() # To ensure the input dataframes for the two method (temporal_window_prequery or not) are the same so the tained base models are identical, at least with the same input data
-                    fitted_res = self.stixel_fitting(X_y)
-                    return fitted_res
+                        con.register("bootstrap_source", x_source)
+                        ids = con.sql("SELECT __index_level_0__ FROM bootstrap_source").fetchnumpy()['__index_level_0__']
+                    rng = np.random.default_rng(single_ensemble_df['bootstrap_random_state'].iloc[0])
+                    bootstrap_ids = rng.choice(ids, size=len(ids), replace=True)
 
-                # train
-                res = (
-                    window_single_ensemble_df[
-                        [
-                            "ensemble_index",
-                            "unique_stixel_id",
-                            "stixel_calibration_point_transformed_left_bound",
-                            "stixel_calibration_point_transformed_right_bound",
-                            "stixel_calibration_point_transformed_lower_bound",
-                            "stixel_calibration_point_transformed_upper_bound",
-                        ]
-                    ]
-                    .groupby(["ensemble_index", "unique_stixel_id"], as_index=True)
-                    .pipe(lambda x: x[x.obj.columns]) # Explicitly select all the columns in the original df to include. To overcome the include_groups=True deprecation warning
-                    .apply(find_belonged_points_and_fit, st_indexes_df=window_X_df_indexes_only, X_df=window_X_df, y_df=window_y_df, include_groups=False)  # although ["ensemble_index", "unique_stixel_id"] will be passed into `find_belonged_points` due to `.pipe(lambda x: x[x.obj.columns])`, the output will not have them so we still set `as_index=True` in `groupby`
-                ).values
-
-                res_list.append(list(res))
-            
-        return res_list
+                results = []
+                for start in starts:
+                    if shared is not None:
+                        times = shared.array(self.Temporal1)
+                        rows = np.flatnonzero((times >= start) & (times < start + self.temporal_bin_interval))
+                        coordinates = shared.frame(rows, columns)
+                        window = TrainingWindow(coordinates,
+                            lambda positions: shared.training_rows(rows[positions]), bootstrap_ids)
+                    else:
+                        window = native_window(x_source, y_source, con, start,
+                            start + self.temporal_bin_interval, columns,
+                            temporal_window_prequery, bootstrap_ids)
+                    coordinates = transform_pred_set_to_STEM_quad(
+                        self.Spatio1, self.Spatio2, window.coordinates, single_ensemble_df)
+                    x = coordinates[f"{self.Spatio1}_new"].to_numpy()
+                    y = coordinates[f"{self.Spatio2}_new"].to_numpy()
+                    time_grid = single_ensemble_df[single_ensemble_df[f"{self.Temporal1}_start"] == start]
+                    spatial_index = SpatialWindowIndex(x, y, len(time_grid))
+                    time_results = []
+                    for stixel_id, grid in time_grid.groupby("unique_stixel_id", sort=True):
+                        grid = grid.iloc[0]
+                        positions = spatial_index.select(grid)
+                        stixel = window.select_positions(positions)
+                        if len(stixel):
+                            stixel['ensemble_index'] = ensemble_id
+                            stixel['unique_stixel_id'] = stixel_id
+                            fitted = self.stixel_fitting(stixel.sort_index(), stixel_filter_func)
+                            time_results.append(fitted)
+                        del stixel
+                    results.append(time_results)
+                    # Drop the old cache before allocating the following window.
+                    del window, coordinates, x, y, spatial_index
+                return results
+        except Exception as error:
+            if hasattr(error, "add_note"):
+                error.add_note(f"AdaSTEM ensemble={ensemble_id}, window_start={start}, "
+                               f"stixel={stixel_id}, backend={'memmap' if shared else 'native'}, "
+                               f"temporal_window_prequery={temporal_window_prequery}")
+            raise
 
     def SAC_training(
         self, ensemble_df: pd.DataFrame, X_train: Union[pd.DataFrame, str], y_train: Union[pd.DataFrame, str], verbosity: int = 0, n_jobs: int = 1,
-        temporal_window_prequery: bool = False
+        temporal_window_prequery: bool = False, stixel_filter_func = None
     ):
         """This function is a training function with SAC strategy:
         Split (S), Apply(A), Combine (C). At ensemble level.
@@ -693,6 +653,7 @@ class AdaSTEM(BaseEstimator):
             y_train (pd.DataFrame, str): y_train
             verbosity (int, optional): Defaults to 0.
             temporal_window_prequery (bool): Whether to prequery the temporal windows as pd.DataFrame object to speed-up the stixel query. If set to True, query speed will be faster but with a moderate memory usage increase.
+            stixel_filter_func: filtering function applied on data.
         """
         assert isinstance(n_jobs, int)
 
@@ -700,14 +661,22 @@ class AdaSTEM(BaseEstimator):
 
         # Parallel wrapper
         if n_jobs == 1:
-            output_generator = (self.SAC_ensemble_training(single_ensemble_df=ensemble[1], X_train=X_train, y_train=y_train, temporal_window_prequery=temporal_window_prequery) for ensemble in groups)
+            output_generator = (self.SAC_ensemble_training(single_ensemble_df=ensemble[1], X_train=X_train, y_train=y_train, temporal_window_prequery=temporal_window_prequery, stixel_filter_func=stixel_filter_func) for ensemble in groups)
         else:
             def mp_train(ensemble, self=self):
-                res = self.SAC_ensemble_training(single_ensemble_df=ensemble[1], X_train=X_train, y_train=y_train, temporal_window_prequery=temporal_window_prequery)
+                res = self.SAC_ensemble_training(single_ensemble_df=ensemble[1], X_train=X_train, y_train=y_train, temporal_window_prequery=temporal_window_prequery, stixel_filter_func=stixel_filter_func)
                 return res
             
-            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.joblib_tmp_dir)
-            output_generator = parallel(joblib.delayed(mp_train)(i) for i in groups)
+            options = dict(n_jobs=n_jobs, return_as="generator_unordered",
+                           backend=self.joblib_backend, temp_folder=self.joblib_tmp_dir,
+                           pre_dispatch=n_jobs, batch_size=1)
+            threads = getattr(self, "_inner_max_num_threads", None)
+            context = (nullcontext() if threads is None else
+                       joblib.parallel_config(backend=options.pop("backend"),
+                                              inner_max_num_threads=threads))
+            with context:
+                parallel = joblib.Parallel(**options)
+                output_generator = parallel(joblib.delayed(mp_train)(i) for i in groups)
 
         # tqdm wrapper
         if verbosity > 0:
@@ -719,22 +688,30 @@ class AdaSTEM(BaseEstimator):
         model_dict = {}
         stixel_specific_x_names = {}
 
-        for ensemble_id, ensemble in enumerate(output_generator):
-            for time_block in ensemble:
-                for feature_tuple in time_block:
-                    if feature_tuple is None:
-                        continue
-                    name = feature_tuple[0]
-                    model = feature_tuple[1]
-                    x_names = feature_tuple[2]
-                    model_dict[f"{name}_model"] = model
-                    stixel_specific_x_names[name] = x_names
-
-        get_reusable_executor().shutdown(wait=True)
-        self.model_dict = model_dict
-        self.stixel_specific_x_names = stixel_specific_x_names # Do it at the end to avoid dictionary changes during the pickling
+        try:
+            for ensemble_id, ensemble in enumerate(output_generator):
+                for time_block in ensemble:
+                    for feature_tuple in time_block:
+                        if feature_tuple is None:
+                            continue
+                        name = feature_tuple[0]
+                        model = feature_tuple[1]
+                        x_names = feature_tuple[2]
+                        model_dict[f"{name}_model"] = model
+                        stixel_specific_x_names[name] = x_names
+        finally:
+            get_reusable_executor().shutdown(wait=True)
+        names = [name for _, group in ensemble_df.groupby("ensemble_index")
+                 for _, window in group.groupby(f"{self.Temporal1}_start")
+                 for name in sorted(window.unique_stixel_id.unique())]
+        self.model_dict = {f"{name}_model": model_dict[f"{name}_model"]
+                           for name in names if f"{name}_model" in model_dict}
+        self.stixel_specific_x_names = {name: stixel_specific_x_names[name]
+                                       for name in names if name in stixel_specific_x_names}
         return self
 
+    @monitor_step("fit")
+    @profile_execution
     def fit(
         self,
         X_train: Union[pd.DataFrame, str],
@@ -743,24 +720,59 @@ class AdaSTEM(BaseEstimator):
         ax=None,
         n_jobs: Union[None, int] = None,
         overwrite = False,
-        temporal_window_prequery: bool = False
+        temporal_window_prequery: bool = False,
+        ensemble_df: Union[None, pd.DataFrame] = None,
+        stixel_filter_func = None,
+        training_data_backend: str = "native",
+        inner_max_num_threads: Optional[int] = None,
+        max_concurrent_ensembles: Optional[int] = None,
+        persist_prediction_state: bool = True
     ):
         """Fitting method
 
         Args:
             X_train: Training variables. Can be either a pd.DataFrame object or a string that indicate the path to the database (.duckdb or .parquet).
             y_train: Training target. Can be either a pd.DataFrame object, a pd.Series object, a np.ndarray, or a string that indicate the path to the database (.duckdb or .parquet). It has to have indexes that match with the X_train.
-            ax: matplotlib Axes to add to
-            verbosty: whether to show progress bar. 0 for no and 1 for yes.
+            verbosity: Whether to show progress bars. 0 disables them and 1 enables them.
             ax: matplotlib ax for adding grid plot on that.
-            n_jobs: multiprocessing thread count. Default the n_jobs of model object.
+            n_jobs: Ensemble worker count. None uses the model's n_jobs setting.
             overwrite: overwrite files in lazy_loading_dir. If set to False and any file exists in lazy_loading_dir, an error will be raise.
             temporal_window_prequery: Whether to prequery the temporal windows as pd.DataFrame object to speed-up the stixel query. If set to True, query speed will be faster but with a moderate memory usage increase.
-
+            ensemble_df: Instead of runing model.split within the `fit` function, you can pass in a customized ensemble_df to skip the whole splitting process.
+            stixel_filter_func: Filtering function applied before fitting each stixel.
+                For example, lambda x: x[x['temp'] * x['prec'] > 25] retains rows
+                whose predictor product exceeds 25. The function must return a DataFrame.
+            training_data_backend: 'native' retains Pandas/DuckDB window queries. Opt-in
+                'memmap' streams numeric inputs once to temporary read-only memory-mapped
+                arrays. 'shared' remains accepted as an alias for 'memmap'.
+                Estimators still receive ordinary Pandas DataFrames. Currently planar models only.
+            inner_max_num_threads: Optional native-library thread limit in loky workers.
+                Also set the base estimator's own n_jobs when it exposes that parameter.
+            max_concurrent_ensembles: Optional cap on concurrent partitioning/training tasks,
+                independently of the total ensemble_fold. This is not a hard RAM limit.
+            persist_prediction_state: Preserve legacy lazy-model writes after prediction.
+                Set False for read-only prediction estimators to release models without rewriting.
+            
         Raises:
             TypeError: X_train is not a type of pd.DataFrame
             TypeError: y_train is not a type of np.ndarray or pd.DataFrame
         """
+        if training_data_backend == "shared":
+            training_data_backend = "memmap"
+        if training_data_backend not in {"native", "memmap"}:
+            raise ValueError("training_data_backend must be 'native' or 'memmap'.")
+        if training_data_backend == "memmap" and type(self).SAC_ensemble_training is not AdaSTEM.SAC_ensemble_training:
+            raise NotImplementedError("Shared training is currently supported by planar AdaSTEM and STEM.")
+        for name, value in [("inner_max_num_threads", inner_max_num_threads),
+                            ("max_concurrent_ensembles", max_concurrent_ensembles)]:
+            if value is not None and (not isinstance(value, int) or isinstance(value, bool) or value < 1):
+                raise ValueError(f"{name} must be a positive integer or None.")
+        if inner_max_num_threads is not None and self.joblib_backend != "loky":
+            raise ValueError("inner_max_num_threads requires the loky backend.")
+        if not isinstance(persist_prediction_state, bool):
+            raise ValueError("persist_prediction_state must be a bool.")
+        self.persist_prediction_state_ = persist_prediction_state
+        fit_start = time.perf_counter()
         # Setup lazy_loading_dir and joblib_tmp_dir
         if overwrite and self.lazy_loading_dir and os.path.isdir(self.lazy_loading_dir):
             for file in os.listdir(self.lazy_loading_dir):
@@ -774,17 +786,29 @@ class AdaSTEM(BaseEstimator):
             self.duckdb_config = duckdb_config(self.max_mem, self.joblib_tmp_dir)
             
             # Input check
-            self.rng = check_random_state(self.random_state)
-            verbosity = check_verbosity(self, verbosity)
-            self.data_format = check_X_y_format_match(X_train, y_train)
-            check_X_train(X_train, self)
-            check_y_train(y_train, self)
-            X_train, y_train = check_X_y_indexes_match(X_train, y_train, self)
-            n_jobs = check_transform_n_jobs(self, n_jobs)
-            self.store_x_names(X_train)
+            with execution_step("input_validation"):
+                self.rng = check_random_state(self.random_state)
+                verbosity = check_verbosity(self, verbosity)
+                self.data_format = check_X_y_format_match(X_train, y_train)
+                check_X_train(X_train, self)
+                check_y_train(y_train, self)
+                X_train, y_train = check_X_y_indexes_match(X_train, y_train, self)
+                n_jobs = check_transform_n_jobs(self, n_jobs)
+                if max_concurrent_ensembles is not None:
+                    n_jobs = min(n_jobs, max_concurrent_ensembles)
+                self.store_x_names(X_train)
             
-            # Quadtree            
-            self.split(X_train, verbosity=verbosity, ax=ax, n_jobs=n_jobs)
+            if stixel_filter_func is not None:
+                assert callable(stixel_filter_func)
+            
+            partition_start = time.perf_counter()
+            if ensemble_df is None:
+                # Quadtree            
+                self.split(X_train, verbosity=verbosity, ax=ax, n_jobs=n_jobs)
+            else:
+                assert isinstance(ensemble_df, pd.DataFrame)
+                self.ensemble_df = ensemble_df
+            partition_seconds = time.perf_counter() - partition_start
             
             # Deside whether to terminate the training process if avaliable ensmebles does not match with the targeted ensemble_fold
             if len(self.ensemble_df["ensemble_index"].unique()) < self.ensemble_fold:
@@ -795,17 +819,51 @@ class AdaSTEM(BaseEstimator):
                 if hasattr(self, rm_target):
                     delattr(self, rm_target)
 
+            workers = min(joblib.effective_n_jobs(n_jobs), self.ensemble_fold)
+            if max_concurrent_ensembles is not None:
+                workers = min(workers, max_concurrent_ensembles)
+            self._inner_max_num_threads = inner_max_num_threads
+            self.execution_info_ = dict(training_data_backend=training_data_backend,
+                                        workers=workers, shared_input_bytes=0,
+                                        persist_prediction_state=persist_prediction_state,
+                                        partition_seconds=partition_seconds)
+            preparation_start = time.perf_counter()
+            with execution_step("training_data_preparation"):
+                if training_data_backend == "memmap":
+                    self._shared_training_data = SharedTrainingData.build(X_train, y_train,
+                        self.duckdb_config, os.path.join(self.joblib_tmp_dir, 'shared_training'),
+                        coordinate_columns=(self.Temporal1, self.Spatio1, self.Spatio2))
+                    self.execution_info_["shared_input_bytes"] = self._shared_training_data.nbytes
+                    # Only metadata and filenames need to be serialized to workers.
+                    training_X, training_y = None, None
+                else:
+                    training_X, training_y = X_train, y_train
+            self.execution_info_["shared_preparation_seconds"] = time.perf_counter() - preparation_start
             # Training
-            self.SAC_training(self.ensemble_df, X_train, y_train, verbosity, n_jobs, temporal_window_prequery)
-            self.classes_ = np.unique(y_train)
+            training_start = time.perf_counter()
+            with execution_step("training"):
+                self.SAC_training(self.ensemble_df, training_X, training_y, verbosity, workers, temporal_window_prequery, stixel_filter_func)
+            self.execution_info_["training_seconds"] = time.perf_counter() - training_start
+            if isinstance(y_train, str):
+                with open_db_connection(y_train, self.duckdb_config) as (source, con):
+                    con.register("class_source", source)
+                    target = [c for c in source.columns if c != '__index_level_0__'][0]
+                    self.classes_ = np.sort(con.sql(f"SELECT DISTINCT {quote_identifier(target)} FROM class_source").df().iloc[:, 0].to_numpy())
+            else:
+                self.classes_ = np.unique(y_train)
+            
         except: # Remove the entire lazy_loading_dir since it includes failed models in this case
             if os.path.exists(self.lazy_loading_dir):
                 shutil.rmtree(self.lazy_loading_dir)
             raise
-        finally: # Remove the joblib_tmp_dir anyway
-            if os.path.exists(self.joblib_tmp_dir):
-                shutil.rmtree(self.joblib_tmp_dir)
+        finally: # Remove temporary shared inputs after all workers finish.
+            with execution_step("fit_cleanup"):
+                self.__dict__.pop("_shared_training_data", None)
+                self.__dict__.pop("_inner_max_num_threads", None)
+                if os.path.exists(self.joblib_tmp_dir):
+                    shutil.rmtree(self.joblib_tmp_dir)
 
+        self.execution_info_["fit_seconds"] = time.perf_counter() - fit_start
         return self
 
     def stixel_predict(self, stixel: pd.DataFrame) -> Union[None, pd.DataFrame]:
@@ -847,130 +905,71 @@ class AdaSTEM(BaseEstimator):
         else:
             return pred
 
+    @profile_execution
     def SAC_ensemble_predict(
         self, single_ensemble_df: pd.DataFrame, data: Union[pd.DataFrame, str], temporal_window_prequery: bool = False
-        ) -> pd.DataFrame:
-        """A sub-module of SAC prediction function.
-        Predict only one ensemble.
+    ) -> pd.DataFrame:
+        """Predict one ensemble with one coordinate/covariate query per window.
 
-        Args:
-            single_ensemble_df (pd.DataFrame): ensemble data (model.ensemble_df)
-            data (pd.DataFrame, str): input covariates to predict
-            temporal_window_prequery (bool): Whether to prequery the temporal windows as pd.DataFrame object to speed-up the stixel query. If set to True, query speed will be faster but with a moderate memory usage increase.
-        Returns:
-            pd.DataFrame: Prediction result of one ensemble.
+        Temporal-window prequerying is retained. Each base estimator receives
+        the same Pandas rows, with the original half-open stixel boundaries.
         """
-        # Calculate the start indices for the sliding window
-        start_indices = sorted(single_ensemble_df[f"{self.Temporal1}_start"].unique())
+        config = self.duckdb_config.copy()
+        config['temp_directory'] = os.path.join(config['temp_directory'], generate_random_saving_code())
+        pieces = []
+        columns = [self.Temporal1, self.Spatio1, self.Spatio2]
+        ensemble_id = single_ensemble_df['ensemble_index'].iloc[0]
+        start, stixel_id = None, None
+        try:
+            with open_db_connection(data, config) as (source, con):
+                for start in sorted(single_ensemble_df[f"{self.Temporal1}_start"].unique()):
+                    window = prediction_window(source, con, start,
+                        start + self.temporal_bin_interval, columns, temporal_window_prequery)
+                    coordinates = transform_pred_set_to_STEM_quad(
+                        self.Spatio1, self.Spatio2, window.coordinates, single_ensemble_df)
+                    x = coordinates[f"{self.Spatio1}_new"].to_numpy()
+                    y = coordinates[f"{self.Spatio2}_new"].to_numpy()
+                    time_grid = single_ensemble_df[single_ensemble_df[f"{self.Temporal1}_start"] == start]
+                    spatial_index = SpatialWindowIndex(x, y, len(time_grid))
+                    for stixel_id, grid in time_grid.groupby("unique_stixel_id", sort=True):
+                        grid = grid.iloc[0]
+                        positions = spatial_index.select(grid)
+                        if not len(positions):
+                            continue
+                        stixel = window.select_positions(positions)
+                        stixel['ensemble_index'] = ensemble_id
+                        stixel['unique_stixel_id'] = stixel_id
+                        prediction = self.stixel_predict(stixel)
+                        if prediction is not None:
+                            pieces.append(prediction)
+                        del stixel
+                    del window, coordinates, x, y, spatial_index
+        except Exception as error:
+            if hasattr(error, "add_note"):
+                error.add_note(f"AdaSTEM prediction ensemble={ensemble_id}, window_start={start}, "
+                               f"stixel={stixel_id}, temporal_window_prequery={temporal_window_prequery}")
+            raise
+        if pieces:
+            return pd.concat(pieces, axis=0).groupby(level=0, sort=False).mean()
+        warnings.warn(f"No prediction for this ensemble: {ensemble_id}")
+        return pd.DataFrame({'pred': pd.Series(dtype="float64")})
 
-        # Initiate duckdb connection
-        duckdb_config = self.duckdb_config.copy()
-        duckdb_config['temp_directory'] = os.path.join(duckdb_config['temp_directory'], generate_random_saving_code())
+    def _prediction_worker(self, single_ensemble_df):
+        """Serialize only this ensemble's fitted models for built-in planar prediction."""
+        if (type(self).SAC_ensemble_predict is not AdaSTEM.SAC_ensemble_predict or
+                type(self).stixel_predict is not AdaSTEM.stixel_predict):
+            return self
+        worker = copy.copy(self)
+        names = set(single_ensemble_df.unique_stixel_id)
+        worker.model_dict = {f"{name}_model": self.model_dict[f"{name}_model"]
+                             for name in names if f"{name}_model" in self.model_dict}
+        worker.stixel_specific_x_names = {name: self.stixel_specific_x_names[name]
+                                         for name in names if name in self.stixel_specific_x_names}
+        worker.ensemble_df = single_ensemble_df
+        worker.__dict__.pop("_finalizer", None)
+        return worker
 
-        with open_db_connection(data, duckdb_config) as (data_df, con):
-            con.register("data_df", data_df)
-
-            # prediction, window by window
-            window_prediction_list = []
-            for start in start_indices:
-                if isinstance(data_df, pd.DataFrame):
-                    temporal_window_indexes = np.array(data_df.index[
-                        (data_df[self.Temporal1] >= start) & 
-                        (data_df[self.Temporal1] < start + self.temporal_bin_interval)
-                        ])
-                    window_X_df_indexes_only = data_df.loc[temporal_window_indexes][[self.Temporal1, self.Spatio1, self.Spatio2]]
-                    window_X_df = data_df.loc[temporal_window_indexes] if temporal_window_prequery else data_df
-                else:
-                    temporal_window_indexes = con.sql(f"SELECT __index_level_0__ FROM data_df WHERE {self.Temporal1} >= {start} AND {self.Temporal1} < {start + self.temporal_bin_interval};").df().values.flatten()
-                    temporal_window_indexes_df = pd.DataFrame(temporal_window_indexes, columns=['__index_level_0__'])
-                    con.register("temporal_window_indexes_df", temporal_window_indexes_df)
-                    window_X_df = con.sql(f"""
-                                            SELECT temporal_window_indexes_df.__index_level_0__, data_df.* EXCLUDE(__index_level_0__)
-                                            FROM data_df
-                                            JOIN temporal_window_indexes_df
-                                            ON data_df.__index_level_0__ = temporal_window_indexes_df.__index_level_0__;
-                                            """).df().set_index('__index_level_0__') if temporal_window_prequery else data_df
-                    window_X_df_indexes_only = con.sql(f"""
-                                                       SELECT data_df.{self.Temporal1}, data_df.{self.Spatio1}, data_df.{self.Spatio2}, data_df.__index_level_0__ 
-                                                       FROM data_df
-                                                       JOIN temporal_window_indexes_df
-                                                       ON data_df.__index_level_0__ = temporal_window_indexes_df.__index_level_0__;
-                                                       """).df().set_index('__index_level_0__')
-
-                    
-                window_X_df_indexes_only = transform_pred_set_to_STEM_quad(self.Spatio1, self.Spatio2, window_X_df_indexes_only, single_ensemble_df)
-                window_single_ensemble_df = single_ensemble_df[single_ensemble_df[f"{self.Temporal1}_start"] == start]
-
-                def find_belonged_points(df, st_indexes_df, X_df):
-                    this_stixel_point_indexes = st_indexes_df.index[
-                        (st_indexes_df[f"{self.Spatio1}_new"] >= df["stixel_calibration_point_transformed_left_bound"].iloc[0])
-                        & (st_indexes_df[f"{self.Spatio1}_new"] < df["stixel_calibration_point_transformed_right_bound"].iloc[0])
-                        & (st_indexes_df[f"{self.Spatio2}_new"] >= df["stixel_calibration_point_transformed_lower_bound"].iloc[0])
-                        & (st_indexes_df[f"{self.Spatio2}_new"] < df["stixel_calibration_point_transformed_upper_bound"].iloc[0])
-                    ]
-                    
-                    if isinstance(X_df, pd.DataFrame):
-                        X = X_df.loc[this_stixel_point_indexes]
-                    elif isinstance(X_df, duckdb.DuckDBPyRelation):      
-                        this_stixel_point_indexes_df = pd.DataFrame(this_stixel_point_indexes, columns=['__index_level_0__'])
-                        con.register("this_stixel_point_indexes_df", this_stixel_point_indexes_df)
-                        con.register('X_df', X_df)
-                        X = con.sql(f"""
-                                    SELECT X_df.* FROM X_df 
-                                    JOIN this_stixel_point_indexes_df
-                                    ON X_df.__index_level_0__ = this_stixel_point_indexes_df.__index_level_0__
-                                    """).df().set_index('__index_level_0__')
-                        con.unregister("this_stixel_point_indexes_df")
-                        con.unregister("X_df")
-                    else:
-                        raise
-                    
-                    return X
-
-                def find_belonged_points_and_predict(df, st_indexes_df, X_df):
-                    X = find_belonged_points(df, st_indexes_df, X_df)
-                    if len(X)==0:
-                        return None
-                    X['ensemble_index'] = df['ensemble_index'].iloc[0]
-                    X['unique_stixel_id'] = df['unique_stixel_id'].iloc[0]
-                    # X = X.sort_index() # To ensure the input dataframes for the two method (temporal_window_prequery or not) are the same so the tained base models are identical, at least with the same input data
-                    pred = self.stixel_predict(X)
-                    return pred
-                
-                res = (
-                    window_single_ensemble_df[
-                        [
-                            "ensemble_index",
-                            "unique_stixel_id",
-                            "stixel_calibration_point_transformed_left_bound",
-                            "stixel_calibration_point_transformed_right_bound",
-                            "stixel_calibration_point_transformed_lower_bound",
-                            "stixel_calibration_point_transformed_upper_bound",
-                        ]
-                    ]
-                    .groupby(["ensemble_index", "unique_stixel_id"], as_index=False, group_keys=False)
-                    .pipe(lambda x: x[x.obj.columns]) # Explicitly select all the columns in the original df to include. To overcome the include_groups=True deprecation warning
-                    .apply(find_belonged_points_and_predict, st_indexes_df=window_X_df_indexes_only, X_df=window_X_df, include_groups=False) # although ["ensemble_index", "unique_stixel_id"] will be passed into `find_belonged_points` due to `.pipe(lambda x: x[x.obj.columns])`, the output will not have them so we still set `as_index=True` in `groupby`
-                )
-
-                # if len(res)>0:
-                #     res = res.droplevel(0) # If using as_index=False duing groupby, pandas will automatically generate a group indexing column, so drop the indexing of the new groups
-                if len(res)==0:
-                    continue
-                
-                window_prediction_list.append(res)
-
-        if any([i is not None for i in window_prediction_list]):
-            ensemble_prediction = pd.concat(window_prediction_list, axis=0)
-            ensemble_prediction = ensemble_prediction.groupby(level=0, sort=False).mean()
-        else:
-            ensmeble_index = list(window_single_ensemble_df["ensemble_index"])[0]
-            warnings.warn(f"No prediction for this ensemble: {ensmeble_index}")
-            ensemble_prediction = pd.DataFrame({'pred': pd.Series(dtype="float64")}) # empty dataframe
-
-        return ensemble_prediction
-
-    def SAC_predict(
+    def _iter_ensemble_predictions(
         self, ensemble_df: pd.DataFrame, data: Union[pd.DataFrame, str], verbosity: int = 0, n_jobs: int = 1, temporal_window_prequery: bool = False
         
     ) -> pd.DataFrame:
@@ -994,14 +993,16 @@ class AdaSTEM(BaseEstimator):
 
         # Parallel maker
         if n_jobs == 1:
-            output_generator = (self.SAC_ensemble_predict(single_ensemble_df=ensemble[1], data=data, temporal_window_prequery=temporal_window_prequery) for ensemble in groups)
+            output_generator = ((position, self.SAC_ensemble_predict(single_ensemble_df=ensemble[1], data=data, temporal_window_prequery=temporal_window_prequery)) for position, ensemble in enumerate(groups))
         else:
-            def mp_predict(ensemble, self=self):
-                res = self.SAC_ensemble_predict(single_ensemble_df=ensemble[1], data=data, temporal_window_prequery=temporal_window_prequery)
-                return res
+            def mp_predict(position, ensemble, worker):
+                res = worker.SAC_ensemble_predict(single_ensemble_df=ensemble, data=data, temporal_window_prequery=temporal_window_prequery)
+                return position, res
 
-            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator", backend=self.joblib_backend, temp_folder=self.joblib_tmp_dir)
-            output_generator = parallel(joblib.delayed(mp_predict)(i) for i in groups)
+            parallel = joblib.Parallel(n_jobs=n_jobs, return_as="generator_unordered",
+                backend=self.joblib_backend, temp_folder=self.joblib_tmp_dir, pre_dispatch=n_jobs, batch_size=1)
+            output_generator = parallel(joblib.delayed(mp_predict)(position, ensemble[1],
+                self._prediction_worker(ensemble[1])) for position, ensemble in enumerate(groups))
 
         # tqdm wrapper
         if verbosity > 0:
@@ -1009,11 +1010,17 @@ class AdaSTEM(BaseEstimator):
                 output_generator, total=len(ensemble_df["ensemble_index"].unique()), desc="Predicting: "
             )
 
-        # Prediction
-        pred = [i for i in output_generator]
-        get_reusable_executor().shutdown(wait=True)
-        
-        pred = pd.concat(pred, axis=1)
+        try:
+            yield from output_generator
+        finally:
+            get_reusable_executor().shutdown(wait=True)
+
+    def SAC_predict(self, ensemble_df, data, verbosity=0, n_jobs=1,
+                    temporal_window_prequery=False):
+        """Return all ensemble columns for callers that require the full matrix."""
+        pred = dict(self._iter_ensemble_predictions(ensemble_df, data, verbosity, n_jobs,
+                                                    temporal_window_prequery))
+        pred = pd.concat([pred[position] for position in sorted(pred)], axis=1)
         
         if len(pred) == 0:
             raise ValueError(
@@ -1023,6 +1030,40 @@ class AdaSTEM(BaseEstimator):
         pred.columns = list(range(self.ensemble_fold))
         return pred
 
+    def _stream_prediction(self, X_test, verbosity, n_jobs, prequery, return_std, logit):
+        with execution_step("prediction_input_index"):
+            if isinstance(X_test, pd.DataFrame):
+                index = X_test.index
+            else:
+                with open_db_connection(X_test, self.duckdb_config) as (source, con):
+                    con.register("prediction_index_source", source)
+                    index = con.sql("SELECT __index_level_0__ FROM prediction_index_source").fetchnumpy()["__index_level_0__"]
+            reducer = PredictionMoments(index, with_std=return_std, logit=logit)
+        try:
+            with execution_step("prediction_and_aggregation"):
+                for _, prediction in self._iter_ensemble_predictions(
+                        self.ensemble_df, X_test, verbosity, n_jobs, prequery):
+                    reducer.update(prediction)
+                    del prediction
+        finally:
+            with execution_step("prediction_cleanup"):
+                if os.path.exists(self.joblib_tmp_dir):
+                    shutil.rmtree(self.joblib_tmp_dir)
+        if not reducer.seen:
+            raise ValueError("All samples are not predictable based on current settings!")
+        with execution_step("prediction_finalize"):
+            mean, std = reducer.finish(self.min_ensemble_required)
+            self.prediction_execution_info_ = dict(aggregation_backend="streaming",
+                accumulator_bytes=reducer.count.nbytes + reducer.mean.nbytes +
+                    (reducer.m2.nbytes if reducer.m2 is not None else 0),
+                rows=len(index), ensembles=self.ensemble_fold)
+            missing = np.count_nonzero(np.isnan(mean))
+            warnings.warn(f"There are {100 * missing / len(mean):.3g}% points ({missing} points) falling out of predictable range.")
+            result = np.column_stack([1 - mean, mean]) if self.task == "classification" else mean
+        return (result, std) if return_std else result
+
+    @monitor_step("prediction")
+    @profile_execution
     def predict_proba(
         self,
         X_test: Union[pd.DataFrame, str],
@@ -1034,6 +1075,9 @@ class AdaSTEM(BaseEstimator):
         logit_agg: bool = False,
         base_model_method: Union[None, str] = None,
         temporal_window_prequery: bool = False,
+        streaming: bool = True,
+        prediction_backend: str = "native",
+        prediction_output_path: Union[str, None] = None,
         **base_model_prediction_param
     ) -> Union[np.ndarray, Tuple[np.ndarray]]:
         """Predict probability
@@ -1042,25 +1086,41 @@ class AdaSTEM(BaseEstimator):
             X_test (pd.DataFrame):
                 Testing variables. Can be either a pd.DataFrame object or a string that indicate the path to the database (.duckdb or .parquet).
             verbosity (int, optional):
-                show progress bar or not. Yes for 0, and No for other. Defaults to None, which set it as the verbosity of the main model class.
+                0 disables progress bars and 1 enables them. None uses the model setting.
             return_std (bool, optional):
                 Whether return the standard deviation among ensembles. Defaults to False.
             n_jobs (Union[int, None], optional):
-                Number of processes used in this task. If None, use the self.n_jobs. Default to 1.
-                I do not recommend setting value larger than 1.
-                In practice, multi-processing seems to slow down the process instead of speeding up.
-                Could be more practical with large amount of data.
-                Still in experiment.
+                Ensemble workers for this prediction call. None uses self.n_jobs.
+                Choose independently of training concurrency; the memory/time
+                trade-off depends on the dataset, estimator and execution backend.
             aggregation (str, optional):
                 'mean' or 'median' for aggregation method across ensembles.
             return_by_separate_ensembles (bool, optional):
                 Experimental function. return not by aggregation, but by separate ensembles.
             logit_agg:
-                Whether to use logit aggregation for the classification task. Most likely only used when you are predicting "real" calibrated probability. If True, the model is averaging the probability prediction estimated by all ensembles in logit scale, and then back-tranforms it to probability scale. It's recommended to be jointly used with the CalibratedClassifierCV class in sklearn as a wrapper of the classifier to estimate the calibrated probability. Default is False, but can be set to true for "real" probability averaging.
+                For classification, False averages probabilities arithmetically.
+                True averages clipped logits and transforms the result back to
+                probability; the returned std then remains on the logit scale.
+                Neither aggregation choice guarantees calibration.
             base_model_method:
                 The name of the prediction method for base models. If None, `predict` or `predict_proba` will be used depending on the tasks. This argument is handy if you have a custom base model class that has a special prediction function. Notice that dummy model will still predict 0, so the ensemble-aggregated result is still an average of zeros and your special prediction function output. Therefore, it may only make sense if your special prediction function predicts 0 as the absense/control value. Defaults to None.
             temporal_window_prequery:
                 Whether to prequery the temporal windows as pd.DataFrame object to speed-up the stixel query. If set to True, query speed will be faster but with a moderate memory usage increase.
+            streaming:
+                Reduce mean predictions as ensembles finish, without a full sample-by-ensemble
+                matrix. Standard deviations use ddof=1 (logit scale when requested).
+                Median, separate-ensemble returns and custom SAC_predict overrides retain
+                their original matrix route. Set False for comparison with that route.
+            prediction_backend:
+                'native' preserves the original execution path. 'memmap' shares numeric
+                inputs through temporary read-only maps and uses a fixed number of result
+                buffers and pending ensemble tasks. Supports built-in planar prediction
+                with loky or threading; estimators receive their full stixel DataFrame.
+                'shared' and 'bounded' remain accepted as aliases for 'memmap'.
+            prediction_output_path:
+                Optional new .npy file for separate-ensemble output with the memmap
+                backend. Returns a writable NumPy memmap; the caller owns this file.
+                Existing files are never overwritten. Defaults to an in-memory array.
             base_model_prediction_param:
                 Any other paramters to pass into the prediction method of the base models. e.g., base_model_prediction_param={'n_jobs':1} (set n_jobs=1 for the *base model*). 
         Raises:
@@ -1076,102 +1136,135 @@ class AdaSTEM(BaseEstimator):
                 Return numpy.ndarray of shape (n_samples, n_ensembles)
 
         """
-        # Setup joblib_tmp_dir
-        self.joblib_tmp_dir = initiate_joblib_tmp_dir(self.lazy_loading_dir)
-        self.duckdb_config = duckdb_config(self.max_mem, self.joblib_tmp_dir)
-        
-        #
-        check_X_test(X_test, self)
-        check_prediction_aggregation(aggregation)
-        return_by_separate_ensembles, return_std = check_prediction_return(return_by_separate_ensembles, return_std)
-        verbosity = check_verbosity(self, verbosity)
-        n_jobs = check_transform_n_jobs(self, n_jobs)
-        self.base_model_method = base_model_method
-        self.base_model_prediction_param = base_model_prediction_param
+        with execution_step("prediction_setup"):
+            # Setup joblib_tmp_dir
+            self.joblib_tmp_dir = initiate_joblib_tmp_dir(self.lazy_loading_dir)
+            self.duckdb_config = duckdb_config(self.max_mem, self.joblib_tmp_dir)
+            try:
+                check_X_test(X_test, self)
+                check_prediction_aggregation(aggregation)
+                return_by_separate_ensembles, return_std = check_prediction_return(return_by_separate_ensembles, return_std)
+                verbosity = check_verbosity(self, verbosity)
+                n_jobs = check_transform_n_jobs(self, n_jobs)
+                self.base_model_method = base_model_method
+                self.base_model_prediction_param = base_model_prediction_param
+                if prediction_backend in {"shared", "bounded"}:
+                    prediction_backend = "memmap"
+                if prediction_backend not in {"native", "memmap"}:
+                    raise ValueError("prediction_backend must be 'native' or 'memmap'.")
+                if prediction_output_path is not None and prediction_backend != "memmap":
+                    raise ValueError("prediction_output_path requires prediction_backend='memmap'.")
+                if prediction_backend == "memmap" and (
+                        type(self).SAC_ensemble_predict is not AdaSTEM.SAC_ensemble_predict or
+                        type(self).stixel_predict is not AdaSTEM.stixel_predict or
+                        type(self).SAC_predict is not AdaSTEM.SAC_predict):
+                    raise NotImplementedError("Memmap prediction requires built-in planar prediction methods; "
+                                              "use prediction_backend='native' for custom or spherical methods.")
+            except BaseException:
+                shutil.rmtree(self.joblib_tmp_dir, ignore_errors=True)
+                raise
+        if prediction_backend == "memmap":
+            from ..lazyloading.shared_prediction import shared_predict
+            try:
+                return shared_predict(self, X_test, verbosity, n_jobs, aggregation,
+                    return_by_separate_ensembles, return_std,
+                    self.task == "classification" and logit_agg, streaming, prediction_output_path)
+            finally:
+                if os.path.exists(self.joblib_tmp_dir):
+                    shutil.rmtree(self.joblib_tmp_dir)
+
+        if (streaming and aggregation == "mean" and not return_by_separate_ensembles
+                and type(self).SAC_predict is AdaSTEM.SAC_predict):
+            return self._stream_prediction(X_test, verbosity, n_jobs, temporal_window_prequery,
+                return_std, self.task == "classification" and logit_agg)
+        self.prediction_execution_info_ = dict(aggregation_backend="matrix")
         
         try:
             # predict
-            res = self.SAC_predict(self.ensemble_df, X_test, verbosity=verbosity, n_jobs=n_jobs, temporal_window_prequery=temporal_window_prequery)
+            with execution_step("ensemble_prediction"):
+                res = self.SAC_predict(self.ensemble_df, X_test, verbosity=verbosity, n_jobs=n_jobs, temporal_window_prequery=temporal_window_prequery)
         except: # Remove the entire lazy_loading_dir since it includes failed models
             raise
         finally: # Remove the joblib_tmp_dir anyway
-            if os.path.exists(self.joblib_tmp_dir):
-                shutil.rmtree(self.joblib_tmp_dir)
+            with execution_step("prediction_cleanup"):
+                if os.path.exists(self.joblib_tmp_dir):
+                    shutil.rmtree(self.joblib_tmp_dir)
                 
-        # Get X_test indexes
-        if isinstance(X_test, pd.DataFrame):
-            X_test_indexes = np.array(X_test.index)
-        elif isinstance(X_test, str):
-            with open_db_connection(X_test, self.duckdb_config) as (X_test_df, con):
-                con.register("X_test_df", X_test_df)
-                X_test_indexes = con.sql("SELECT __index_level_0__ FROM X_test_df;").df().values.flatten()
-        else: 
-            raise
-        
-        # Experimental Function
-        if return_by_separate_ensembles:
+        with execution_step("prediction_aggregation"):
+            # Get X_test indexes
+            if isinstance(X_test, pd.DataFrame):
+                X_test_indexes = np.array(X_test.index)
+            elif isinstance(X_test, str):
+                with open_db_connection(X_test, self.duckdb_config) as (X_test_df, con):
+                    con.register("X_test_df", X_test_df)
+                    X_test_indexes = con.sql("SELECT __index_level_0__ FROM X_test_df;").df().values.flatten()
+            else:
+                raise
+
+            # Experimental Function
+            if return_by_separate_ensembles:
+                indexer = pd.DataFrame({"index": list(X_test_indexes)}).set_index("index")
+                res = pd.concat([indexer, res], axis=1)
+                return res.values
+
+            # Transform to logit space if classification:
+            if self.task=='classification' and logit_agg:
+                for col_index in range(res.shape[1]):
+                    prob = np.clip(res.iloc[:,col_index], 1e-16, 1 - 1e-16)
+                    res.iloc[:,col_index] = np.log(prob / (1-prob)) # logit space
+
+                # Aggregate
+                if aggregation == "mean":
+                    res_mean = res.mean(axis=1, skipna=True)  # mean of all grid model that predicts this stixel
+                elif aggregation == "median":
+                    res_mean = res.median(axis=1, skipna=True)
+
+                # Transform back to 0-1:
+                res_mean = 1/(1+np.exp(-res_mean)) # notice that the res_std is not transformed!
+                res_mean = res_mean.mask(res_mean <= 1e-16, 0)
+
+            else:
+                # don't need to aggregate at logit scale
+                # Aggregate
+                if aggregation == "mean":
+                    res_mean = res.mean(axis=1, skipna=True)  # mean of all grid model that predicts this stixel
+                elif aggregation == "median":
+                    res_mean = res.median(axis=1, skipna=True)
+
+            res_std = res.std(axis=1, skipna=True)
+
+            # Nan count
+            res_nan_count = res.isnull().sum(axis=1)
+            pred_mean = np.where(
+                self.ensemble_fold - res_nan_count.values >= self.min_ensemble_required, res_mean.values, np.nan
+            )
+            pred_std = np.where(
+                self.ensemble_fold - res_nan_count.values >= self.min_ensemble_required, res_std.values, np.nan
+            )
+
+            res = pd.DataFrame({"index": list(res_mean.index), "pred_mean": pred_mean, "pred_std": pred_std}).set_index(
+                "index"
+            )
+
+            # Preparing output (formatting)
             indexer = pd.DataFrame({"index": list(X_test_indexes)}).set_index("index")
             res = pd.concat([indexer, res], axis=1)
-            return res.values
 
-        # Transform to logit space if classification:
-        if self.task=='classification' and logit_agg:
-            for col_index in range(res.shape[1]):
-                prob = np.clip(res.iloc[:,col_index], 1e-16, 1 - 1e-16)
-                res.iloc[:,col_index] = np.log(prob / (1-prob)) # logit space
-                
-            # Aggregate
-            if aggregation == "mean":
-                res_mean = res.mean(axis=1, skipna=True)  # mean of all grid model that predicts this stixel
-            elif aggregation == "median":
-                res_mean = res.median(axis=1, skipna=True)
-                
-            # Transform back to 0-1:
-            res_mean = 1/(1+np.exp(-res_mean)) # notice that the res_std is not transformed!
-            res_mean = res_mean.where(res_mean<=1e-16, 0)
-            
-        else:
-            # don't need to aggregate at logit scale
-            # Aggregate
-            if aggregation == "mean":
-                res_mean = res.mean(axis=1, skipna=True)  # mean of all grid model that predicts this stixel
-            elif aggregation == "median":
-                res_mean = res.median(axis=1, skipna=True)
-        
-        res_std = res.std(axis=1, skipna=True)
-        
-        # Nan count
-        res_nan_count = res.isnull().sum(axis=1)
-        pred_mean = np.where(
-            self.ensemble_fold - res_nan_count.values >= self.min_ensemble_required, res_mean.values, np.nan
-        )
-        pred_std = np.where(
-            self.ensemble_fold - res_nan_count.values >= self.min_ensemble_required, res_std.values, np.nan
-        )
-        
-        res = pd.DataFrame({"index": list(res_mean.index), "pred_mean": pred_mean, "pred_std": pred_std}).set_index(
-            "index"
-        )
+            nan_count = np.sum(np.isnan(res["pred_mean"].values))
+            nan_frac = nan_count / len(res["pred_mean"].values)
+            warnings.warn(f"There are {nan_frac}% points ({nan_count} points) falling out of predictable range.")
 
-        # Preparing output (formatting)
-        indexer = pd.DataFrame({"index": list(X_test_indexes)}).set_index("index")
-        res = pd.concat([indexer, res], axis=1)
-        
-        nan_count = np.sum(np.isnan(res["pred_mean"].values))
-        nan_frac = nan_count / len(res["pred_mean"].values)
-        warnings.warn(f"There are {nan_frac}% points ({nan_count} points) falling out of predictable range.")
-
-        if return_std:
-            if self.task=='classification':
-                return np.array([1-res["pred_mean"].values.flatten(), res["pred_mean"].values.flatten()]).T, res["pred_std"].values
+            if return_std:
+                if self.task=='classification':
+                    return np.array([1-res["pred_mean"].values.flatten(), res["pred_mean"].values.flatten()]).T, res["pred_std"].values
+                else:
+                    return res["pred_mean"].values.flatten(), res["pred_std"].values.flatten()
             else:
-                return res["pred_mean"].values.flatten(), res["pred_std"].values.flatten()
-        else:
-            if self.task=='classification':
-                return np.array([1-res["pred_mean"].values.flatten(), res["pred_mean"].values.flatten()]).T
-            else:
-                return res["pred_mean"].values.flatten()
-        
+                if self.task=='classification':
+                    return np.array([1-res["pred_mean"].values.flatten(), res["pred_mean"].values.flatten()]).T
+                else:
+                    return res["pred_mean"].values.flatten()
+
 
     @abstractmethod
     def predict(
@@ -1295,6 +1388,7 @@ class AdaSTEM(BaseEstimator):
             "poisson_deviance_explained": poisson_deviance_explained,
         }
 
+    @monitor_step("evaluation")
     def score(self, X_test: pd.DataFrame, y_test: Union[pd.Series, np.ndarray]) -> dict:
         """Combine predicting and evaluating in one method
 
@@ -1311,6 +1405,19 @@ class AdaSTEM(BaseEstimator):
         self.score_dict = score_dict
         return self.score_dict
 
+    @staticmethod
+    def eval_calibration(y_test, y_pred, n_bins=8):
+        """Binary probability scores and bin support; evaluate on held-out rows."""
+        from ..calibration import calibration_scores
+        return calibration_scores(y_test, y_pred, n_bins)
+
+    @monitor_step("calibration_diagnostics")
+    def calibration_diagnostics(self, X_test, y_test, pred=None, **kwargs):
+        """Held-out overall, spatial, temporal and actual-stixel calibration."""
+        from ..calibration import stixel_calibration_diagnostics
+        return stixel_calibration_diagnostics(self, X_test, y_test, pred, **kwargs)
+
+    @monitor_step("feature_importances")
     def calculate_feature_importances(self):
         """A method to generate feature importance values for each stixel.
 
@@ -1363,6 +1470,7 @@ class AdaSTEM(BaseEstimator):
             pd.DataFrame(feature_importance_list).set_index("stixel_index").reset_index(drop=False).fillna(0)
         )
 
+    @monitor_step("feature_importances_by_points")
     def assign_feature_importances_by_points(
         self,
         Sample_ST_df: Union[pd.DataFrame, None] = None,
@@ -1509,6 +1617,7 @@ class AdaSTEM(BaseEstimator):
             
         return model
     
+    @monitor_step("model_save")
     def save(self, tar_gz_file, remove_temporary_file = True, verbosity=1, compresslevel=2):
         os.makedirs(self.lazy_loading_dir, exist_ok=True)
 
@@ -1597,7 +1706,7 @@ class AdaSTEMClassifier(AdaSTEM):
         plot_ylims=None,
         verbosity=0,
         plot_empty=False,
-        completely_random_rotation=False,
+        completely_random_rotation=True,
         lazy_loading = False,
         lazy_loading_dir = None,
         min_class_sample = 1,
@@ -1790,7 +1899,7 @@ class AdaSTEMRegressor(AdaSTEM):
         plot_ylims=None,
         verbosity=0,
         plot_empty=False,
-        completely_random_rotation=False,
+        completely_random_rotation=True,
         lazy_loading=False,
         lazy_loading_dir=None,
         min_class_sample=1,

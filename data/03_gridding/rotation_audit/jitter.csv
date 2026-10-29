@@ -1,0 +1,7 @@
+kind,angle,identical_memberships,max_vertex_difference
+adaptive,0.0,True,7.105427357601002e-15
+adaptive,27.5,True,1.4210854715202004e-14
+adaptive,88.2,True,1.4210854715202004e-14
+fixed,0.0,True,0.0
+fixed,27.5,True,0.0
+fixed,88.2,True,1.4210854715202004e-14

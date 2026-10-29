@@ -11,8 +11,10 @@ import shutil
 import os
 from pathlib import Path
 import duckdb
+from joblib import effective_n_jobs
 import re
 from .generate_random import generate_random_saving_code
+from .duckdb_compat import fetch_one
 
 def check_random_state(seed: Union[None, int, np.random._generator.Generator]) -> np.random._generator.Generator:
     """Turn seed into a np.random.RandomState instance.
@@ -52,22 +54,31 @@ def check_base_model(base_model):
 
 
 def check_transform_n_jobs(self, n_jobs):
+    n_jobs = self.n_jobs if n_jobs is None else n_jobs
     if n_jobs is None:
-        if self.n_jobs is None:
-            warnings.warn("No n_jobs input. Default to 1.")
-            return 1
-        else:
-            return self.n_jobs
-    else:
-        if not isinstance(n_jobs, int):
-            raise TypeError(f"n_jobs is not a integer. Got {n_jobs}.")
-        else:
-            if n_jobs == 0:
-                raise ValueError("n_jobs cannot be 0!")
-            elif n_jobs > self.ensemble_fold:
-                raise ValueError(f"n_jobs ({n_jobs}) is larger than ensemble_fold ({self.ensemble_fold}). The computational resources are redundant since the algorithm is paralleled by ensemble_fold. Consider using a n_jobs value that is smaller than self.ensemble_fold.")
-            else:
-                return n_jobs
+        warnings.warn("No n_jobs input. Default to 1.")
+        return 1
+    if not isinstance(n_jobs, int) or isinstance(n_jobs, bool):
+        raise TypeError(f"n_jobs must be an integer. Got {n_jobs}.")
+    if n_jobs == 0:
+        raise ValueError("n_jobs cannot be 0!")
+    return min(effective_n_jobs(n_jobs), self.ensemble_fold)
+
+
+def normalize_quadtree_args(arguments):
+    """Accept the corrected criteria spelling and its existing public alias."""
+    result = {} if arguments is None else dict(arguments)
+    old = "addiitonal_quadtree_criteria"
+    new = "additional_quadtree_criteria"
+    if new in result:
+        if old in result and result[old] is not result[new]:
+            raise ValueError("Provide only one additional quadtree criterion.")
+        result[old] = result.pop(new)
+    result.setdefault("additional_features", [])
+    result.setdefault(old, None)
+    if result[old] is not None and not callable(result[old]):
+        raise TypeError("additional_quadtree_criteria must be callable or None.")
+    return result
 
 
 def check_verbosity(self, verbosity):
@@ -136,7 +147,7 @@ def check_X_train(X_train, self, index_col='__index_level_0__'):
                     
     # check type
     if isinstance(X_train, pd.DataFrame):
-        if np.sum(np.isnan(np.array(X_train))) > 0:
+        if any(X_train[column].isna().any() for column in X_train):
             raise ValueError(
                 "NAs (missing values) detected in input data. stemflow do not support NAs input. Consider filling them with values (e.g., -1 or mean values) or removing the rows."
             )
@@ -172,15 +183,15 @@ def check_X_train(X_train, self, index_col='__index_level_0__'):
                         raise ValueError(f"Index '{index_col}' must be numeric; found {name2type[index_col]}.")
                     # NAs anywhere?
                     cols = [row[0] for row in schema]
-                    na = con.sql(f'SELECT COUNT(*) FROM "{the_only_table_name}" WHERE NOT (' + " AND ".join(f'"{c}" IS NOT NULL' for c in cols) + ")").fetchone()[0]
+                    na = fetch_one(con.sql(f'SELECT COUNT(*) FROM "{the_only_table_name}" WHERE NOT (' + " AND ".join(f'"{c}" IS NOT NULL' for c in cols) + ")"))[0]
                     if na > 0:
                         raise ValueError(f"NAs detected in table '{the_only_table_name}' ({na} row(s)).")
                     # unique + non-null index
-                    indexes_are_unique = con.sql(f'''
+                    indexes_are_unique = fetch_one(con.sql(f'''
                         SELECT 
                             COUNT(*) = COUNT(DISTINCT "{index_col}") 
                         FROM "{the_only_table_name}"
-                    ''').fetchone()[0]
+                    '''))[0]
                     if not indexes_are_unique:
                         raise ValueError(f"Index '{index_col}' is not unique.")
                     
@@ -207,11 +218,11 @@ def check_X_train(X_train, self, index_col='__index_level_0__'):
                 if str(col2type[index_col]).upper() not in _NUMERIC:
                     raise ValueError(f"Index '{index_col}' must be numeric; found {col2type[index_col]}.")
                 # any NAs anywhere?
-                na = con.sql(f"SELECT COUNT(*) FROM rel_db WHERE NOT (" + " AND ".join(f'"{c}" IS NOT NULL' for c in cols) + ")").fetchone()[0]
+                na = fetch_one(con.sql(f"SELECT COUNT(*) FROM rel_db WHERE NOT (" + " AND ".join(f'"{c}" IS NOT NULL' for c in cols) + ")"))[0]
                 if na > 0:
                     raise ValueError(f"NAs detected in parquet ({na} row(s)).")
                 # unique + non-null index
-                ok = con.sql(f'SELECT COUNT(*)=COUNT(DISTINCT "{index_col}") FROM rel_db').fetchone()[0]
+                ok = fetch_one(con.sql(f'SELECT COUNT(*)=COUNT(DISTINCT "{index_col}") FROM rel_db'))[0]
                 if not ok:
                     raise ValueError(f"Index '{index_col}' is not unique.")
             finally:
@@ -230,7 +241,7 @@ def check_y_train(y_train, self, index_col='__index_level_0__'):
                     
     type_y_train = type(y_train)
     if isinstance(y_train, (pd.DataFrame, pd.Series)):
-        if np.sum(np.isnan(np.array(y_train))) > 0:
+        if np.asarray(pd.isna(y_train)).any():
             raise ValueError("NAs (missing values) detected in input y data. Consider deleting these rows.")
         if isinstance(y_train.index, pd.MultiIndex):
             raise ValueError("Index must be single-level, not MultiIndex.")
@@ -262,15 +273,15 @@ def check_y_train(y_train, self, index_col='__index_level_0__'):
                         raise ValueError(f"Index '{index_col}' must be numeric; found {name2type[index_col]}.")
                     # NAs anywhere?
                     cols = [row[0] for row in schema]
-                    na = con.sql(f'SELECT COUNT(*) FROM "{the_only_table_name}" WHERE NOT (' + " AND ".join(f'"{c}" IS NOT NULL' for c in cols) + ")").fetchone()[0]
+                    na = fetch_one(con.sql(f'SELECT COUNT(*) FROM "{the_only_table_name}" WHERE NOT (' + " AND ".join(f'"{c}" IS NOT NULL' for c in cols) + ")"))[0]
                     if na > 0:
                         raise ValueError(f"NAs detected in table '{the_only_table_name}' ({na} row(s)).")
                     # unique + non-null index
-                    indexes_are_unique = con.sql(f'''
+                    indexes_are_unique = fetch_one(con.sql(f'''
                         SELECT 
                             COUNT(*) = COUNT(DISTINCT "{index_col}") 
                         FROM "{the_only_table_name}"
-                    ''').fetchone()[0]
+                    '''))[0]
                     if not indexes_are_unique:
                         raise ValueError(f"Index '{index_col}' is not unique.")
             finally:
@@ -288,11 +299,11 @@ def check_y_train(y_train, self, index_col='__index_level_0__'):
                 if str(col2type[index_col]).upper() not in _NUMERIC:
                     raise ValueError(f"Index '{index_col}' must be numeric; found {col2type[index_col]}.")
                 # any NAs anywhere?
-                na = con.sql(f"SELECT COUNT(*) FROM rel_db WHERE NOT (" + " AND ".join(f'"{c}" IS NOT NULL' for c in cols) + ")").fetchone()[0]
+                na = fetch_one(con.sql(f"SELECT COUNT(*) FROM rel_db WHERE NOT (" + " AND ".join(f'"{c}" IS NOT NULL' for c in cols) + ")"))[0]
                 if na > 0:
                     raise ValueError(f"NAs detected in parquet ({na} row(s)).")
                 # unique + non-null index
-                ok = con.sql(f'SELECT COUNT(*)=COUNT(DISTINCT "{index_col}") FROM rel_db').fetchone()[0]
+                ok = fetch_one(con.sql(f'SELECT COUNT(*)=COUNT(DISTINCT "{index_col}") FROM rel_db'))[0]
                 if not ok:
                     raise ValueError(f"Index '{index_col}' is not unique.")
             finally:
@@ -310,7 +321,9 @@ def transform_y(X_train, y_train):
     """If y_train is not str, but also not a dataframe, transform it into a dataframe
     """
     if isinstance(X_train, pd.DataFrame):
-        if isinstance(y_train, (np.ndarray, pd.Series)):
+        if isinstance(y_train, pd.Series):
+            return y_train.to_frame(name='y_true')
+        if isinstance(y_train, np.ndarray):
             return pd.DataFrame(y_train, columns=['y_true'], index=X_train.index)
     
     return y_train
@@ -320,9 +333,9 @@ def check_X_y_format_match(X_train, y_train):
     if isinstance(X_train, (pd.DataFrame)) and isinstance(y_train, (pd.DataFrame, pd.Series, np.ndarray)):
         return 'pandas'
     elif isinstance(X_train, str) and isinstance(y_train, str):
-        if X_train.endswith('.duckdb') and X_train.endswith('.duckdb'):
+        if X_train.endswith('.duckdb') and y_train.endswith('.duckdb'):
             return 'duckdb'
-        elif X_train.endswith('.parquet') and X_train.endswith('.parquet'):
+        elif X_train.endswith('.parquet') and y_train.endswith('.parquet'):
             return 'parquet'
         
     raise AttributeError('Input X and y must have the same format. Either both pd.DataFrame, .duckdb, or .parquet.')
@@ -458,6 +471,3 @@ def initiate_joblib_tmp_dir(lazy_loading_dir):
     if not os.path.exists(joblib_tmp_dir):
         os.makedirs(joblib_tmp_dir)
     return joblib_tmp_dir
-
-
-    

@@ -1,0 +1,81 @@
+{
+  "case": "combined_tuned",
+  "repeat": 1,
+  "strategy": "bounded",
+  "jobs": 4,
+  "end_to_end": false,
+  "measurement": {
+    "exit_code": 0,
+    "guard_reason": null,
+    "wall_seconds": 20.648135875118896,
+    "phase_peaks": {
+      "startup": {
+        "rss_bytes": 230473728,
+        "footprint_bytes": 157600128,
+        "parent_rss_bytes": 230473728,
+        "descendants_rss_bytes": 0
+      },
+      "prediction": {
+        "rss_bytes": 6148702208,
+        "footprint_bytes": 2029277440,
+        "parent_rss_bytes": 903380992,
+        "descendants_rss_bytes": 5458706432
+      },
+      "verification_output": {
+        "rss_bytes": 752402432,
+        "footprint_bytes": 249141184,
+        "parent_rss_bytes": 697958400,
+        "descendants_rss_bytes": 54444032
+      },
+      "done": {
+        "rss_bytes": 752402432,
+        "footprint_bytes": 241113024,
+        "parent_rss_bytes": 697958400,
+        "descendants_rss_bytes": 54444032
+      }
+    }
+  },
+  "resident": false,
+  "prediction_seconds": 19.4378564581275,
+  "preparation_seconds": 0.0,
+  "total_seconds": 19.4378564581275,
+  "cache_disk_bytes": 0,
+  "coverage": 1.0,
+  "logit": false,
+  "separate": false,
+  "output_bytes": 8000000,
+  "execution_info": {
+    "aggregation_backend": "bounded_streaming",
+    "prediction_backend": "bounded",
+    "rows": 1000000,
+    "ensembles": 50,
+    "workers": 4,
+    "max_pending_tasks": 4,
+    "shared_input_bytes": 240000768,
+    "shared_preparation_seconds": 0.5204922088887542,
+    "result_buffer_bytes": 32000000,
+    "worker_count_bytes": 4000000,
+    "result_transport": "completion_records",
+    "estimator_calls": 100,
+    "output_storage": "memory",
+    "output_bytes": 24000000
+  },
+  "versions": {
+    "python": "3.13.15",
+    "numpy": "2.5.1",
+    "pandas": "3.0.5",
+    "duckdb": "1.5.5",
+    "sklearn": "1.9.0",
+    "xgboost": "3.3.0"
+  },
+  "equivalence": {
+    "missing_masks_equal": true,
+    "std_missing_masks_equal": true,
+    "maximum_prediction_difference": 0.0,
+    "maximum_std_difference": 4.336808689942018e-19,
+    "strict_tolerance": 1e-12,
+    "float32_tolerance": 1e-06,
+    "strict_passed": true,
+    "passed": true
+  }
+}

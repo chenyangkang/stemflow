@@ -1,0 +1,75 @@
+{
+  "case": "many_stixels",
+  "repeat": 2,
+  "strategy": "shared_positions",
+  "jobs": 4,
+  "end_to_end": false,
+  "measurement": {
+    "exit_code": 0,
+    "guard_reason": null,
+    "wall_seconds": 6.466677624965087,
+    "phase_peaks": {
+      "startup": {
+        "rss_bytes": 229163008,
+        "footprint_bytes": 157993088,
+        "parent_rss_bytes": 229163008,
+        "descendants_rss_bytes": 0
+      },
+      "model_loading": {
+        "rss_bytes": 251215872,
+        "footprint_bytes": 179570816,
+        "parent_rss_bytes": 251215872,
+        "descendants_rss_bytes": 0
+      },
+      "shared_preparation": {
+        "rss_bytes": 373719040,
+        "footprint_bytes": 255904128,
+        "parent_rss_bytes": 373719040,
+        "descendants_rss_bytes": 0
+      },
+      "prediction": {
+        "rss_bytes": 2137227264,
+        "footprint_bytes": 977470016,
+        "parent_rss_bytes": 481427456,
+        "descendants_rss_bytes": 1661435904
+      },
+      "verification_output": {
+        "rss_bytes": 536199168,
+        "footprint_bytes": 231347840,
+        "parent_rss_bytes": 481361920,
+        "descendants_rss_bytes": 54837248
+      },
+      "done": {
+        "rss_bytes": 527532032,
+        "footprint_bytes": 222353024,
+        "parent_rss_bytes": 472694784,
+        "descendants_rss_bytes": 54837248
+      }
+    }
+  },
+  "resident": false,
+  "prediction_seconds": 5.1226509171538055,
+  "preparation_seconds": 0.1221942079719156,
+  "total_seconds": 5.244845125125721,
+  "cache_disk_bytes": 38400640,
+  "coverage": 0.9992333333333333,
+  "logit": false,
+  "versions": {
+    "python": "3.13.15",
+    "numpy": "2.5.1",
+    "pandas": "3.0.5",
+    "duckdb": "1.5.5",
+    "sklearn": "1.9.0",
+    "xgboost": "3.3.0"
+  },
+  "equivalence": {
+    "missing_masks_equal": true,
+    "std_missing_masks_equal": true,
+    "maximum_prediction_difference": 1.3038516155639002e-08,
+    "maximum_std_difference": 1.4545741694460546e-08,
+    "strict_tolerance": 1e-12,
+    "float32_tolerance": 1e-06,
+    "strict_passed": false,
+    "passed": true
+  }
+}

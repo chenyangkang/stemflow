@@ -1,0 +1,210 @@
+Prediction execution stress tests, 2026-10-11
+
+Status
+
+These are historical, isolated experiments on the codex-rewrite checkout at
+271017a, before the package implementation in PREDICTION_MEMORY_RESULTS.md.
+At that stage production behavior remained the reverted version. Experimental
+subclasses live under scripts/06_prediction_stress and are not imported by the
+package. The later prediction_backend="memmap" implementation has separate
+compatibility checks and measurements documented in that newer report.
+
+93 prediction trials completed: 90 succeeded and 3 were deliberately stopped
+by the local memory guard. The guard is sampled, not a hard memory limit.
+Nine original targeted compatibility tests pass. Three additional tests
+verify separate-ensemble output for pandas, DuckDB, and Parquet, including
+parallel execution, input order, overlapping stixels, and missing values.
+No training databases, fitted model files, numeric caches, or full prediction
+arrays are retained in the results.
+
+Workloads
+
+- Synthetic input from 300,000 through 5,000,000 prediction rows, independently
+  of training size; 8 through 116 generated covariates, plus coordinates.
+- Six ensembles for wide million-row inputs; both 80-day and 366-day input
+  distributions; approximately 749,000 rows in one concentrated temporal window.
+- Twelve ensembles and 6,796 fitted stixels; overlapping 60-day windows with
+  a 10-day step; a separate one-million-row, 50-ensemble aggregation stress.
+- Three-fold local beta calibration, both fixed and Optuna-tuned XGBoost.
+- Random forests totaling 887,701,832 serialized bytes: 8 fitted forests,
+  4,000 trees, and a largest stixel file of 132,941,449 bytes.
+- Real Acadian Flycatcher covariates: 50,000 source rows, 20,000 used for
+  fitting, expanded by repetition to 500,000 prediction rows. This measures
+  execution with realistic covariates, not independent generalization.
+- Fit and prediction in the same job for the large-forest case, using the
+  package's normal worker lifecycle. Training workers are explicitly closed
+  by the package; a persistent training-worker pool was not assumed.
+
+Implementation candidates
+
+baseline: unchanged package; temporal_window_prequery=True.
+rotation: NumPy rotation arrays, removing the intermediate Python lists.
+lean: direct estimator outputs and online within-ensemble sums/counts,
+  removing per-stixel index lists, result frames, concatenation, and groupby.
+arrow: lean plus whole-window Arrow conversion with split pandas blocks.
+shared: lean plus a one-time export of numeric prediction columns to
+  temporary read-only NumPy maps. Each worker gathers a private stixel
+  DataFrame. Base estimators still receive all rows in their stixel at once.
+shared_positions: shared plus source-position indexing, avoiding repeated
+  observation-ID hash lookups; IDs are validated once before dispatch.
+shared_threads and lean_threads: corresponding thread experiments.
+
+No candidate disables temporal-window prequerying, reduces ensemble counts
+relative to its paired baseline, changes trained estimators, or introduces
+repeated row batches to the base estimator's predict method. Exporting the
+cache in bounded blocks is an input-conversion step, not estimator batching.
+
+Selected results
+
+Time includes fresh shared-cache preparation. Values below are medians where
+repetitions were run. Footprint is the simultaneously sampled sum across the
+prediction parent and its descendants, in GiB, on Apple Silicon/macOS.
+
+Workload                         Workers Repeats Baseline s Candidate s Footprint GiB
+1M rows, 116 covariates           2       3       14.35      8.17        4.07 -> 1.10
+5M rows, 8 covariates             1       1       14.44      4.35        1.35 -> 0.60
+6,796 stixels, 300k rows          4       2        5.91      5.23        1.14 -> 0.91
+600k rows, overlapping windows   4       2        9.46      4.62        2.92 -> 1.13
+847 MiB forests, same-job fit    4       1       10.31     10.29        2.21 -> 2.18
+
+Candidate is shared_positions except the forest row, which uses shared.
+The original four-worker path crossed the guard for both concentrated wide
+million-row inputs and five-million-row narrow inputs. Shared alternatives
+completed both. These are guard stops, not observed Slurm OOM events.
+
+At 5M rows, shared_positions took 4.35 s with one worker and 4.41 s with four.
+Cheap estimators can make extra processes and result transfer unhelpful.
+For 6,796 stixels, shared_threads took 13.07 s versus 5.99 s for baseline in
+the initial exploratory run. Threads therefore should not become a universal
+default. Forest prediction was compute dominated and barely changed.
+
+Memory interpretation
+
+Summed RSS is also saved, alongside parent and descendant components. Shared
+file-backed pages can be counted in the RSS of several processes. macOS
+footprint excludes much shared file cache, so it is not total resident RAM,
+Linux PSS, or Slurm cgroup memory. For the repeated wide million-row case,
+summed RSS was 5.98 GiB for baseline versus 5.44 GiB for shared_positions,
+while macOS footprint fell from 4.07 to 1.10 GiB. The mapped input occupied
+0.91 GiB on disk. Linux/HPC verification is still needed before translating
+these measurements into a per-job memory request.
+
+The harness records peaks for input preparation, fitting, model loading,
+shared preparation, prediction, and output verification. End-to-end forest
+jobs peaked during prediction: approximately 2.2 GiB, compared with 1.5 GiB
+during fitting. Their complete child wall times were approximately 52 s for
+both implementations. Serialized model bytes, private stixel DataFrame
+payloads, and observed process memory are separate measurements, not an
+additive partition of native estimator allocations. Component maxima may
+occur at different times and must not be added together.
+
+Profiling
+
+Separate profiled runs are excluded from performance medians. Function
+profiles, source-line timing, Python allocation snapshots, and worker phase
+timers are saved. In the 50-ensemble, 1M-row cheap-XGBoost workload, baseline
+predict_one_stixel accumulated 9.30 worker-seconds, including 2.35 own seconds;
+pandas maybe_convert_platform accumulated 6.29 own seconds, largely from the
+index-list/DataFrame conversions. The lean prediction helper accumulated
+2.03 worker-seconds for the same 100 estimator calls.
+
+The parent online reducer accumulated about 1.00 s across 50 updates in the
+baseline profile and 0.62 s in the position-based profile. It was not the
+dominant bottleneck in these tests. Inclusive profile times overlap and must
+not be summed as independent stages. Source-line profiles identify call
+sites; Python allocation snapshots report net retained Python allocations,
+not native DuckDB/XGBoost/forest RAM or a per-line process-memory peak.
+
+Optuna model retention
+
+The tuned fixture had 12 fitted stixels, 36 final XGBoost estimators, 2,160
+retained trees, and 108 trial metadata records. Each stixel retained three
+60-tree final estimators for calibration, not nine trial estimators. The
+models totaled 3,802,184 serialized bytes. SelfTuningClassifier keeps a
+parameter/loss history and one final estimator; it does not keep the trial
+estimators or the Optuna study. Tuning can still select larger final models.
+
+The early extensions_v1 forest inventory counter incorrectly reported zero
+estimators/trees because it inspected the unfitted forest template. Those raw
+records are annotated; counts above use the corrected, separately rerun
+workflow_v1 fixture. Serialized sizes refer to that validated fixture.
+
+Compatibility
+
+All 90 successful stress trials retained the same prediction and standard-
+deviation missing-value masks. Maximum probability difference was
+2.483526873e-8; maximum standard-deviation difference was 2.545149278e-8.
+Calibrated beta and forest cases agreed to floating-point precision. Raw
+float32 XGBoost cases have tiny rounding differences because original pandas
+groupby means retain float32, while prototype online sums use float64.
+Original strict-threshold failures in exploratory raw JSON are preserved;
+they are rounding differences, not altered stixel memberships.
+
+Tests cover pandas, DuckDB, and Parquet; overlap, shuffled/nonconsecutive IDs,
+both probability and logit aggregation, parallel operation, coverage masks,
+standard deviations, intentional zero predictions, read-only cache isolation,
+and duplicate-ID rejection. Separate-ensemble returns retain the matrix route and one column per ensemble;
+within-ensemble reductions do not average across ensemble columns. Full matrix
+output still requires rows x ensembles storage, plus intermediate overhead.
+Experimental execution is not yet a package-wide compatibility guarantee for every custom subclass, nonnumeric column,
+regression mode, spherical grid, or output aggregation mode.
+
+Recommendation
+
+An opt-in prediction_data_backend using numeric read-only shared input is a
+promising next package change, combined with lean per-stixel result handling
+and NumPy rotation. Retain native DuckDB/pandas paths for unsupported inputs
+and custom overrides. Keep process parallelism configurable; do not switch
+all users to threads, blindly maximize workers, or silently reintroduce the
+previous slower estimator row-batching change. Very large models require a
+separate investigation of estimator workspace, model caching, and scheduling;
+sharing prediction input alone does not solve that case.
+
+Reproduction
+
+Run from the stemflow repository root with its dependencies, including psutil,
+XGBoost, and Optuna for the tuned case. The harness supports macOS and Linux
+memory sampling; Windows stress sampling has not been validated.
+
+  PYTHONPATH="$PWD" python scripts/06_prediction_stress/run_stress.py \
+    --cases wide_million --strategies baseline,shared,shared_positions \
+    --jobs 2 --repeat 3 --output data/06_prediction_stress/new_comparison
+
+  PYTHONPATH="$PWD" python scripts/06_prediction_stress/run_stress.py \
+    --cases result_pressure --rows 5000000 --ensembles 6 \
+    --strategies baseline,shared_positions --jobs 1,4 \
+    --output data/06_prediction_stress/new_large_input
+
+  PYTHONPATH="$PWD" python scripts/06_prediction_stress/run_stress.py \
+    --cases huge_forests --strategies baseline,shared --jobs 4 --end-to-end \
+    --output data/06_prediction_stress/new_workflow
+
+  python scripts/06_prediction_stress/summarize.py
+
+The first successful strategy must be baseline, to establish an oracle. Use
+a new output directory for an independent run; cached reports are not a
+checkpoint containing the temporary oracle. The 5.5 GiB default guard is for
+this local machine, not a hard limiter or a universal resource recommendation.
+Filesystem caches were not forcibly flushed; trials use fresh Python
+processes, and repeated strategy order is reversed on alternate repetitions.
+
+HPC submission uses the supplied 30-core, 80-GiB structure and unified logs:
+
+  sbatch scripts/06_prediction_stress/01.Prediction_stress.slurm \
+    wide_million 1,4,8,16,30 1000000
+
+The HPC script tests 50 ensembles, three repetitions, baseline/Arrow/shared/shared_positions
+strategies, and uses a 64-GiB sampled guard. It assumes the repository and
+experimental files have been copied to the server; none has been pushed.
+Logs go to log_files/prediction_stress_CASE_JOBID.log and results to
+data/06_prediction_stress/hpc_CASE_JOBID. Inspect sacct as well for actual
+Slurm memory accounting. HPC results are not available from this Mac run.
+
+Artifacts
+
+data/06_prediction_stress/comparison/trials.csv: every trial, including guards.
+data/06_prediction_stress/comparison/comparison.csv: unprofiled summaries.
+data/06_prediction_stress/comparison/profile_functions.csv: function profiles.
+data/06_prediction_stress/comparison/worker_phase_times.csv: detailed timers.
+figures/06_prediction_stress/prediction_stress.png and .pdf: selected results.
+Raw per-trial JSON includes version information, equivalence, and phase peaks.

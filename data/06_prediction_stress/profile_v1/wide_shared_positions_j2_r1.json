@@ -1,0 +1,161 @@
+{
+  "case": "wide",
+  "repeat": 1,
+  "strategy": "shared_positions",
+  "jobs": 2,
+  "end_to_end": false,
+  "measurement": {
+    "exit_code": 0,
+    "guard_reason": null,
+    "wall_seconds": 6.096654332941398,
+    "phase_peaks": {
+      "startup": {
+        "rss_bytes": 224542720,
+        "footprint_bytes": 151718336,
+        "parent_rss_bytes": 224542720,
+        "descendants_rss_bytes": 0
+      },
+      "model_loading": {
+        "rss_bytes": 231505920,
+        "footprint_bytes": 158206400,
+        "parent_rss_bytes": 231505920,
+        "descendants_rss_bytes": 0
+      },
+      "shared_preparation": {
+        "rss_bytes": 1148960768,
+        "footprint_bytes": 603852800,
+        "parent_rss_bytes": 1148960768,
+        "descendants_rss_bytes": 0
+      },
+      "prediction": {
+        "rss_bytes": 2755149824,
+        "footprint_bytes": 834107136,
+        "parent_rss_bytes": 952696832,
+        "descendants_rss_bytes": 1838252032
+      },
+      "verification_output": {
+        "rss_bytes": 1007222784,
+        "footprint_bytes": 208001344,
+        "parent_rss_bytes": 953991168,
+        "descendants_rss_bytes": 53231616
+      },
+      "done": {
+        "rss_bytes": 1004879872,
+        "footprint_bytes": 208001344,
+        "parent_rss_bytes": 951648256,
+        "descendants_rss_bytes": 53231616
+      }
+    }
+  },
+  "resident": false,
+  "prediction_seconds": 4.43745445786044,
+  "preparation_seconds": 0.44707166589796543,
+  "total_seconds": 4.8845261237584054,
+  "cache_disk_bytes": 292800640,
+  "coverage": 1.0,
+  "logit": false,
+  "versions": {
+    "python": "3.13.15",
+    "numpy": "2.5.1",
+    "pandas": "3.0.5",
+    "duckdb": "1.5.5",
+    "sklearn": "1.9.0",
+    "xgboost": "3.3.0"
+  },
+  "equivalence": {
+    "missing_masks_equal": true,
+    "std_missing_masks_equal": true,
+    "maximum_prediction_difference": 0.0,
+    "maximum_std_difference": 0.0,
+    "strict_tolerance": 1e-12,
+    "float32_tolerance": 1e-06,
+    "strict_passed": true,
+    "passed": true
+  },
+  "worker_details": [
+    {
+      "pid": 65235,
+      "ensemble": 5,
+      "timings": {
+        "query": 0.0055232488084584475,
+        "rotation": 0.020385875133797526,
+        "selection": 0.017673129914328456,
+        "gather": 0.21198854479007423,
+        "estimator": 0.8924638361204416,
+        "reduction": 0.005122915375977755
+      },
+      "estimator_calls": 30,
+      "largest_stixel_bytes": 49734032
+    },
+    {
+      "pid": 65234,
+      "ensemble": 0,
+      "timings": {
+        "query": 0.028840999817475677,
+        "rotation": 0.002799500012770295,
+        "selection": 0.008296582382172346,
+        "gather": 0.1597584194969386,
+        "estimator": 0.6628608361352235,
+        "reduction": 0.0034843306057155132
+      },
+      "estimator_calls": 17,
+      "largest_stixel_bytes": 53695616
+    },
+    {
+      "pid": 65235,
+      "ensemble": 3,
+      "timings": {
+        "query": 0.005476831924170256,
+        "rotation": 0.002786500146612525,
+        "selection": 0.009498003637418151,
+        "gather": 0.17158291907981038,
+        "estimator": 0.7283300398848951,
+        "reduction": 0.004083417588844895
+      },
+      "estimator_calls": 21,
+      "largest_stixel_bytes": 44312352
+    },
+    {
+      "pid": 65235,
+      "ensemble": 1,
+      "timings": {
+        "query": 0.028852666961029172,
+        "rotation": 0.0029285831842571497,
+        "selection": 0.00893499911762774,
+        "gather": 0.16740691917948425,
+        "estimator": 0.7137623759917915,
+        "reduction": 0.004014209844172001
+      },
+      "estimator_calls": 20,
+      "largest_stixel_bytes": 33139104
+    },
+    {
+      "pid": 65234,
+      "ensemble": 4,
+      "timings": {
+        "query": 0.0056380408350378275,
+        "rotation": 0.0028329158667474985,
+        "selection": 0.009972459636628628,
+        "gather": 0.17945258598774672,
+        "estimator": 0.7536662912461907,
+        "reduction": 0.003803208004683256
+      },
+      "estimator_calls": 23,
+      "largest_stixel_bytes": 24020336
+    },
+    {
+      "pid": 65234,
+      "ensemble": 2,
+      "timings": {
+        "query": 0.010243292199447751,
+        "rotation": 0.002722916891798377,
+        "selection": 0.008649749681353569,
+        "gather": 0.15738629177212715,
+        "estimator": 0.6695502488873899,
+        "reduction": 0.0035072944592684507
+      },
+      "estimator_calls": 18,
+      "largest_stixel_bytes": 50543136
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "case": "combined_forest",
+  "repeat": 1,
+  "strategy": "baseline",
+  "jobs": 4,
+  "end_to_end": false,
+  "measurement": {
+    "exit_code": 0,
+    "guard_reason": null,
+    "wall_seconds": 63.707026874879375,
+    "phase_peaks": {
+      "startup": {
+        "rss_bytes": 231800832,
+        "footprint_bytes": 159042304,
+        "parent_rss_bytes": 231800832,
+        "descendants_rss_bytes": 0
+      },
+      "model_loading": {
+        "rss_bytes": 249462784,
+        "footprint_bytes": 174131968,
+        "parent_rss_bytes": 249462784,
+        "descendants_rss_bytes": 0
+      },
+      "prediction": {
+        "rss_bytes": 7467991040,
+        "footprint_bytes": 5434059840,
+        "parent_rss_bytes": 551043072,
+        "descendants_rss_bytes": 7068516352
+      },
+      "verification_output": {
+        "rss_bytes": 591036416,
+        "footprint_bytes": 268801920,
+        "parent_rss_bytes": 572784640,
+        "descendants_rss_bytes": 18251776
+      },
+      "done": {
+        "rss_bytes": 697974784,
+        "footprint_bytes": 260691840,
+        "parent_rss_bytes": 679673856,
+        "descendants_rss_bytes": 18300928
+      }
+    }
+  },
+  "resident": false,
+  "prediction_seconds": 62.10798137518577,
+  "preparation_seconds": 0.0,
+  "total_seconds": 62.10798137518577,
+  "cache_disk_bytes": 0,
+  "coverage": 1.0,
+  "logit": false,
+  "separate": false,
+  "output_bytes": 8000000,
+  "execution_info": {
+    "aggregation_backend": "streaming",
+    "accumulator_bytes": 20000000,
+    "rows": 1000000,
+    "ensembles": 20
+  },
+  "versions": {
+    "python": "3.13.15",
+    "numpy": "2.5.1",
+    "pandas": "3.0.5",
+    "duckdb": "1.5.5",
+    "sklearn": "1.9.0",
+    "xgboost": "3.3.0"
+  },
+  "source_sha256": {
+    "stemflow/model/AdaSTEM.py": "5d968eae11d8a4556dac2cc28dbc7e945ff8c90da5a2620654ff3692f560dffd",
+    "stemflow/lazyloading/bounded_prediction.py": "d13aad87840743ca9dba03e06987d0fa23e708740228cca5e800f13e4ca9743f",
+    "scripts/06_prediction_stress/strategies.py": "ee17a02ed2aec4d4feca0826e52e6580fe6496d0659d2b6bcfdffe85efef7f8b"
+  },
+  "equivalence": {
+    "missing_masks_equal": true,
+    "std_missing_masks_equal": true,
+    "maximum_prediction_difference": 0.0,
+    "maximum_std_difference": 0.0,
+    "strict_tolerance": 1e-12,
+    "float32_tolerance": 1e-06,
+    "strict_passed": true,
+    "passed": true
+  }
+}

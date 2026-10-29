@@ -34,6 +34,7 @@ def train_one_stixel(
     subset_x_names: bool,
     stixel_X_train: pd.DataFrame,
     min_class_sample: int,
+    stixel_filter_func: None
 ) -> Tuple[Union[None, BaseEstimator], list]:
     """Train one stixel
 
@@ -46,10 +47,12 @@ def train_one_stixel(
         subset_x_names (bool): Whether to only store variables with std > 0 for each stixel.
         sub_X_train (pd.DataFrame): Input training dataframe for THE stixel.
         min_class_sample (int): Minimum umber of samples needed to train the classifier in each stixel. If the sample does not satisfy, fit a dummy one.
-
+        stixel_filter_func: filtering function applied on data.
     Returns:
         tuple[Union[None, BaseEstimator], list]: trained_model, stixel_specific_x_names
     """
+    if stixel_filter_func is not None:
+        stixel_X_train = stixel_filter_func(stixel_X_train) # apply function
 
     if len(stixel_X_train) < stixel_training_size_threshold:  # threshold
         return (None, [], "Not_Enough_Data")
@@ -59,7 +62,7 @@ def train_one_stixel(
     unique_sub_y_train_binary = np.unique(np.where(sub_y_train > 0, 1, 0))
 
     # nan check
-    nan_count = np.sum(np.isnan(np.array(sub_X_train))) + np.sum(np.isnan(sub_y_train))
+    nan_count = sub_X_train.isna().to_numpy().sum() + sub_y_train.isna().sum()
     if nan_count > 0:
         return (None, [], "Contain_Nan")
 
@@ -69,14 +72,19 @@ def train_one_stixel(
     # fit
     if (not task == "regression") and ((len(unique_sub_y_train_binary) == 1) or min_sample_count_each_class < min_class_sample):
         trained_model = dummy_model1(float(unique_sub_y_train_binary[0]))
+        trained_model._stemflow_training_support_ = dict(n=len(sub_y_train),
+            positives=int((sub_y_train > 0).sum()))
         return (trained_model, [], "Success")
     else:
         # Remove the variables that have no variation
         stixel_specific_x_names = x_names.copy()
 
         if subset_x_names:
+            metadata = getattr(base_model, "required_metadata_columns", ())
+            constant = set(sub_X_train.columns[sub_X_train.std(axis=0) == 0])
             stixel_specific_x_names = [
-                i for i in stixel_specific_x_names if i not in list(sub_X_train.columns[sub_X_train.std(axis=0) == 0])
+                i for i in stixel_specific_x_names if i in metadata or
+                i not in constant
             ]
 
         # continue, if no variable left
@@ -99,6 +107,8 @@ def train_one_stixel(
         else:
             trained_model.fit(sub_X_train[stixel_specific_x_names], sub_y_train)
 
+    trained_model._stemflow_training_support_ = dict(n=len(sub_y_train),
+        positives=int((sub_y_train > 0).sum()))
     return (trained_model, stixel_specific_x_names, "Success")
 
 
