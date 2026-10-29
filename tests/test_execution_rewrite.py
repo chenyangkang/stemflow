@@ -220,7 +220,8 @@ def test_single_class_stixels_keep_intended_constant(sample, backend, value):
         model.predict_proba(outside)
 
 
-def test_shared_filter_receives_pandas_and_can_mutate(sample):
+@pytest.mark.parametrize("backend", ["native", "memmap"])
+def test_shared_filter_receives_pandas_and_can_mutate(sample, backend):
     X, y = sample
     original = X.copy(deep=True)
     def keep_rows(frame):
@@ -228,10 +229,12 @@ def test_shared_filter_receives_pandas_and_can_mutate(sample):
         frame = frame[frame.row_code % 2 == 0].copy()
         frame["env"] = frame.env + 1
         return frame
-    model = make_model().fit(X, y, training_data_backend="memmap", stixel_filter_func=keep_rows)
+    model = make_model().fit(X, y, training_data_backend=backend, stixel_filter_func=keep_rows)
     recorded = [m for m in model.model_dict.values() if hasattr(m, "rows_")]
     assert recorded
     assert all(np.all(m.rows_ % 2 == 0) for m in recorded)
+    for estimator in recorded:
+        assert_array_equal(estimator.labels_.ravel(), y.occ.to_numpy()[estimator.rows_.astype(int)])
     pd.testing.assert_frame_equal(X, original)
 
 

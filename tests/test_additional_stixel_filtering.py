@@ -24,12 +24,20 @@ X_train, X_test, y_train, y_test = ST_train_test_split(
 )
 
 
-def test_STEMRegressor():
-    X_train.loc[:, 'aaa'] = np.random.normal(size=len(X_train))
-    X_test.loc[:, 'aaa'] = np.random.normal(size=len(X_test))
-    
+@pytest.fixture
+def filtered_data():
+    # Keep filter inputs independent of test order and process-global randomness.
+    rng = np.random.default_rng(42)
+    train, test = X_train.copy(), X_test.copy()
+    train['aaa'] = rng.normal(size=len(train))
+    test['aaa'] = rng.normal(size=len(test))
+    labels = (y_train > 0).astype(int)
+    return train, test, labels, y_test.copy()
+
+
+def test_STEMRegressor(filtered_data):
+    X_train, X_test, y_train, y_test = filtered_data
     model = make_STEMRegressor()
-    y_train.loc[:] = np.where(y_train > 0, 1, 0)
     model = model.fit(X_train, y_train, stixel_filter_func=lambda x: x[x['aaa']>-0.3])
 
     pred_mean, pred_std = model.predict(X_test.reset_index(drop=True), return_std=True, verbosity=1, n_jobs=1)
@@ -54,12 +62,9 @@ def test_STEMRegressor():
     assert model.feature_importances_.shape[0] > 0
 
 
-def test_AdaSTEMClassifier():
-    X_train.loc[:, 'aaa'] = np.random.normal(size=len(X_train))
-    X_test.loc[:, 'aaa'] = np.random.normal(size=len(X_test))
-    
+def test_AdaSTEMClassifier(filtered_data):
+    X_train, X_test, y_train, y_test = filtered_data
     model = make_AdaSTEMClassifier()
-    y_train.loc[:] = np.where(y_train > 0, 1, 0)
     model = model.fit(X_train, y_train, stixel_filter_func=lambda x: x[x['aaa']>-0.3])
 
     pred_mean, pred_std = model.predict(X_test.reset_index(drop=True), return_std=True, verbosity=1, n_jobs=1)
